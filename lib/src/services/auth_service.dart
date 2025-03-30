@@ -10,51 +10,32 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  // Development-only auto-login credentials
-  static const _devEmail = 'shawn.mcpeek@gmail.com';
-  static const _devPassword = 'Mgti18il';
+  // Auth state changes stream
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
-  Future<User?> autoLoginForDevelopment() async {
-    if (!kDebugMode) {
-      AppLogger.warning('Auto-login is only available in debug mode');
-      return null;
-    }
-
+  // Sign in with email and password
+  Future<UserCredential> signInWithEmailAndPassword(String email, String password) async {
     try {
-      // Sign in with the development credentials
-      final userCredential = await _auth.signInWithEmailAndPassword(
-        email: _devEmail,
-        password: _devPassword,
-      );
-      
-      return userCredential.user;
-    } catch (e) {
-      AppLogger.error('Auto-login failed', e);
-      return null;
-    }
-  }
-
-  // Regular authentication methods
-  Future<User?> signInWithEmailAndPassword(String email, String password) async {
-    try {
-      final userCredential = await _auth.signInWithEmailAndPassword(
+      return await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
-      return userCredential.user;
     } catch (e) {
-      AppLogger.error('Sign in failed', e);
-      return null;
+      AppLogger.error('Error signing in with email and password', e);
+      rethrow;
     }
   }
 
+  // Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    try {
+      await _auth.signOut();
+    } catch (e) {
+      AppLogger.error('Error signing out', e);
+      rethrow;
+    }
   }
 
   // Get current user
   User? get currentUser => _auth.currentUser;
-
-  // Auth state changes stream
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
 } 
