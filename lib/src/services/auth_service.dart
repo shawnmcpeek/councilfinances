@@ -10,9 +10,6 @@ class AuthService {
   factory AuthService() => _instance;
   AuthService._internal();
 
-  // Development-only auto-login credentials
-  static const _devEmail = 'shawn.mcpeek@gmail.com';
-  static const _devPassword = 'Mgti18il';
 
   Future<User?> autoLoginForDevelopment() async {
     if (!kDebugMode) {
