@@ -38,4 +38,4 @@ class AuthService {
 
   // Get current user
   User? get currentUser => _auth.currentUser;
-} 
+}
