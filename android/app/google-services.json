@@ -1,0 +1,46 @@
+{
+  "project_info": {
+    "project_number": "606365253863",
+    "project_id": "council-finance",
+    "storage_bucket": "council-finance.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:606365253863:android:91637a0d87298836c0a242",
+        "android_client_info": {
+          "package_name": "com.councilfinance.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "606365253863-h4c9p1g5aal84d3p47jvic1cjofbnjra.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC9ot3Rx_VzrUlvXbiiPYYExTNIX_bpu9o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "606365253863-h4c9p1g5aal84d3p47jvic1cjofbnjra.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "606365253863-egnl9bmeb6frgr2do7s5ul74hsl9ek3r.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.councilfinance"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,200 @@
+{
+  "council_programs": {
+    "faith": [
+      {
+        "id": "rsvp",
+        "name": "RSVP (Refund Support Vocations Program)",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "into_the_breach",
+        "name": "Into the Breach",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "spiritual_reflection",
+        "name": "Spiritual Reflection",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "holy_hour",
+        "name": "Holy Hour",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "rosary_program",
+        "name": "Rosary Program",
+        "category": "FAITH",
+        "systemDefault": true
+      }
+    ],
+    "family": [
+      {
+        "id": "food_for_families",
+        "name": "Food for Families",
+        "category": "FAMILY",
+        "systemDefault": true
+      },
+      {
+        "id": "family_of_month",
+        "name": "Family of the Month/Year",
+        "category": "FAMILY",
+        "systemDefault": true
+      },
+      {
+        "id": "family_prayer_night",
+        "name": "Family Prayer Night",
+        "category": "FAMILY",
+        "systemDefault": true
+      },
+      {
+        "id": "family_week",
+        "name": "Family Week",
+        "category": "FAMILY",
+        "systemDefault": true
+      }
+    ],
+    "community": [
+      {
+        "id": "coats_for_kids",
+        "name": "Coats for Kids",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "global_wheelchair",
+        "name": "Global Wheelchair Mission",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "habitat",
+        "name": "Habitat for Humanity",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "free_throw",
+        "name": "Free Throw Championship",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "essay_contest",
+        "name": "Catholic Citizenship Essay Contest",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      }
+    ],
+    "life": [
+      {
+        "id": "march_for_life",
+        "name": "March for Life",
+        "category": "LIFE",
+        "systemDefault": true
+      },
+      {
+        "id": "special_olympics",
+        "name": "Special Olympics",
+        "category": "LIFE",
+        "systemDefault": true
+      },
+      {
+        "id": "ultrasound",
+        "name": "Ultrasound Program",
+        "category": "LIFE",
+        "systemDefault": true
+      },
+      {
+        "id": "pregnancy_center",
+        "name": "Pregnancy Center Support",
+        "category": "LIFE",
+        "systemDefault": true
+      }
+    ]
+  },
+  "assembly_programs": {
+    "patriotic": [
+      {
+        "id": "honor_guard",
+        "name": "Honor Guard",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      },
+      {
+        "id": "veterans_support",
+        "name": "Veterans Support",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      },
+      {
+        "id": "patriotic_rosary",
+        "name": "Patriotic Rosary",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      },
+      {
+        "id": "flag_retirement",
+        "name": "Flag Retirement Ceremony",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      },
+      {
+        "id": "memorial_mass",
+        "name": "Memorial Mass",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      },
+      {
+        "id": "color_corps",
+        "name": "Color Corps Events",
+        "category": "PATRIOTIC",
+        "systemDefault": true
+      }
+    ],
+    "community": [
+      {
+        "id": "assembly_social",
+        "name": "Assembly Social Events",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "civic_events",
+        "name": "Civic Events Support",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      },
+      {
+        "id": "military_support",
+        "name": "Military Support Programs",
+        "category": "COMMUNITY",
+        "systemDefault": true
+      }
+    ],
+    "faith": [
+      {
+        "id": "chalice_program",
+        "name": "Chalice Program",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "religious_ceremonies",
+        "name": "Religious Ceremonies Support",
+        "category": "FAITH",
+        "systemDefault": true
+      },
+      {
+        "id": "pilgrimage_program",
+        "name": "Pilgrimage Program",
+        "category": "FAITH",
+        "systemDefault": true
+      }
+    ]
+  }
+} 

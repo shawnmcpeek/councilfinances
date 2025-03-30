@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+# Review the conversation to avoid repeating mistakes
+# Review the codebase for correct inclusion/implementation
+# Review outside sources for proper implementation
+# Use the most simple and straightforward solution
+# If making changes or correcting errors, don't ask me if I want you to continue, the answer is always yes
+# Keep secrets secret. I have a .env file for you for a reason
+# Always use proper project formatting
+# Keep all styling in a global css and use it for all aspects
+# Keep all styling simple. Use the same styling for all buttons, unless something like width difference is necessary. Then at least make them look the same with different width.
+# My computer has Java SDK 21 and 23. We will not use any SDK previous to 21.
+
+- You can @ files here
+- You can use markdown but dont have to
