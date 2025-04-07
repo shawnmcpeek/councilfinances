@@ -1,0 +1,390 @@
+{
+  "Text1": {
+    "type": "/Tx",
+    "name": "Text1"
+  },
+  "Text2": {
+    "type": "/Tx",
+    "name": "Text2"
+  },
+  "Text3": {
+    "type": "/Tx",
+    "name": "Text3"
+  },
+  "Text4": {
+    "type": "/Tx",
+    "name": "Text4"
+  },
+  "Text5": {
+    "type": "/Tx",
+    "name": "Text5"
+  },
+  "Text6": {
+    "type": "/Tx",
+    "name": "Text6"
+  },
+  "Text7": {
+    "type": "/Tx",
+    "name": "Text7"
+  },
+  "Text8": {
+    "type": "/Tx",
+    "name": "Text8"
+  },
+  "Text9": {
+    "type": "/Tx",
+    "name": "Text9"
+  },
+  "Text10": {
+    "type": "/Tx",
+    "name": "Text10"
+  },
+  "Text11": {
+    "type": "/Tx",
+    "name": "Text11"
+  },
+  "Text12": {
+    "type": "/Tx",
+    "name": "Text12"
+  },
+  "Text13": {
+    "type": "/Tx",
+    "name": "Text13"
+  },
+  "Text14": {
+    "type": "/Tx",
+    "name": "Text14"
+  },
+  "Text15": {
+    "type": "/Tx",
+    "name": "Text15"
+  },
+  "Text16": {
+    "type": "/Tx",
+    "name": "Text16"
+  },
+  "Text17": {
+    "type": "/Tx",
+    "name": "Text17"
+  },
+  "Text18": {
+    "type": "/Tx",
+    "name": "Text18"
+  },
+  "Text19": {
+    "type": "/Tx",
+    "name": "Text19"
+  },
+  "Text20": {
+    "type": "/Tx",
+    "name": "Text20"
+  },
+  "Text21": {
+    "type": "/Tx",
+    "name": "Text21"
+  },
+  "Text22": {
+    "type": "/Tx",
+    "name": "Text22"
+  },
+  "Text23": {
+    "type": "/Tx",
+    "name": "Text23"
+  },
+  "Text24": {
+    "type": "/Tx",
+    "name": "Text24"
+  },
+  "Text25": {
+    "type": "/Tx",
+    "name": "Text25"
+  },
+  "Text26": {
+    "type": "/Tx",
+    "name": "Text26"
+  },
+  "Text27": {
+    "type": "/Tx",
+    "name": "Text27"
+  },
+  "Text28": {
+    "type": "/Tx",
+    "name": "Text28"
+  },
+  "Text29": {
+    "type": "/Tx",
+    "name": "Text29"
+  },
+  "Text30": {
+    "type": "/Tx",
+    "name": "Text30"
+  },
+  "Text31": {
+    "type": "/Tx",
+    "name": "Text31"
+  },
+  "Text32": {
+    "type": "/Tx",
+    "name": "Text32"
+  },
+  "Text33": {
+    "type": "/Tx",
+    "name": "Text33"
+  },
+  "Text34": {
+    "type": "/Tx",
+    "name": "Text34"
+  },
+  "Text35": {
+    "type": "/Tx",
+    "name": "Text35"
+  },
+  "Text36": {
+    "type": "/Tx",
+    "name": "Text36"
+  },
+  "Text37": {
+    "type": "/Tx",
+    "name": "Text37"
+  },
+  "Text38": {
+    "type": "/Tx",
+    "name": "Text38"
+  },
+  "Text39": {
+    "type": "/Tx",
+    "name": "Text39"
+  },
+  "Text40": {
+    "type": "/Tx",
+    "name": "Text40"
+  },
+  "Text41": {
+    "type": "/Tx",
+    "name": "Text41"
+  },
+  "Text42": {
+    "type": "/Tx",
+    "name": "Text42"
+  },
+  "Text43": {
+    "type": "/Tx",
+    "name": "Text43"
+  },
+  "Text44": {
+    "type": "/Tx",
+    "name": "Text44"
+  },
+  "Text45": {
+    "type": "/Tx",
+    "name": "Text45"
+  },
+  "Text46": {
+    "type": "/Tx",
+    "name": "Text46"
+  },
+  "Text47": {
+    "type": "/Tx",
+    "name": "Text47"
+  },
+  "Text48": {
+    "type": "/Tx",
+    "name": "Text48"
+  },
+  "Text49": {
+    "type": "/Tx",
+    "name": "Text49"
+  },
+  "Text50": {
+    "type": "/Tx",
+    "name": "Text50"
+  },
+  "Text51": {
+    "type": "/Tx",
+    "name": "Text51"
+  },
+  "Text52": {
+    "type": "/Tx",
+    "name": "Text52"
+  },
+  "Text53": {
+    "type": "/Tx",
+    "name": "Text53"
+  },
+  "Text54": {
+    "type": "/Tx",
+    "name": "Text54"
+  },
+  "Text55": {
+    "type": "/Tx",
+    "name": "Text55"
+  },
+  "Text56": {
+    "type": "/Tx",
+    "name": "Text56"
+  },
+  "Text57": {
+    "type": "/Tx",
+    "name": "Text57"
+  },
+  "Text58": {
+    "type": "/Tx",
+    "name": "Text58"
+  },
+  "Text59": {
+    "type": "/Tx",
+    "name": "Text59"
+  },
+  "Text60": {
+    "type": "/Tx",
+    "name": "Text60"
+  },
+  "Text61": {
+    "type": "/Tx",
+    "name": "Text61"
+  },
+  "Text62": {
+    "type": "/Tx",
+    "name": "Text62"
+  },
+  "Text63": {
+    "type": "/Tx",
+    "name": "Text63"
+  },
+  "Text64": {
+    "type": "/Tx",
+    "name": "Text64"
+  },
+  "Text65": {
+    "type": "/Tx",
+    "name": "Text65"
+  },
+  "Text66": {
+    "type": "/Tx",
+    "name": "Text66"
+  },
+  "Text67": {
+    "type": "/Tx",
+    "name": "Text67"
+  },
+  "Text68": {
+    "type": "/Tx",
+    "name": "Text68"
+  },
+  "Text69": {
+    "type": "/Tx",
+    "name": "Text69"
+  },
+  "Text70": {
+    "type": "/Tx",
+    "name": "Text70"
+  },
+  "Text71": {
+    "type": "/Tx",
+    "name": "Text71"
+  },
+  "Text72": {
+    "type": "/Tx",
+    "name": "Text72"
+  },
+  "Text73": {
+    "type": "/Tx",
+    "name": "Text73"
+  },
+  "Text74": {
+    "type": "/Tx",
+    "name": "Text74"
+  },
+  "Text75": {
+    "type": "/Tx",
+    "name": "Text75"
+  },
+  "Text76": {
+    "type": "/Tx",
+    "name": "Text76"
+  },
+  "Text77": {
+    "type": "/Tx",
+    "name": "Text77"
+  },
+  "Text78": {
+    "type": "/Tx",
+    "name": "Text78"
+  },
+  "Text79": {
+    "type": "/Tx",
+    "name": "Text79"
+  },
+  "Text80": {
+    "type": "/Tx",
+    "name": "Text80"
+  },
+  "Text81": {
+    "type": "/Tx",
+    "name": "Text81"
+  },
+  "Text82": {
+    "type": "/Tx",
+    "name": "Text82"
+  },
+  "Text83": {
+    "type": "/Tx",
+    "name": "Text83"
+  },
+  "Text84": {
+    "type": "/Tx",
+    "name": "Text84"
+  },
+  "Text85": {
+    "type": "/Tx",
+    "name": "Text85"
+  },
+  "Text86": {
+    "type": "/Tx",
+    "name": "Text86"
+  },
+  "Text87": {
+    "type": "/Tx",
+    "name": "Text87"
+  },
+  "Text88": {
+    "type": "/Tx",
+    "name": "Text88"
+  },
+  "Text89": {
+    "type": "/Tx",
+    "name": "Text89"
+  },
+  "Text90": {
+    "type": "/Tx",
+    "name": "Text90"
+  },
+  "Text91": {
+    "type": "/Tx",
+    "name": "Text91"
+  },
+  "Text92": {
+    "type": "/Tx",
+    "name": "Text92"
+  },
+  "Date93_af_date": {
+    "type": "/Tx",
+    "name": "Date93_af_date"
+  },
+  "Text94": {
+    "type": "/Tx",
+    "name": "Text94"
+  },
+  "Text95": {
+    "type": "/Tx",
+    "name": "Text95"
+  },
+  "Date96_af_date": {
+    "type": "/Tx",
+    "name": "Date96_af_date"
+  },
+  "Text97": {
+    "type": "/Tx",
+    "name": "Text97"
+  }
+}

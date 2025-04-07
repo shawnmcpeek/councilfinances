@@ -1,0 +1,149 @@
+{
+  "faith": [
+    {
+      "id": "vocations",
+      "name": "Refund Support Vocations Program"
+    },
+    {
+      "id": "facilities",
+      "name": "Church Facilities"
+    },
+    {
+      "id": "catholic_schools",
+      "name": "Catholic Schools/Seminaries"
+    },
+    {
+      "id": "vocations",
+      "name": "Religious/Vocations Education"
+    },
+    {
+      "id": "prayer_and_study",
+      "name": "Prayer and Study Programs"
+    },
+    {
+      "id": "sacramental",
+      "name": "Sacramental GIfts"
+    },
+    {
+      "id": "faith_activities",
+      "name": "Miscellaneous Faith Activities"
+    }
+  ],
+  "family": [
+    {
+      "id": "food_for_families",
+      "name": "Food for Families"
+    },
+    {
+      "id": "family_formation",
+      "name": "Family Formation Programs"
+    },
+    {
+      "id": "christ_in_christmas",
+      "name": "Keep Christ in Christmas"
+    },
+    {
+      "id": "family_week",
+      "name": "Family Week"
+    },
+    {
+      "id": "prayer_night",
+      "name": "Family Prayer Night"
+    },
+    {
+      "id": "family_activities",
+      "name": "Miscellaneous Family Activities"
+    }
+  ],
+  "community": [
+    {
+      "id": "coats_for_kids",
+      "name": "Coats for Kids"
+    },
+    {
+      "id": "global_wheelchair",
+      "name": "Global Wheelchair Mission"
+    },
+    {
+      "id": "habitat",
+      "name": "Habitat for Humanity"
+    },
+    {
+      "id": "disaster_preparedness",
+      "name": "Disaster Preparedness/Relief"
+    },{
+      "id": "disabilities",
+      "name": "Physically Disabled/Intellectual Disabilities"
+    },{
+      "id": "elderly",
+      "name": "Elderly/Widow(er) Care"
+    },{
+      "id": "hospital",
+      "name": "Hospital/Health Organizations"
+    },{
+      "id": "squires",
+      "name": "Columbian Squires"
+    },{
+      "id": "youth_group",
+      "name": "Scouting/Youth Groups"
+    },{
+      "id": "athletics",
+      "name": "Athletics"
+    },{
+      "id": "youth_welfare",
+      "name": "Youth Welfare/Service"
+    },{
+      "id": "scholarships",
+      "name": "Scholarships/Education"
+    },
+    {
+      "id": "vavs",
+      "name": "Veterans/VAVS"
+    },
+    {
+      "id": "community_activities",
+      "name": "Miscellaneous Community/Youth Activities"
+    }
+  ],
+  "life": [
+    {
+      "id": "special_olympics",
+      "name": "Special Olympics"
+    },
+    {
+      "id": "march_for_life",
+      "name": "March for Life"
+    },
+
+    {
+      "id": "ultrasound",
+      "name": "Ultrasound Initiative"
+    },
+    {
+      "id": "pregnancy_center",
+      "name": "Pregnancy Center Support"
+    },
+    {
+      "id": "christian_refugee",
+      "name": "Christian Refugee Relief"
+    },
+    {
+      "id": "unborn",
+      "name": "Memorials to Unborn Children"
+    },
+    {
+      "id": "life_activities",
+      "name": "Miscellaneous Life Activities"
+    }
+  ],
+  "patriotic": [
+    {
+      "id": "veterans_support",
+      "name": "Veterans Support"
+    },
+    {
+      "id": "patriotic_activities",
+      "name": "Miscellaneous Patriotic Activities"
+    }
+  ]
+} 

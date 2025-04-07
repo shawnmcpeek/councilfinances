@@ -121,8 +121,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ],
                     SizedBox(height: AppTheme.largeSpacing),
                     FilledButton(
+                      style: AppTheme.baseButtonStyle,
                       onPressed: _isLoading ? null : _signIn,
-                      style: AppTheme.filledButtonStyle,
                       child: _isLoading
                           ? const SizedBox(
                               height: 20,

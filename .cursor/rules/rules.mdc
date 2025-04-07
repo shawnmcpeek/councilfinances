@@ -13,7 +13,8 @@ alwaysApply: true
 # Always use proper project formatting
 # Keep all styling in a global css and use it for all aspects
 # Keep all styling simple. Use the same styling for all buttons, unless something like width difference is necessary. Then at least make them look the same with different width.
+# For styling fixes, identify the correct pattern first and enforce it consistently. No incremental fixes - ensure full compliance with global styling rules.
 # My computer has Java SDK 21 and 23. We will not use any SDK previous to 21.
-
+# If I ask a question or start a dialogue/discussion, only respond. You can provide example code, but do not start changing code. I will tell you when I am ready to resume code.
 - You can @ files here
 - You can use markdown but dont have to

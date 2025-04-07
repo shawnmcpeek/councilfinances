@@ -25,6 +25,12 @@ class AppTheme {
     color: Colors.black87,
   );
 
+  static const TextStyle labelStyle = TextStyle(
+    fontSize: 16,
+    fontWeight: FontWeight.w500,
+    color: Colors.black87,
+  );
+
   // Input Decoration
   static const InputDecorationTheme inputDecorationTheme = InputDecorationTheme(
     border: OutlineInputBorder(),
@@ -33,25 +39,89 @@ class AppTheme {
     contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
   );
 
-  // Button Styles
-  static final ButtonStyle filledButtonStyle = FilledButton.styleFrom(
+  static InputDecoration get formFieldDecoration => const InputDecoration(
+    border: OutlineInputBorder(),
+    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+    filled: true,
+    fillColor: Colors.white,
+  );
+
+  static InputDecoration formFieldDecorationWithLabel(String label, [String? hint]) {
+    return formFieldDecoration.copyWith(
+      labelText: label,
+      hintText: hint,
+    );
+  }
+
+  // Button Styles - Simplified to a single base style
+  static final ButtonStyle baseButtonStyle = FilledButton.styleFrom(
     minimumSize: const Size(double.infinity, 48),
+    padding: const EdgeInsets.symmetric(vertical: 16.0),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(25),
+    ),
+  );
+
+  // Filled button style
+  static ButtonStyle get filledButtonStyle => baseButtonStyle;
+
+  // Variant for outlined buttons
+  static final ButtonStyle outlinedButtonStyle = OutlinedButton.styleFrom(
+    minimumSize: const Size(double.infinity, 48),
+    padding: const EdgeInsets.symmetric(vertical: 16.0),
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(8),
     ),
   );
 
-  static final ButtonStyle outlinedButtonStyle = OutlinedButton.styleFrom(
-    minimumSize: const Size(double.infinity, 48),
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(8),
-    ),
-  );
+  // Variant for selected/unselected state
+  static ButtonStyle getButtonStyle({bool isSelected = true}) {
+    return baseButtonStyle.copyWith(
+      backgroundColor: MaterialStateProperty.all(
+        isSelected ? primaryColor : Colors.white,
+      ),
+      foregroundColor: MaterialStateProperty.all(
+        isSelected ? Colors.white : primaryColor,
+      ),
+      elevation: MaterialStateProperty.resolveWith((states) {
+        if (states.contains(MaterialState.pressed)) {
+          return isSelected ? 0 : 3;
+        }
+        return isSelected ? 2 : 6;
+      }),
+      shadowColor: MaterialStateProperty.all(
+        primaryColor.withOpacity(0.5),
+      ),
+      surfaceTintColor: MaterialStateProperty.all(
+        isSelected ? Colors.white.withOpacity(0.1) : primaryColor.withOpacity(0.05),
+      ),
+      side: MaterialStateProperty.all(
+        BorderSide(
+          color: isSelected ? Colors.transparent : primaryColor.withOpacity(0.3),
+          width: 1.5,
+        ),
+      ),
+    );
+  }
 
   // Spacing
   static const double spacing = 16.0;
   static const double smallSpacing = 8.0;
   static const double largeSpacing = 24.0;
+
+  // Toggle Button Constraints
+  static const double toggleMaxWidth = 400.0;
+  static const double toggleButtonMinWidth = 160.0;
+
+  // Standard Layout Patterns
+  static const EdgeInsets screenPadding = EdgeInsets.all(spacing);
+
+  static Widget screenContent({required Widget child}) {
+    return Padding(
+      padding: screenPadding,
+      child: child,
+    );
+  }
 
   // Card Style
   static final CardTheme cardTheme = CardTheme(
@@ -62,9 +132,30 @@ class AppTheme {
     margin: const EdgeInsets.all(spacing),
   );
 
+  static final EdgeInsets cardPadding = EdgeInsets.all(spacing);
+
+  // Dropdown Style
+  static final dropdownTheme = DropdownMenuThemeData(
+    menuStyle: MenuStyle(
+      elevation: MaterialStateProperty.all(2),
+      shape: MaterialStateProperty.all(
+        RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      padding: MaterialStateProperty.all(
+        const EdgeInsets.symmetric(horizontal: 12),
+      ),
+    ),
+  );
+
   // Chip Style
   static final ChipThemeData chipTheme = ChipThemeData(
-    backgroundColor: primaryColor.withOpacity(0.1),
+    backgroundColor: Color.fromRGBO(
+      primaryColor.r.toInt(),
+      primaryColor.g.toInt(),
+      primaryColor.b.toInt(),
+      0.1),
     selectedColor: primaryColor,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     labelStyle: const TextStyle(fontSize: 14),
@@ -85,13 +176,19 @@ class AppTheme {
       scaffoldBackgroundColor: backgroundColor,
       inputDecorationTheme: inputDecorationTheme,
       cardTheme: cardTheme,
-      chipTheme: chipTheme,
-      filledButtonTheme: FilledButtonThemeData(style: filledButtonStyle),
+      dropdownMenuTheme: dropdownTheme,
+      filledButtonTheme: FilledButtonThemeData(style: baseButtonStyle),
       outlinedButtonTheme: OutlinedButtonThemeData(style: outlinedButtonStyle),
       appBarTheme: const AppBarTheme(
         backgroundColor: primaryColor,
         foregroundColor: Colors.white,
         elevation: 0,
+      ),
+      textTheme: const TextTheme(
+        titleLarge: headingStyle,
+        titleMedium: subheadingStyle,
+        bodyLarge: bodyStyle,
+        labelLarge: labelStyle,
       ),
     );
   }

@@ -31,6 +31,11 @@ class ProgramService {
   // Load program states for a specific organization
   Future<void> loadProgramStates(ProgramsData programsData, String organizationId, bool isAssembly) async {
     try {
+      if (organizationId.isEmpty) {
+        AppLogger.error('Cannot load program states: organizationId is empty');
+        return;
+      }
+
       AppLogger.debug('Loading program states for organization: $organizationId');
       
       // Ensure organization ID is properly formatted
@@ -43,7 +48,7 @@ class ProgramService {
       final doc = await _firestore
           .collection('organizations')
           .doc(organizationId)
-          .collection('program_states')
+          .collection('programs')
           .doc('states')
           .get();
 
@@ -54,102 +59,142 @@ class ProgramService {
       for (var categoryPrograms in programs.values) {
         for (var program in categoryPrograms) {
           program.isEnabled = true;
+          program.financialType = FinancialType.both; // Set default financial type
         }
       }
 
       // Apply stored states if the document exists
       if (doc.exists) {
         final data = doc.data() as Map<String, dynamic>;
-        AppLogger.debug('Loaded program states: $data');
         
-        for (var entry in data.entries) {
-          if (entry.key == 'updatedAt') continue; // Skip timestamp field
-          
-          final programId = entry.key;
-          final isEnabled = entry.value as bool;
+        // Handle program states
+        final states = data['states'] as Map<String, dynamic>?;
+        if (states != null) {
+          for (var entry in states.entries) {
+            final programId = entry.key;
+            final isEnabled = entry.value as bool;
 
-          for (var categoryPrograms in programs.values) {
-            for (var program in categoryPrograms) {
-              if (program.id == programId) {
-                program.isEnabled = isEnabled;
-                break;
+            for (var categoryPrograms in programs.values) {
+              for (var program in categoryPrograms) {
+                if (program.id == programId) {
+                  program.isEnabled = isEnabled;
+                  break;
+                }
+              }
+            }
+          }
+        }
+
+        // Handle financial types
+        final financialTypes = data['financialTypes'] as Map<String, dynamic>?;
+        if (financialTypes != null) {
+          for (var entry in financialTypes.entries) {
+            final programId = entry.key;
+            final typeStr = entry.value as String;
+
+            for (var categoryPrograms in programs.values) {
+              for (var program in categoryPrograms) {
+                if (program.id == programId) {
+                  program.financialType = FinancialType.values.firstWhere(
+                    (type) => type.name == typeStr,
+                    orElse: () => FinancialType.both
+                  );
+                  break;
+                }
               }
             }
           }
         }
       } else {
         AppLogger.debug('No program states found, using defaults');
+        // Create default states document
+        await _firestore
+          .collection('organizations')
+          .doc(organizationId)
+          .collection('programs')
+          .doc('states')
+          .set({
+            'states': {},
+            'financialTypes': {},
+            'createdAt': FieldValue.serverTimestamp(),
+          });
       }
     } catch (e, stackTrace) {
       AppLogger.error('Error loading program states', e, stackTrace);
-      rethrow; // Rethrow to handle the error in the UI
+      // Don't rethrow, just log the error and continue with default states
+      AppLogger.info('Continuing with default program states');
     }
   }
 
   // Get custom programs for a specific organization
   Future<List<Program>> getCustomPrograms(String organizationId, bool isAssembly) async {
     try {
-      // Ensure organization ID is properly formatted
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        organizationId = isAssembly 
-            ? 'A${organizationId.padLeft(6, '0')}'
-            : 'C${organizationId.padLeft(6, '0')}';
-      }
-
-      AppLogger.debug('Loading custom programs for organization: $organizationId');
-      
-      final snapshot = await _firestore
-          .collection('organizations')
+      final snapshot = await _firestore.collection('organizations')
           .doc(organizationId)
-          .collection('custom_programs')
+          .collection('programs')
+          .where('isAssembly', isEqualTo: isAssembly)
           .get();
 
       return snapshot.docs.map((doc) {
         final data = doc.data();
-        data['id'] = doc.id;
-        return Program.fromJson(data);
+        return Program.fromMap({
+          'id': doc.id,
+          'name': data['name'],
+          'category': data['category'],
+          'isSystemDefault': data['isSystemDefault'] ?? false,
+          'financialType': data['financialType'] ?? FinancialType.both.name,
+          'isEnabled': data['isEnabled'] ?? true,
+        });
       }).toList();
-    } catch (e, stackTrace) {
-      AppLogger.error('Error loading custom programs', e, stackTrace);
-      return [];
+    } catch (e) {
+      AppLogger.error('Error getting custom programs', e);
+      rethrow;
     }
   }
 
   // Add a custom program
   Future<void> addCustomProgram(String organizationId, Program program, bool isAssembly) async {
-    await _firestore
-        .collection('programs')
-        .doc(organizationId)
-        .collection('custom')
-        .add({
-          ...program.toJson(),
-          'createdAt': FieldValue.serverTimestamp(),
-          'isEnabled': true,
-        });
+    try {
+      final docRef = _firestore.collection('organizations')
+          .doc(organizationId)
+          .collection('programs')
+          .doc();
+
+      final programData = {
+        'id': docRef.id,
+        'name': program.name,
+        'category': program.category,
+        'isSystemDefault': false,
+        'financialType': program.financialType.name,
+        'isEnabled': true,
+        'isAssembly': isAssembly,
+        'createdAt': FieldValue.serverTimestamp(),
+      };
+
+      await docRef.set(programData);
+      AppLogger.debug('Added custom program: ${program.name} with financial type: ${program.financialType.name}');
+    } catch (e) {
+      AppLogger.error('Error adding custom program', e);
+      rethrow;
+    }
   }
 
   // Update all program states at once
-  Future<void> updateProgramStates(String organizationId, Map<String, bool> programStates) async {
+  Future<void> updateProgramStates(String organizationId, Map<String, dynamic> states) async {
     try {
-      // Ensure organization ID is properly formatted
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        throw Exception('Invalid organization ID format: $organizationId');
-      }
-
-      AppLogger.debug('Updating program states for organization: $organizationId');
-      AppLogger.debug('States to update: $programStates');
-
-      await _firestore
-          .collection('organizations')
+      final docRef = _firestore.collection('organizations')
           .doc(organizationId)
-          .collection('program_states')
-          .doc('states')
-          .set({
-            ...programStates,
-            'updatedAt': FieldValue.serverTimestamp(),
-          });
-    } catch (e, stackTrace) {
-      AppLogger.error('Error updating program states', e, stackTrace);
+          .collection('programs')
+          .doc('states');
+
+      await docRef.set({
+        'states': states,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      
+      AppLogger.debug('Updated program states: $states');
+    } catch (e) {
+      AppLogger.error('Error updating program states', e);
       rethrow;
     }
   }
@@ -157,38 +202,23 @@ class ProgramService {
   // Update a single program (handles both system and custom programs)
   Future<void> updateCustomProgram(String organizationId, Program program, bool isAssembly) async {
     try {
-      // Ensure organization ID is properly formatted
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        organizationId = isAssembly 
-            ? 'A${organizationId.padLeft(6, '0')}'
-            : 'C${organizationId.padLeft(6, '0')}';
-      }
+      final docRef = _firestore.collection('organizations')
+          .doc(organizationId)
+          .collection('programs')
+          .doc(program.id);
 
-      if (program.isSystemDefault) {
-        // For system programs, update the states document
-        await _firestore
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('program_states')
-            .doc('states')
-            .set({
-              program.id: program.isEnabled,
-              'updatedAt': FieldValue.serverTimestamp(),
-            }, SetOptions(merge: true));
-      } else {
-        // For custom programs, update the full document
-        await _firestore
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('custom_programs')
-            .doc(program.id)
-            .update({
-              ...program.toJson(),
-              'updatedAt': FieldValue.serverTimestamp(),
-            });
-      }
-    } catch (e, stackTrace) {
-      AppLogger.error('Error updating program', e, stackTrace);
+      final programData = {
+        'name': program.name,
+        'category': program.category,
+        'financialType': program.financialType.name,
+        'isEnabled': program.isEnabled,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      await docRef.update(programData);
+      AppLogger.debug('Updated custom program: ${program.name} with financial type: ${program.financialType.name}');
+    } catch (e) {
+      AppLogger.error('Error updating custom program', e);
       rethrow;
     }
   }
@@ -211,6 +241,55 @@ class ProgramService {
           .delete();
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting program', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> migrateExistingPrograms(String organizationId) async {
+    try {
+      final programsSnapshot = await _firestore
+          .collection('organizations')
+          .doc(organizationId)
+          .collection('programs')
+          .get();
+
+      final batch = _firestore.batch();
+
+      for (var doc in programsSnapshot.docs) {
+        final data = doc.data();
+        if (!data.containsKey('financialType')) {
+          batch.update(doc.reference, {
+            'financialType': FinancialType.both.name,
+          });
+        }
+      }
+
+      await batch.commit();
+      AppLogger.debug('Completed migration of existing programs for organization: $organizationId');
+    } catch (e) {
+      AppLogger.error('Error migrating existing programs', e);
+      rethrow;
+    }
+  }
+
+  // Add this new method
+  Future<void> updateProgramFinancialType(String organizationId, String programId, FinancialType type) async {
+    try {
+      final docRef = _firestore.collection('organizations')
+          .doc(organizationId)
+          .collection('programs')
+          .doc('states');
+
+      await docRef.set({
+        'financialTypes': {
+          programId: type.name,
+        },
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+      
+      AppLogger.debug('Updated program financial type: $programId to ${type.name}');
+    } catch (e) {
+      AppLogger.error('Error updating program financial type', e);
       rethrow;
     }
   }

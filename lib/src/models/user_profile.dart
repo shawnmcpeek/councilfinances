@@ -57,4 +57,12 @@ class UserProfile {
           .toList() ?? [],
     );
   }
+
+  String getOrganizationId(bool isAssembly) {
+    return isAssembly 
+      ? (assemblyNumber ?? '').toString()
+      : (councilNumber ?? '').toString();
+  }
+
+  bool get isAssembly => assemblyNumber != null;
 } 

@@ -5,31 +5,36 @@
         "id": "rsvp",
         "name": "RSVP (Refund Support Vocations Program)",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "into_the_breach",
         "name": "Into the Breach",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "spiritual_reflection",
         "name": "Spiritual Reflection",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "holy_hour",
         "name": "Holy Hour",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "rosary_program",
         "name": "Rosary Program",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ],
     "family": [
@@ -37,25 +42,29 @@
         "id": "food_for_families",
         "name": "Food for Families",
         "category": "FAMILY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "family_of_month",
         "name": "Family of the Month/Year",
         "category": "FAMILY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "family_prayer_night",
         "name": "Family Prayer Night",
         "category": "FAMILY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "family_week",
         "name": "Family Week",
         "category": "FAMILY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ],
     "community": [
@@ -63,31 +72,36 @@
         "id": "coats_for_kids",
         "name": "Coats for Kids",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "global_wheelchair",
         "name": "Global Wheelchair Mission",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "habitat",
         "name": "Habitat for Humanity",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "free_throw",
         "name": "Free Throw Championship",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "essay_contest",
         "name": "Catholic Citizenship Essay Contest",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ],
     "life": [
@@ -95,25 +109,29 @@
         "id": "march_for_life",
         "name": "March for Life",
         "category": "LIFE",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "special_olympics",
         "name": "Special Olympics",
         "category": "LIFE",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "ultrasound",
         "name": "Ultrasound Program",
         "category": "LIFE",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "pregnancy_center",
         "name": "Pregnancy Center Support",
         "category": "LIFE",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ]
   },
@@ -123,37 +141,43 @@
         "id": "honor_guard",
         "name": "Honor Guard",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "veterans_support",
         "name": "Veterans Support",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "patriotic_rosary",
         "name": "Patriotic Rosary",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "flag_retirement",
         "name": "Flag Retirement Ceremony",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "memorial_mass",
         "name": "Memorial Mass",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "color_corps",
         "name": "Color Corps Events",
         "category": "PATRIOTIC",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ],
     "community": [
@@ -161,19 +185,22 @@
         "id": "assembly_social",
         "name": "Assembly Social Events",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "civic_events",
         "name": "Civic Events Support",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "military_support",
         "name": "Military Support Programs",
         "category": "COMMUNITY",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ],
     "faith": [
@@ -181,19 +208,22 @@
         "id": "chalice_program",
         "name": "Chalice Program",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "religious_ceremonies",
         "name": "Religious Ceremonies Support",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       },
       {
         "id": "pilgrimage_program",
         "name": "Pilgrimage Program",
         "category": "FAITH",
-        "systemDefault": true
+        "systemDefault": true,
+        "financialType": "both"
       }
     ]
   }

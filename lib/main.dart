@@ -4,6 +4,10 @@ import 'package:kcmanagement/firebase_options.dart';
 import 'package:kcmanagement/src/screens/login_screen.dart';
 import 'package:kcmanagement/src/screens/profile_screen.dart';
 import 'package:kcmanagement/src/screens/home_screen.dart';
+import 'package:kcmanagement/src/screens/programs_collect.dart';
+import 'package:kcmanagement/src/screens/hours_entry_screen.dart';
+import 'package:kcmanagement/src/screens/reports_screen.dart';
+import 'package:kcmanagement/src/screens/finance_screen.dart';
 import 'package:kcmanagement/src/screens/programs_screen.dart';
 import 'package:kcmanagement/src/services/auth_service.dart';
 import 'package:kcmanagement/src/services/user_service.dart';
@@ -11,43 +15,69 @@ import 'package:kcmanagement/src/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kcmanagement/src/utils/logger.dart';
 import 'package:kcmanagement/src/theme/app_theme.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:provider/provider.dart';
+import 'src/providers/organization_provider.dart';
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize logger
-  AppLogger.init();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Configure Firestore settings
-  FirebaseFirestore.instance.settings = const Settings(
-    persistenceEnabled: true,
-    cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-  );
-  
-  runApp(const MyApp());
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    
+    // Initialize logger
+    AppLogger.init();
+    
+    // Initialize Firebase
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    // Initialize path_provider
+    await getApplicationDocumentsDirectory().then((directory) {
+      AppLogger.debug('Application documents directory initialized: ${directory.path}');
+    }).catchError((e) {
+      AppLogger.error('Failed to initialize application documents directory', e);
+    });
+
+    // Configure Firestore settings
+    FirebaseFirestore.instance.settings = const Settings(
+      persistenceEnabled: true,
+      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+    );
+    
+    runApp(
+      MultiProvider(
+        providers: [
+          ChangeNotifierProvider(create: (_) => OrganizationProvider()),
+          // ... any other existing providers ...
+        ],
+        child: const MyApp(),
+      ),
+    );
+  } catch (e, stackTrace) {
+    AppLogger.error('Error initializing app', e, stackTrace);
+    rethrow;
+  }
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      key: const ValueKey('root_app'),
       debugShowCheckedModeBanner: false,
       title: 'KC Management',
       theme: AppTheme.lightTheme,
+      navigatorKey: GlobalKey<NavigatorState>(),
       home: const AuthWrapper(),
     );
   }
 }
 
+// The AuthWrapper will handle authentication and show either the MainScreen or LoginScreen
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
+  const AuthWrapper({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -55,27 +85,17 @@ class AuthWrapper extends StatelessWidget {
       stream: AuthService().authStateChanges,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
+          return const Center(child: CircularProgressIndicator());
         }
-
-        if (snapshot.hasData) {
-          // User is logged in, show main screen
-          return const MainScreen();
-        }
-
-        // User is not logged in, show login screen
-        return const LoginScreen();
+        
+        return snapshot.hasData ? const MainScreen() : const LoginScreen();
       },
     );
   }
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({super.key});
+  const MainScreen({Key? key}) : super(key: key);
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -83,46 +103,6 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
-  final _userService = UserService();
-  UserProfile? _userProfile;
-  String _selectedOrg = 'council';
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserProfile();
-  }
-
-  Future<void> _loadUserProfile() async {
-    try {
-      final profile = await _userService.getUserProfile();
-      if (mounted) {
-        setState(() {
-          _userProfile = profile;
-        });
-      }
-    } catch (e) {
-      AppLogger.error('Error loading user profile in MainScreen', e);
-    }
-  }
-
-  String _getFormattedOrganizationId() {
-    if (_userProfile == null) return '';
-    
-    if (_selectedOrg == 'assembly') {
-      if (_userProfile?.assemblyNumber == null) return '';
-      return 'A${_userProfile!.assemblyNumber.toString().padLeft(6, '0')}';
-    } else {
-      if (_userProfile?.councilNumber == null) return '';
-      return 'C${_userProfile!.councilNumber.toString().padLeft(6, '0')}';
-    }
-  }
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -130,92 +110,66 @@ class _MainScreenState extends State<MainScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          HomeScreen(
-            onOrgChanged: (org) => setState(() => _selectedOrg = org),
-          ),
-          ProgramsScreen(
-            initialIsAssembly: _selectedOrg == 'assembly',
-            organizationId: _getFormattedOrganizationId(),
-          ),
+          const HomeScreen(),
+          const ProgramsCollectScreen(),
+          const HoursEntryScreen(),
           const FinanceScreen(),
-          const HoursScreen(),
           ProfileScreen(
-            onProgramsPressed: () => _onItemTapped(1),  // 1 is the index of Programs tab
+            onProgramsPressed: () async {
+              final userProfile = await UserService().getUserProfile();
+              if (userProfile == null) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Error: User profile not found')),
+                );
+                return;
+              }
+
+              final isAssembly = userProfile.assemblyNumber != null;
+              final organizationId = isAssembly 
+                  ? 'A${userProfile.assemblyNumber.toString().padLeft(6, '0')}'
+                  : 'C${userProfile.councilNumber.toString().padLeft(6, '0')}';
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ProgramsScreen(
+                    organizationId: organizationId,
+                  ),
+                ),
+              );
+            },
           ),
         ],
       ),
       bottomNavigationBar: NavigationBar(
-        onDestinationSelected: _onItemTapped,
         selectedIndex: _selectedIndex,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        indicatorColor: Theme.of(context).colorScheme.primaryContainer,
-        destinations: const <NavigationDestination>[
+        onDestinationSelected: (int index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
+            icon: Icon(Icons.home),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.assignment_outlined),
-            selectedIcon: Icon(Icons.assignment),
+            icon: Icon(Icons.assignment),
             label: 'Programs',
           ),
           NavigationDestination(
-            icon: Icon(Icons.account_balance_outlined),
-            selectedIcon: Icon(Icons.account_balance),
-            label: 'Finance',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer_outlined),
-            selectedIcon: Icon(Icons.timer),
+            icon: Icon(Icons.timer),
             label: 'Hours',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
+            icon: Icon(Icons.attach_money),
+            label: 'Finance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.person),
             label: 'Profile',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class FinanceScreen extends StatelessWidget {
-  const FinanceScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finance'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: const Center(
-        child: Text(
-          'Finance',
-          style: TextStyle(fontSize: 24),
-        ),
-      ),
-    );
-  }
-}
-
-class HoursScreen extends StatelessWidget {
-  const HoursScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Volunteer Hours'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-      ),
-      body: const Center(
-        child: Text(
-          'Volunteer Hours',
-          style: TextStyle(fontSize: 24),
-        ),
       ),
     );
   }

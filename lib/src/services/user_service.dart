@@ -63,4 +63,23 @@ class UserService {
       throw Exception('Failed to update profile: ${e.toString()}');
     }
   }
+
+  Future<UserProfile?> getCurrentUserProfile() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return null;
+
+      final doc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
+      if (!doc.exists) return null;
+
+      return UserProfile.fromMap(doc.data()!);
+    } catch (e, stackTrace) {
+      AppLogger.error('Error getting current user profile', e, stackTrace);
+      return null;
+    }
+  }
 } 

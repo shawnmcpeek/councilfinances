@@ -7,7 +7,6 @@ import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../utils/logger.dart';
 import '../theme/app_theme.dart';
-import '../screens/programs_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onProgramsPressed;
@@ -205,9 +204,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _firstNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'First Name',
-                      ),
+                      decoration: AppTheme.formFieldDecorationWithLabel('First Name'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your first name';
@@ -220,9 +217,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Expanded(
                     child: TextFormField(
                       controller: _lastNameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Last Name',
-                      ),
+                      decoration: AppTheme.formFieldDecorationWithLabel('Last Name'),
                       validator: (value) {
                         if (value == null || value.isEmpty) {
                           return 'Please enter your last name';
@@ -236,9 +231,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               SizedBox(height: AppTheme.spacing),
               TextFormField(
                 controller: _membershipNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Membership Number',
-                ),
+                decoration: AppTheme.formFieldDecorationWithLabel('Membership Number'),
                 keyboardType: TextInputType.number,
                 inputFormatters: [
                   FilteringTextInputFormatter.digitsOnly,
@@ -255,64 +248,80 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
               ),
               SizedBox(height: AppTheme.spacing),
-              TextFormField(
-                controller: _councilNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Council Number',
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(AppTheme.spacing),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _councilNumberController,
+                        decoration: AppTheme.formFieldDecorationWithLabel('Council Number'),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                        onChanged: _validateCouncilNumber,
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return 'Please enter your council number';
+                          }
+                          if (value.length > 6) {
+                            return 'Council number cannot exceed 6 digits';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_showCouncilRoles) ...[
+                        SizedBox(height: AppTheme.spacing),
+                        _buildRoleSelector(
+                          title: 'Council Roles',
+                          roles: CouncilRole.values,
+                          selectedRoles: _selectedCouncilRoles,
+                          onChanged: (roles) => setState(() => _selectedCouncilRoles = roles.cast<CouncilRole>()),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                onChanged: _validateCouncilNumber,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your council number';
-                  }
-                  if (value.length > 6) {
-                    return 'Council number cannot exceed 6 digits';
-                  }
-                  return null;
-                },
               ),
-              if (_showCouncilRoles) ...[
-                SizedBox(height: AppTheme.spacing),
-                _buildRoleSelector(
-                  title: 'Council Roles',
-                  roles: CouncilRole.values,
-                  selectedRoles: _selectedCouncilRoles,
-                  onChanged: (roles) => setState(() => _selectedCouncilRoles = roles.cast<CouncilRole>()),
-                ),
-              ],
               SizedBox(height: AppTheme.spacing),
-              TextFormField(
-                controller: _assemblyNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Assembly Number (optional)',
+              Card(
+                child: Padding(
+                  padding: EdgeInsets.all(AppTheme.spacing),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      TextFormField(
+                        controller: _assemblyNumberController,
+                        decoration: AppTheme.formFieldDecorationWithLabel('Assembly Number (optional)'),
+                        keyboardType: TextInputType.number,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(6),
+                        ],
+                        onChanged: _validateAssemblyNumber,
+                        validator: (value) {
+                          if (value != null && value.isNotEmpty && value.length > 6) {
+                            return 'Assembly number cannot exceed 6 digits';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_showAssemblyRoles) ...[
+                        SizedBox(height: AppTheme.spacing),
+                        _buildRoleSelector(
+                          title: 'Assembly Roles',
+                          roles: AssemblyRole.values,
+                          selectedRoles: _selectedAssemblyRoles,
+                          onChanged: (roles) => setState(() => _selectedAssemblyRoles = roles.cast<AssemblyRole>()),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [
-                  FilteringTextInputFormatter.digitsOnly,
-                  LengthLimitingTextInputFormatter(6),
-                ],
-                onChanged: _validateAssemblyNumber,
-                validator: (value) {
-                  if (value != null && value.isNotEmpty && value.length > 6) {
-                    return 'Assembly number cannot exceed 6 digits';
-                  }
-                  return null;
-                },
               ),
-              if (_showAssemblyRoles) ...[
-                SizedBox(height: AppTheme.spacing),
-                _buildRoleSelector(
-                  title: 'Assembly Roles',
-                  roles: AssemblyRole.values,
-                  selectedRoles: _selectedAssemblyRoles,
-                  onChanged: (roles) => setState(() => _selectedAssemblyRoles = roles.cast<AssemblyRole>()),
-                ),
-              ],
               SizedBox(height: AppTheme.largeSpacing),
               FilledButton(
                 onPressed: _isLoading ? null : _saveProfile,

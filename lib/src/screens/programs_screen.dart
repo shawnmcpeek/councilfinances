@@ -6,16 +6,16 @@ import '../services/program_service.dart';
 import '../services/user_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/logger.dart';
+import 'package:provider/provider.dart';
+import '../providers/organization_provider.dart';
 
 class ProgramsScreen extends StatefulWidget {
-  final bool initialIsAssembly;
   final String organizationId;
-  
-  const ProgramsScreen({
-    super.key,
-    required this.initialIsAssembly,
+
+  ProgramsScreen({
+    Key? key,
     required this.organizationId,
-  });
+  }) : super(key: key);
 
   @override
   State<ProgramsScreen> createState() => _ProgramsScreenState();
@@ -27,7 +27,6 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   ProgramsData? _systemPrograms;
   List<Program>? _customPrograms;
   bool _isLoading = true;
-  bool _isAssembly = false;
   String? _organizationId;
   UserProfile? _userProfile;
   bool _hasFullAccess = false;
@@ -37,7 +36,6 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   @override
   void initState() {
     super.initState();
-    _isAssembly = widget.initialIsAssembly;
     _organizationId = widget.organizationId;
     _loadPrograms();
   }
@@ -45,10 +43,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   @override
   void didUpdateWidget(ProgramsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.initialIsAssembly != widget.initialIsAssembly ||
-        oldWidget.organizationId != widget.organizationId) {
+    if (oldWidget.organizationId != widget.organizationId) {
       setState(() {
-        _isAssembly = widget.initialIsAssembly;
         _organizationId = widget.organizationId;
       });
       // Only reload if we haven't loaded these programs before
@@ -61,7 +57,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   bool _checkFullAccess() {
     if (_userProfile == null) return false;
     
-    if (_isAssembly) {
+    final isAssembly = context.read<OrganizationProvider>().isAssembly;
+    if (isAssembly) {
       return _userProfile!.assemblyRoles.any((role) => role.accessLevel == AccessLevel.full);
     } else {
       return _userProfile!.councilRoles.any((role) => role.accessLevel == AccessLevel.full);
@@ -80,7 +77,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         throw Exception('Invalid organization ID');
       }
 
-      AppLogger.debug('Loading programs for organization: $_organizationId, isAssembly: $_isAssembly');
+      final isAssembly = context.read<OrganizationProvider>().isAssembly;
+      AppLogger.debug('Loading programs for organization: $_organizationId, isAssembly: $isAssembly');
       
       // Load system programs only if we haven't loaded them yet
       if (_systemPrograms == null) {
@@ -88,8 +86,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       }
       
       // Always load the current organization's program states and custom programs
-      await _programService.loadProgramStates(_systemPrograms!, _organizationId!, _isAssembly);
-      final customPrograms = await _programService.getCustomPrograms(_organizationId!, _isAssembly);
+      await _programService.loadProgramStates(_systemPrograms!, _organizationId!, isAssembly);
+      final customPrograms = await _programService.getCustomPrograms(_organizationId!, isAssembly);
 
       if (mounted) {
         setState(() {
@@ -132,8 +130,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         ),
       ).then((discard) {
         if (discard == true) {
+          final organizationProvider = context.read<OrganizationProvider>();
+          organizationProvider.toggleOrganization();
           setState(() {
-            _isAssembly = !_isAssembly;
             _hasFullAccess = _checkFullAccess();
             _hasUnsavedChanges = false;
             _pendingStateChanges.clear();
@@ -142,8 +141,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         }
       });
     } else {
+      final organizationProvider = context.read<OrganizationProvider>();
+      organizationProvider.toggleOrganization();
       setState(() {
-        _isAssembly = !_isAssembly;
         _hasFullAccess = _checkFullAccess();
       });
       _loadPrograms();
@@ -155,8 +155,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
     setState(() => _isLoading = true);
     try {
+      final isAssembly = context.read<OrganizationProvider>().isAssembly;
       // Get all programs (both system and custom)
-      final programs = _isAssembly 
+      final programs = isAssembly 
           ? _systemPrograms?.assemblyPrograms ?? {}
           : _systemPrograms?.councilPrograms ?? {};
 
@@ -235,16 +236,17 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       return;
     }
 
+    final isAssembly = context.read<OrganizationProvider>().isAssembly;
     final result = await showDialog<Program>(
       context: context,
       builder: (context) => _ProgramDialog(
-        isAssembly: _isAssembly,
+        isAssembly: isAssembly,
       ),
     );
 
     if (result != null && _organizationId != null) {
       try {
-        await _programService.addCustomProgram(_organizationId!, result, _isAssembly);
+        await _programService.addCustomProgram(_organizationId!, result, isAssembly);
         _loadPrograms();
       } catch (e) {
         AppLogger.error('Error adding program', e);
@@ -259,9 +261,10 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isAssembly = context.watch<OrganizationProvider>().isAssembly;
     return Scaffold(
       appBar: AppBar(
-        title: Text('${_isAssembly ? 'Assembly' : 'Council'} Programs'),
+        title: Text('${isAssembly ? 'Assembly' : 'Council'} Programs'),
         actions: [
           if (_hasUnsavedChanges && _hasFullAccess)
             TextButton.icon(
@@ -284,7 +287,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final systemPrograms = _isAssembly 
+    final isAssembly = context.watch<OrganizationProvider>().isAssembly;
+    final systemPrograms = isAssembly 
         ? _systemPrograms?.assemblyPrograms ?? {}
         : _systemPrograms?.councilPrograms ?? {};
 
@@ -315,10 +319,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                 flex: 1,
                 child: FilledButton(
                   onPressed: () {
-                    if (!_isAssembly) return;
+                    if (isAssembly) return;
                     if (_userProfile?.councilNumber == null) return;
                     setState(() {
-                      _isAssembly = false;
                       _hasFullAccess = _checkFullAccess();
                       _hasUnsavedChanges = false;
                       _pendingStateChanges.clear();
@@ -327,10 +330,10 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                     _loadPrograms();
                   },
                   style: FilledButton.styleFrom(
-                    backgroundColor: !_isAssembly 
+                    backgroundColor: !isAssembly 
                       ? AppTheme.primaryColor
                       : AppTheme.primaryColor.withOpacity(0.1),
-                    foregroundColor: !_isAssembly
+                    foregroundColor: !isAssembly
                       ? Colors.white
                       : AppTheme.primaryColor,
                     padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -347,10 +350,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                   flex: 1,
                   child: FilledButton(
                     onPressed: () {
-                      if (_isAssembly) return;
+                      if (!isAssembly) return;
                       if (_userProfile?.assemblyNumber == null) return;
                       setState(() {
-                        _isAssembly = true;
                         _hasFullAccess = _checkFullAccess();
                         _hasUnsavedChanges = false;
                         _pendingStateChanges.clear();
@@ -359,10 +361,10 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                       _loadPrograms();
                     },
                     style: FilledButton.styleFrom(
-                      backgroundColor: _isAssembly 
+                      backgroundColor: isAssembly 
                         ? AppTheme.primaryColor
                         : AppTheme.primaryColor.withOpacity(0.1),
-                      foregroundColor: _isAssembly
+                      foregroundColor: isAssembly
                         ? Colors.white
                         : AppTheme.primaryColor,
                       padding: const EdgeInsets.symmetric(vertical: 16.0),
@@ -381,7 +383,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
           Expanded(
             child: Center(
               child: Text(
-                _isAssembly ? 'No assembly programs available' : 'No council programs available',
+                isAssembly ? 'No assembly programs available' : 'No council programs available',
                 style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
@@ -430,17 +432,18 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () async {
+                final isAssembly = context.read<OrganizationProvider>().isAssembly;
                 final result = await showDialog<Program>(
                   context: context,
                   builder: (context) => _ProgramDialog(
-                    isAssembly: _isAssembly,
+                    isAssembly: isAssembly,
                     program: program,
                   ),
                 );
 
                 if (result != null && _organizationId != null) {
                   try {
-                    await _programService.updateCustomProgram(_organizationId!, result, _isAssembly);
+                    await _programService.updateCustomProgram(_organizationId!, result, isAssembly);
                     _loadPrograms();
                   } catch (e) {
                     AppLogger.error('Error updating program', e);
@@ -476,7 +479,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
                 if (confirm == true && _organizationId != null) {
                   try {
-                    await _programService.deleteCustomProgram(_organizationId!, program.id, _isAssembly);
+                    final isAssembly = context.read<OrganizationProvider>().isAssembly;
+                    await _programService.deleteCustomProgram(_organizationId!, program.id, isAssembly);
                     _loadPrograms();
                   } catch (e) {
                     AppLogger.error('Error deleting program', e);
@@ -530,12 +534,12 @@ class _ProgramDialogState extends State<_ProgramDialog> {
   @override
   Widget build(BuildContext context) {
     final categories = widget.isAssembly 
-        ? [ProgramCategory.PATRIOTIC]
+        ? [ProgramCategory.patriotic]
         : [
-            ProgramCategory.FAITH,
-            ProgramCategory.FAMILY,
-            ProgramCategory.COMMUNITY,
-            ProgramCategory.LIFE,
+            ProgramCategory.faith,
+            ProgramCategory.family,
+            ProgramCategory.community,
+            ProgramCategory.life,
           ];
 
     return AlertDialog(
