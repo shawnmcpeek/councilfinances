@@ -10,10 +10,10 @@ class HoursHistoryList extends StatefulWidget {
   final bool isAssembly;
 
   const HoursHistoryList({
-    Key? key,
+    super.key,
     required this.organizationId,
     required this.isAssembly,
-  }) : super(key: key);
+  });
 
   @override
   State<HoursHistoryList> createState() => _HoursHistoryListState();

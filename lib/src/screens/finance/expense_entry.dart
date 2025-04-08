@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/logger.dart';
 import '../../services/finance_service.dart';
-import '../../services/program_service.dart';
 import '../../models/program.dart';
 import '../../models/payment_method.dart';
 import '../../components/program_dropdown.dart';
@@ -29,7 +28,6 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
   final _descriptionController = TextEditingController();
   final _checkNumberController = TextEditingController();
   final _financeService = FinanceService();
-  final _programService = ProgramService();
   
   bool _isExpanded = true;
   Program? _selectedProgram;

@@ -12,25 +12,25 @@ import '../providers/organization_provider.dart';
 class ProgramsScreen extends StatefulWidget {
   final String organizationId;
 
-  ProgramsScreen({
-    Key? key,
+  const ProgramsScreen({
+    super.key,
     required this.organizationId,
-  }) : super(key: key);
+  });
 
   @override
   State<ProgramsScreen> createState() => _ProgramsScreenState();
 }
 
 class _ProgramsScreenState extends State<ProgramsScreen> {
-  final ProgramService _programService = ProgramService();
-  final UserService _userService = UserService();
-  ProgramsData? _systemPrograms;
-  List<Program>? _customPrograms;
-  bool _isLoading = true;
+  final _userService = UserService();
+  final _programService = ProgramService();
   String? _organizationId;
   UserProfile? _userProfile;
+  ProgramsData? _systemPrograms;
+  List<Program> _customPrograms = [];
   bool _hasFullAccess = false;
   bool _hasUnsavedChanges = false;
+  bool _isLoading = false;
   final Map<String, bool> _pendingStateChanges = {};
 
   @override
@@ -66,87 +66,48 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   Future<void> _loadPrograms() async {
+    if (!mounted) return;
+    
     setState(() => _isLoading = true);
     try {
       final userProfile = await _userService.getUserProfile();
+      if (!mounted) return;
+      
       if (userProfile == null) {
         throw Exception('User profile not found');
       }
 
-      if (_organizationId == null || _organizationId!.isEmpty) {
+      final orgId = _organizationId ?? '';
+      if (orgId.isEmpty) {
         throw Exception('Invalid organization ID');
       }
 
       final isAssembly = context.read<OrganizationProvider>().isAssembly;
-      AppLogger.debug('Loading programs for organization: $_organizationId, isAssembly: $isAssembly');
+      AppLogger.debug('Loading programs for organization: $orgId, isAssembly: $isAssembly');
       
       // Load system programs only if we haven't loaded them yet
-      if (_systemPrograms == null) {
-        _systemPrograms = await _programService.loadSystemPrograms();
-      }
+      _systemPrograms ??= await _programService.loadSystemPrograms();
       
       // Always load the current organization's program states and custom programs
-      await _programService.loadProgramStates(_systemPrograms!, _organizationId!, isAssembly);
-      final customPrograms = await _programService.getCustomPrograms(_organizationId!, isAssembly);
+      await _programService.loadProgramStates(_systemPrograms!, orgId, isAssembly);
+      final customPrograms = await _programService.getCustomPrograms(orgId, isAssembly);
 
-      if (mounted) {
-        setState(() {
-          _userProfile = userProfile;
-          _customPrograms = customPrograms;
-          _hasFullAccess = _checkFullAccess();
-          _hasUnsavedChanges = false;
-          _pendingStateChanges.clear();
-          _isLoading = false;
-        });
-      }
+      if (!mounted) return;
+      setState(() {
+        _userProfile = userProfile;
+        _customPrograms = customPrograms;
+        _hasFullAccess = _checkFullAccess();
+        _hasUnsavedChanges = false;
+        _pendingStateChanges.clear();
+        _isLoading = false;
+      });
     } catch (e) {
       AppLogger.error('Error loading programs', e);
-      if (mounted) {
-        setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading programs: ${e.toString()}')),
-        );
-      }
-    }
-  }
-
-  void _toggleOrganizationType() {
-    if (_hasUnsavedChanges) {
-      showDialog<bool>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Unsaved Changes'),
-          content: const Text('You have unsaved changes. Do you want to discard them?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('CANCEL'),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('DISCARD'),
-            ),
-          ],
-        ),
-      ).then((discard) {
-        if (discard == true) {
-          final organizationProvider = context.read<OrganizationProvider>();
-          organizationProvider.toggleOrganization();
-          setState(() {
-            _hasFullAccess = _checkFullAccess();
-            _hasUnsavedChanges = false;
-            _pendingStateChanges.clear();
-          });
-          _loadPrograms();
-        }
-      });
-    } else {
-      final organizationProvider = context.read<OrganizationProvider>();
-      organizationProvider.toggleOrganization();
-      setState(() {
-        _hasFullAccess = _checkFullAccess();
-      });
-      _loadPrograms();
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading programs: ${e.toString()}')),
+      );
     }
   }
 
@@ -177,15 +138,13 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         }
       }
 
-      // Add custom program states if they exist
-      if (_customPrograms != null) {
-        for (var program in _customPrograms!) {
-          final bool isEnabled = _pendingStateChanges.containsKey(program.id)
-              ? _pendingStateChanges[program.id]!
-              : program.isEnabled;
-          allProgramStates[program.id] = isEnabled;
-          AppLogger.debug('Custom program ${program.name} (${program.id}): $isEnabled');
-        }
+      // Add custom program states
+      for (var program in _customPrograms) {
+        final bool isEnabled = _pendingStateChanges.containsKey(program.id)
+            ? _pendingStateChanges[program.id]!
+            : program.isEnabled;
+        allProgramStates[program.id] = isEnabled;
+        AppLogger.debug('Custom program ${program.name} (${program.id}): $isEnabled');
       }
 
       AppLogger.debug('Saving program states to Firestore: $allProgramStates');
@@ -230,6 +189,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
   Future<void> _addCustomProgram() async {
     if (!_hasFullAccess) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('You do not have permission to add programs')),
       );
@@ -237,6 +197,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     }
 
     final isAssembly = context.read<OrganizationProvider>().isAssembly;
+    if (!mounted) return;
     final result = await showDialog<Program>(
       context: context,
       builder: (context) => _ProgramDialog(
@@ -247,14 +208,14 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     if (result != null && _organizationId != null) {
       try {
         await _programService.addCustomProgram(_organizationId!, result, isAssembly);
+        if (!mounted) return;
         _loadPrograms();
       } catch (e) {
         AppLogger.error('Error adding program', e);
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error adding program: ${e.toString()}')),
-          );
-        }
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error adding program: ${e.toString()}')),
+        );
       }
     }
   }
@@ -262,19 +223,43 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   @override
   Widget build(BuildContext context) {
     final isAssembly = context.watch<OrganizationProvider>().isAssembly;
+
     return Scaffold(
       appBar: AppBar(
         title: Text('${isAssembly ? 'Assembly' : 'Council'} Programs'),
         actions: [
           if (_hasUnsavedChanges && _hasFullAccess)
-            TextButton.icon(
-              onPressed: _saveChanges,
-              icon: const Icon(Icons.save, color: Colors.white),
-              label: const Text('SAVE', style: TextStyle(color: Colors.white)),
+            Padding(
+              padding: const EdgeInsets.only(right: 8.0),
+              child: FilledButton.icon(
+                onPressed: _saveChanges,
+                icon: const Icon(Icons.save),
+                label: const Text('SAVE CHANGES'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.primaryColor,
+                ),
+              ),
             ),
         ],
       ),
-      body: _buildBody(),
+      body: Column(
+        children: [
+          Expanded(
+            child: _buildBody(),
+          ),
+          if (_hasUnsavedChanges && _hasFullAccess)
+            Padding(
+              padding: EdgeInsets.all(AppTheme.spacing),
+              child: FilledButton.icon(
+                onPressed: _saveChanges,
+                icon: const Icon(Icons.save),
+                label: const Text('SAVE PROGRAM CHANGES'),
+                style: AppTheme.filledButtonStyle,
+              ),
+            ),
+        ],
+      ),
       floatingActionButton: _hasFullAccess ? FloatingActionButton(
         onPressed: _addCustomProgram,
         child: const Icon(Icons.add),
@@ -288,26 +273,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     }
 
     final isAssembly = context.watch<OrganizationProvider>().isAssembly;
-    final systemPrograms = isAssembly 
+    final programs = isAssembly 
         ? _systemPrograms?.assemblyPrograms ?? {}
         : _systemPrograms?.councilPrograms ?? {};
-
-    // Merge custom programs into their categories
-    final Map<String, List<Program>> mergedPrograms = {};
-    
-    // Initialize with system programs
-    for (var entry in systemPrograms.entries) {
-      mergedPrograms[entry.key.toLowerCase()] = List.from(entry.value);
-    }
-    
-    // Add custom programs to their respective categories
-    if (_customPrograms != null) {
-      for (var program in _customPrograms!) {
-        final category = program.category.toLowerCase();
-        mergedPrograms.putIfAbsent(category, () => []);
-        mergedPrograms[category]!.add(program);
-      }
-    }
 
     return Column(
       children: [
@@ -319,20 +287,21 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                 flex: 1,
                 child: FilledButton(
                   onPressed: () {
-                    if (isAssembly) return;
                     if (_userProfile?.councilNumber == null) return;
+                    if (!isAssembly) return; // Only allow pressing when in Assembly mode
                     setState(() {
                       _hasFullAccess = _checkFullAccess();
                       _hasUnsavedChanges = false;
                       _pendingStateChanges.clear();
                       _organizationId = 'C${_userProfile!.councilNumber.toString().padLeft(6, '0')}';
                     });
+                    context.read<OrganizationProvider>().setOrganization(false);
                     _loadPrograms();
                   },
                   style: FilledButton.styleFrom(
                     backgroundColor: !isAssembly 
                       ? AppTheme.primaryColor
-                      : AppTheme.primaryColor.withOpacity(0.1),
+                      : AppTheme.primaryColor.withAlpha(25),
                     foregroundColor: !isAssembly
                       ? Colors.white
                       : AppTheme.primaryColor,
@@ -350,20 +319,21 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                   flex: 1,
                   child: FilledButton(
                     onPressed: () {
-                      if (!isAssembly) return;
                       if (_userProfile?.assemblyNumber == null) return;
+                      if (isAssembly) return; // Only allow pressing when in Council mode
                       setState(() {
                         _hasFullAccess = _checkFullAccess();
                         _hasUnsavedChanges = false;
                         _pendingStateChanges.clear();
                         _organizationId = 'A${_userProfile!.assemblyNumber.toString().padLeft(6, '0')}';
                       });
+                      context.read<OrganizationProvider>().setOrganization(true);
                       _loadPrograms();
                     },
                     style: FilledButton.styleFrom(
                       backgroundColor: isAssembly 
                         ? AppTheme.primaryColor
-                        : AppTheme.primaryColor.withOpacity(0.1),
+                        : AppTheme.primaryColor.withAlpha(25),
                       foregroundColor: isAssembly
                         ? Colors.white
                         : AppTheme.primaryColor,
@@ -379,7 +349,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
             ],
           ),
         ),
-        if (mergedPrograms.isEmpty)
+        if (programs.isEmpty && _customPrograms.isEmpty)
           Expanded(
             child: Center(
               child: Text(
@@ -390,33 +360,61 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
           )
         else
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.all(AppTheme.spacing),
-              children: mergedPrograms.entries.map((entry) => _buildCategorySection(
-                entry.key,
-                entry.value,
-                false,
-              )).toList(),
+            child: Material(
+              child: ListView(
+                padding: EdgeInsets.all(AppTheme.spacing),
+                children: [
+                  // System programs by category
+                  for (var entry in programs.entries) ...[
+                    Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppTheme.spacing),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              entry.key[0].toUpperCase() + entry.key.substring(1).toLowerCase(),
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            SizedBox(height: AppTheme.spacing),
+                            ...entry.value.map((program) => _buildProgramTile(program)),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: AppTheme.spacing),
+                  ],
+                  // Custom programs section if any exist
+                  if (_customPrograms.isNotEmpty) ...[
+                    Card(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppTheme.spacing),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Custom Programs',
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                            SizedBox(height: AppTheme.spacing),
+                            ..._customPrograms.map((program) => _buildProgramTile(program)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildCategorySection(String category, List<Program> programs, bool isSystem) {
-    return Card(
-      margin: EdgeInsets.only(bottom: AppTheme.spacing),
-      child: ExpansionTile(
-        title: Text(category.toUpperCase(), style: AppTheme.subheadingStyle),
-        children: programs.map((program) => _buildProgramTile(program)).toList(),
-      ),
-    );
-  }
-
   Widget _buildProgramTile(Program program) {
     // Get the current enabled state, considering pending changes
     final bool isEnabled = _pendingStateChanges.containsKey(program.id)
-        ? _pendingStateChanges[program.id]!
+        ? _pendingStateChanges[program.id] ?? program.isEnabled
         : program.isEnabled;
 
     return ListTile(
@@ -432,6 +430,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
             IconButton(
               icon: const Icon(Icons.edit),
               onPressed: () async {
+                if (!mounted) return;
                 final isAssembly = context.read<OrganizationProvider>().isAssembly;
                 final result = await showDialog<Program>(
                   context: context,
@@ -444,14 +443,14 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                 if (result != null && _organizationId != null) {
                   try {
                     await _programService.updateCustomProgram(_organizationId!, result, isAssembly);
+                    if (!mounted) return;
                     _loadPrograms();
                   } catch (e) {
                     AppLogger.error('Error updating program', e);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error updating program: ${e.toString()}')),
-                      );
-                    }
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error updating program: ${e.toString()}')),
+                    );
                   }
                 }
               },
@@ -459,6 +458,8 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
             IconButton(
               icon: const Icon(Icons.delete),
               onPressed: () async {
+                if (!mounted) return;
+                final isAssembly = context.read<OrganizationProvider>().isAssembly;
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -479,16 +480,15 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
                 if (confirm == true && _organizationId != null) {
                   try {
-                    final isAssembly = context.read<OrganizationProvider>().isAssembly;
                     await _programService.deleteCustomProgram(_organizationId!, program.id, isAssembly);
+                    if (!mounted) return;
                     _loadPrograms();
                   } catch (e) {
                     AppLogger.error('Error deleting program', e);
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Error deleting program: ${e.toString()}')),
-                      );
-                    }
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Error deleting program: ${e.toString()}')),
+                    );
                   }
                 }
               },
@@ -522,7 +522,7 @@ class _ProgramDialogState extends State<_ProgramDialog> {
     super.initState();
     _nameController = TextEditingController(text: widget.program?.name ?? '');
     _selectedCategory = widget.program?.category ?? 
-        (widget.isAssembly ? 'PATRIOTIC' : 'FAITH');
+        (widget.isAssembly ? ProgramCategory.patriotic.name : ProgramCategory.faith.name);
   }
 
   @override
@@ -557,8 +557,10 @@ class _ProgramDialogState extends State<_ProgramDialog> {
           DropdownButtonFormField<String>(
             value: _selectedCategory,
             items: categories.map((category) => DropdownMenuItem(
-              value: category.toString().split('.').last,
-              child: Text(category.toString().split('.').last),
+              value: category.name,
+              child: Text(
+                category.name[0].toUpperCase() + category.name.substring(1).toLowerCase(),
+              ),
             )).toList(),
             onChanged: (value) {
               if (value != null) {

@@ -2,13 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
 import '../theme/app_theme.dart';
-import '../models/user_profile.dart';
-import '../services/user_service.dart';
-import '../utils/logger.dart';
 import '../components/organization_toggle.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({Key? key}) : super(key: key);
+  const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

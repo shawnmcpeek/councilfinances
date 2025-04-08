@@ -12,7 +12,7 @@ import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
 
 class ProgramsCollectScreen extends StatefulWidget {
-  const ProgramsCollectScreen({Key? key}) : super(key: key);
+  const ProgramsCollectScreen({super.key});
 
   @override
   State<ProgramsCollectScreen> createState() => _ProgramsCollectScreenState();
@@ -249,106 +249,88 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
 
                   // Program Dropdown
                   DropdownButtonFormField<Form1728PProgram>(
-                    decoration: const InputDecoration(
-                      labelText: 'Charitable Program',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
+                    decoration: AppTheme.formFieldDecorationWithLabel('Charitable Program'),
                     value: _selectedProgram,
                     items: _selectedCategory != null 
                       ? _programs[_selectedCategory]?.map((program) {
                           return DropdownMenuItem(
                             value: program,
-                            child: Text(
-                              program.name,
-                              style: const TextStyle(fontSize: 16),
-                            ),
+                            child: Text(program.name),
                           );
                         }).toList() ?? []
                       : [],
                     onChanged: _onProgramChanged,
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppTheme.spacing),
 
                   // Date Picker
                   InkWell(
                     onTap: () => _selectDate(context),
                     child: InputDecorator(
-                      decoration: const InputDecoration(
-                        labelText: 'Program Date',
-                        border: OutlineInputBorder(),
-                        contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      ),
+                      decoration: AppTheme.formFieldDecorationWithLabel('Program Date'),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
                             '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}',
-                            style: const TextStyle(fontSize: 16),
                           ),
                           const Icon(Icons.calendar_today),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppTheme.spacing),
 
                   // Hours Input
                   TextField(
                     controller: _hoursController,
-                    decoration: const InputDecoration(
-                      labelText: 'Service Hours',
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter total volunteer hours',
-                    ),
+                    decoration: AppTheme.formFieldDecorationWithLabel('Service Hours')
+                        .copyWith(hintText: 'Enter total volunteer hours'),
                     keyboardType: TextInputType.number,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppTheme.spacing),
 
                   // Disbursement Input
                   TextField(
                     controller: _disbursementController,
-                    decoration: const InputDecoration(
-                      labelText: 'Charitable Disbursements',
-                      border: OutlineInputBorder(),
-                      hintText: 'Enter total charitable disbursements',
-                      prefixText: '\$',
-                    ),
+                    decoration: AppTheme.formFieldDecorationWithLabel('Charitable Disbursements')
+                        .copyWith(
+                          hintText: 'Enter total charitable disbursements',
+                          prefixText: '\$',
+                        ),
                     keyboardType: const TextInputType.numberWithOptions(decimal: true),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
                     ],
                   ),
-                  const SizedBox(height: 24),
+                  SizedBox(height: AppTheme.spacing),
 
                   // Description Input
                   TextField(
                     controller: _descriptionController,
-                    decoration: const InputDecoration(
-                      labelText: 'Description',
-                      border: OutlineInputBorder(),
-                      hintText: 'Describe the activity (e.g., "March for Life Rally in DC")',
-                    ),
+                    decoration: AppTheme.formFieldDecorationWithLabel('Description')
+                        .copyWith(hintText: 'Describe the activity (e.g., "March for Life Rally in DC")'),
                     maxLines: 3,
                     textCapitalization: TextCapitalization.sentences,
                   ),
-                  const SizedBox(height: 32),
+                  SizedBox(height: AppTheme.largeSpacing),
 
                   // Submit Button
-                  ElevatedButton.icon(
+                  FilledButton.icon(
                     onPressed: _isSaving ? null : _submitEntry,
                     icon: _isSaving 
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
                         )
                       : const Icon(Icons.save),
                     label: Text(_isSaving ? 'Saving...' : 'Submit'),
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                    ),
+                    style: AppTheme.filledButtonStyle,
                   ),
                 ],
               ),

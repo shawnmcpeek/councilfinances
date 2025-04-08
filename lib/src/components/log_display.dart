@@ -145,8 +145,8 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
     if (entry.details.containsKey('Type')) {
       final isExpense = entry.details['Type'] == 'Expense';
       return isExpense 
-          ? Colors.red.withOpacity(0.3)
-          : Colors.green.withOpacity(0.3);
+          ? Colors.red.withAlpha(77)
+          : Colors.green.withAlpha(77);
     }
     // Default color for non-financial entries
     return Colors.transparent;
@@ -244,7 +244,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
                                 onTap: () => _showEntryDetails(entry),
                                 child: Container(
                                   decoration: BoxDecoration(
-                                    color: isEven ? Colors.grey.withOpacity(0.05) : null,
+                                    color: isEven ? Colors.grey.withAlpha(13) : null,
                                     border: Border(
                                       left: BorderSide(
                                         color: _getEntryColor(entry),

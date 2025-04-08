@@ -15,10 +15,10 @@ class HoursEntryForm extends StatefulWidget {
   final bool isAssembly;
 
   const HoursEntryForm({
-    Key? key,
+    super.key,
     required this.organizationId,
     required this.isAssembly,
-  }) : super(key: key);
+  });
 
   @override
   State<HoursEntryForm> createState() => _HoursEntryFormState();
@@ -33,7 +33,6 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
   bool _isLoading = false;
   UserProfile? _userProfile;
   ProgramsData? _systemPrograms;
-  List<Program>? _customPrograms;
   Program? _selectedProgram;
   DateTime _startDate = DateTime.now();
   TimeOfDay _startTime = TimeOfDay.now();
@@ -73,15 +72,11 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
       // Load system programs if we haven't yet
       _systemPrograms ??= await _programService.loadSystemPrograms();
       
-      // Load program states and custom programs
+      // Load program states
       await _programService.loadProgramStates(_systemPrograms!, widget.organizationId, widget.isAssembly);
-      final customPrograms = await _programService.getCustomPrograms(widget.organizationId, widget.isAssembly);
 
       if (mounted) {
-        setState(() {
-          _customPrograms = customPrograms;
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     } catch (e) {
       AppLogger.error('Error loading programs', e);
@@ -89,30 +84,6 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         setState(() => _isLoading = false);
       }
     }
-  }
-
-  List<Program> _getEnabledPrograms() {
-    final List<Program> enabledPrograms = [];
-    
-    // Add system programs
-    final programs = widget.isAssembly
-        ? _systemPrograms?.assemblyPrograms ?? {}
-        : _systemPrograms?.councilPrograms ?? {};
-    
-    for (var categoryPrograms in programs.values) {
-      enabledPrograms.addAll(
-        categoryPrograms.where((program) => program.isEnabled)
-      );
-    }
-    
-    // Add custom programs
-    if (_customPrograms != null) {
-      enabledPrograms.addAll(
-        _customPrograms!.where((program) => program.isEnabled)
-      );
-    }
-    
-    return enabledPrograms;
   }
 
   Future<void> _selectStartDate() async {

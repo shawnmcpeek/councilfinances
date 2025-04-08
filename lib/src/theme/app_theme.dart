@@ -77,29 +77,26 @@ class AppTheme {
   // Variant for selected/unselected state
   static ButtonStyle getButtonStyle({bool isSelected = true}) {
     return baseButtonStyle.copyWith(
-      backgroundColor: MaterialStateProperty.all(
-        isSelected ? primaryColor : Colors.white,
+      backgroundColor: WidgetStateProperty.resolveWith((states) => 
+        isSelected ? primaryColor : Colors.white
       ),
-      foregroundColor: MaterialStateProperty.all(
-        isSelected ? Colors.white : primaryColor,
+      foregroundColor: WidgetStateProperty.resolveWith((states) => 
+        isSelected ? Colors.white : primaryColor
       ),
-      elevation: MaterialStateProperty.resolveWith((states) {
-        if (states.contains(MaterialState.pressed)) {
-          return isSelected ? 0 : 3;
-        }
-        return isSelected ? 2 : 6;
-      }),
-      shadowColor: MaterialStateProperty.all(
-        primaryColor.withOpacity(0.5),
+      elevation: WidgetStateProperty.resolveWith((states) => 
+        isSelected ? 2.0 : 6.0
       ),
-      surfaceTintColor: MaterialStateProperty.all(
-        isSelected ? Colors.white.withOpacity(0.1) : primaryColor.withOpacity(0.05),
+      shadowColor: WidgetStateProperty.resolveWith((states) => 
+        primaryColor.withAlpha(128)
       ),
-      side: MaterialStateProperty.all(
+      surfaceTintColor: WidgetStateProperty.resolveWith((states) => 
+        isSelected ? Colors.white.withAlpha(26) : primaryColor.withAlpha(13)
+      ),
+      side: WidgetStateProperty.resolveWith((states) => 
         BorderSide(
-          color: isSelected ? Colors.transparent : primaryColor.withOpacity(0.3),
+          color: isSelected ? Colors.transparent : primaryColor.withAlpha(77),
           width: 1.5,
-        ),
+        )
       ),
     );
   }
@@ -137,25 +134,21 @@ class AppTheme {
   // Dropdown Style
   static final dropdownTheme = DropdownMenuThemeData(
     menuStyle: MenuStyle(
-      elevation: MaterialStateProperty.all(2),
-      shape: MaterialStateProperty.all(
+      elevation: WidgetStateProperty.resolveWith((states) => 2.0),
+      shape: WidgetStateProperty.resolveWith((states) => 
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(8),
-        ),
+        )
       ),
-      padding: MaterialStateProperty.all(
-        const EdgeInsets.symmetric(horizontal: 12),
+      padding: WidgetStateProperty.resolveWith((states) => 
+        const EdgeInsets.symmetric(horizontal: 12)
       ),
     ),
   );
 
   // Chip Style
   static final ChipThemeData chipTheme = ChipThemeData(
-    backgroundColor: Color.fromRGBO(
-      primaryColor.r.toInt(),
-      primaryColor.g.toInt(),
-      primaryColor.b.toInt(),
-      0.1),
+    backgroundColor: Color.fromARGB(26, primaryColor.r.toInt(), primaryColor.g.toInt(), primaryColor.b.toInt()),
     selectedColor: primaryColor,
     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
     labelStyle: const TextStyle(fontSize: 14),

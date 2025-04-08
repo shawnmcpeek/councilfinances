@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../utils/logger.dart';
 import '../services/user_service.dart';
 import '../models/user_profile.dart';
 import '../components/organization_toggle.dart';
@@ -11,7 +10,7 @@ import 'finance/transaction_history.dart';
 import '../providers/organization_provider.dart';
 
 class FinanceScreen extends StatefulWidget {
-  const FinanceScreen({Key? key}) : super(key: key);
+  const FinanceScreen({super.key});
 
   @override
   State<FinanceScreen> createState() => _FinanceScreenState();

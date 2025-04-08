@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../utils/logger.dart';
 import 'package:share_plus/share_plus.dart';
+import '../services/user_service.dart';
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -126,6 +127,7 @@ class Form1728FieldMap {
 
 class ReportService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final UserService _userService = UserService();
 
   Future<Map<String, dynamic>> aggregateProgramData(String organizationId, String year) async {
     final Map<String, dynamic> totals = {
@@ -140,10 +142,12 @@ class ReportService {
       totals['year_end'] = year;
       
       // Extract council/assembly number from organizationId
-      final orgType = organizationId[0]; // 'C' or 'A'
       final orgNumber = organizationId.substring(1);
       totals['council_number'] = orgNumber.trim();
-      totals['jurisdiction'] = ''; // TODO: Get jurisdiction from profile
+
+      // Get jurisdiction from user profile
+      final userProfile = await _userService.getUserProfile();
+      totals['jurisdiction'] = userProfile?.jurisdiction ?? 'TN';
 
       // Get all categories
       final categories = ['faith', 'family', 'community', 'life'];

@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../../theme/app_theme.dart';
 import '../../utils/logger.dart';
 import '../../services/finance_service.dart';
 import '../../models/finance_entry.dart';
-import '../../models/payment_method.dart';
 
 class TransactionHistory extends StatefulWidget {
   final String organizationId;
@@ -23,11 +21,11 @@ class TransactionHistory extends StatefulWidget {
 class _TransactionHistoryState extends State<TransactionHistory> {
   final _financeService = FinanceService();
   final _currencyFormat = NumberFormat.currency(symbol: '\$');
+  final _expandedYears = <int>{};
+  final _expandedMonths = <String>{};
   
   bool _isLoading = true;
   Map<int, Map<int, List<FinanceEntry>>> _groupedEntries = {};
-  Set<int> _expandedYears = {};
-  Set<String> _expandedMonths = {};
 
   @override
   void initState() {
@@ -116,13 +114,6 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     return DateFormat('MMMM').format(DateTime(2000, month));
   }
 
-  Color _getEntryColor(FinanceEntry entry, bool isEven) {
-    final baseColor = entry.isExpense ? Colors.red : Colors.green;
-    return isEven 
-      ? Color.alphaBlend(Colors.grey.withOpacity(0.05), baseColor.withOpacity(0.3))
-      : baseColor.withOpacity(0.3);
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -164,10 +155,9 @@ class _TransactionHistoryState extends State<TransactionHistory> {
               ),
               onTap: () => _toggleYear(year),
             ),
-            if (isYearExpanded) ...[
+            if (isYearExpanded)
               for (var month in _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a)))
                 _buildMonthSection(year, month),
-            ],
           ],
         );
       },
@@ -201,9 +191,9 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey.withAlpha(26), // 0.1 opacity
                     border: Border(
-                      bottom: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      bottom: BorderSide(color: Colors.grey.withAlpha(51)), // 0.2 opacity
                     ),
                   ),
                   child: Row(
@@ -246,10 +236,12 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                   final financeEntry = entry.value;
                   return Container(
                     decoration: BoxDecoration(
-                      color: index.isEven ? Colors.grey.withOpacity(0.05) : null,
+                      color: index.isEven ? Colors.grey.withAlpha(13) : null, // 0.05 opacity
                       border: Border(
                         left: BorderSide(
-                          color: financeEntry.isExpense ? Colors.red.withOpacity(0.3) : Colors.green.withOpacity(0.3),
+                          color: financeEntry.isExpense 
+                            ? Colors.red.withAlpha(77)    // 0.3 opacity
+                            : Colors.green.withAlpha(77), // 0.3 opacity
                           width: 3,
                         ),
                       ),
@@ -305,14 +297,14 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                       ),
                     ),
                   );
-                }).toList(),
+                }),
                 // Monthly total
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                   decoration: BoxDecoration(
-                    color: Colors.grey.withOpacity(0.1),
+                    color: Colors.grey.withAlpha(26), // 0.1 opacity
                     border: Border(
-                      top: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                      top: BorderSide(color: Colors.grey.withAlpha(51)), // 0.2 opacity
                     ),
                   ),
                   child: Column(
@@ -365,7 +357,7 @@ class _TransactionHistoryState extends State<TransactionHistory> {
                                 decoration: BoxDecoration(
                                   border: Border(
                                     top: BorderSide(
-                                      color: Colors.grey.withOpacity(0.3),
+                                      color: Colors.grey.withAlpha(77),
                                       width: 1,
                                     ),
                                   ),

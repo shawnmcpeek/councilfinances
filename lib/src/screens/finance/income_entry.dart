@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import '../../theme/app_theme.dart';
 import '../../utils/logger.dart';
 import '../../services/finance_service.dart';
-import '../../services/program_service.dart';
 import '../../models/program.dart';
 import '../../models/payment_method.dart';
 import '../../components/program_dropdown.dart';
@@ -28,9 +27,7 @@ class _IncomeEntryState extends State<IncomeEntry> {
   final _amountController = TextEditingController();
   final _descriptionController = TextEditingController();
   final _financeService = FinanceService();
-  final _programService = ProgramService();
   
-  bool _isLoading = true;
   bool _isExpanded = true;
   Program? _selectedProgram;
   DateTime _selectedDate = DateTime.now();

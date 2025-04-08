@@ -10,11 +10,11 @@ class OrganizationToggle extends StatelessWidget {
   final Function(bool)? onChanged;
 
   const OrganizationToggle({
-    Key? key,
+    super.key,
     this.userProfile,
     this.isAssembly,
     this.onChanged,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

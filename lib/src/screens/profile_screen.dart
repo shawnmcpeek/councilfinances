@@ -5,8 +5,8 @@ import '../models/member_roles.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
-import '../utils/logger.dart';
 import '../theme/app_theme.dart';
+import '../utils/logger.dart';
 
 class ProfileScreen extends StatefulWidget {
   final VoidCallback onProgramsPressed;
@@ -34,7 +34,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _showCouncilRoles = false;
   bool _showAssemblyRoles = false;
   StreamSubscription<UserProfile?>? _profileSubscription;
-  UserProfile? _userProfile;
 
   void _validateCouncilNumber(String value) {
     final isValid = value.isNotEmpty && 
@@ -71,7 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final profile = await _userService.getUserProfile();
       if (mounted) {
         setState(() {
-          _userProfile = profile;
           _isLoading = false;
           _firstNameController.text = profile?.firstName ?? '';
           _lastNameController.text = profile?.lastName ?? '';

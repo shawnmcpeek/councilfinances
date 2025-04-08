@@ -6,12 +6,10 @@ import 'package:kcmanagement/src/screens/profile_screen.dart';
 import 'package:kcmanagement/src/screens/home_screen.dart';
 import 'package:kcmanagement/src/screens/programs_collect.dart';
 import 'package:kcmanagement/src/screens/hours_entry_screen.dart';
-import 'package:kcmanagement/src/screens/reports_screen.dart';
 import 'package:kcmanagement/src/screens/finance_screen.dart';
 import 'package:kcmanagement/src/screens/programs_screen.dart';
 import 'package:kcmanagement/src/services/auth_service.dart';
 import 'package:kcmanagement/src/services/user_service.dart';
-import 'package:kcmanagement/src/models/user_profile.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kcmanagement/src/utils/logger.dart';
 import 'package:kcmanagement/src/theme/app_theme.dart';
@@ -60,7 +58,7 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key}) : super(key: key);
+  const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +75,7 @@ class MyApp extends StatelessWidget {
 
 // The AuthWrapper will handle authentication and show either the MainScreen or LoginScreen
 class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({Key? key}) : super(key: key);
+  const AuthWrapper({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -95,7 +93,7 @@ class AuthWrapper extends StatelessWidget {
 }
 
 class MainScreen extends StatefulWidget {
-  const MainScreen({Key? key}) : super(key: key);
+  const MainScreen({super.key});
 
   @override
   State<MainScreen> createState() => _MainScreenState();
@@ -103,6 +101,44 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+
+  Future<void> _handleProgramsPressed() async {
+    if (!mounted) return;
+    
+    try {
+      final userProfile = await UserService().getUserProfile();
+      if (!mounted) return;
+      
+      if (userProfile == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error: User profile not found')),
+        );
+        return;
+      }
+
+      if (!mounted) return;
+      final isAssembly = userProfile.assemblyNumber != null;
+      final organizationId = isAssembly 
+          ? 'A${userProfile.assemblyNumber.toString().padLeft(6, '0')}'
+          : 'C${userProfile.councilNumber.toString().padLeft(6, '0')}';
+
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ProgramsScreen(
+            organizationId: organizationId,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: ${e.toString()}')),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -115,29 +151,7 @@ class _MainScreenState extends State<MainScreen> {
           const HoursEntryScreen(),
           const FinanceScreen(),
           ProfileScreen(
-            onProgramsPressed: () async {
-              final userProfile = await UserService().getUserProfile();
-              if (userProfile == null) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Error: User profile not found')),
-                );
-                return;
-              }
-
-              final isAssembly = userProfile.assemblyNumber != null;
-              final organizationId = isAssembly 
-                  ? 'A${userProfile.assemblyNumber.toString().padLeft(6, '0')}'
-                  : 'C${userProfile.councilNumber.toString().padLeft(6, '0')}';
-
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ProgramsScreen(
-                    organizationId: organizationId,
-                  ),
-                ),
-              );
-            },
+            onProgramsPressed: _handleProgramsPressed,
           ),
         ],
       ),

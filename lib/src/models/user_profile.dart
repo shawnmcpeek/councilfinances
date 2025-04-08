@@ -9,6 +9,7 @@ class UserProfile {
   final int? assemblyNumber;
   final List<CouncilRole> councilRoles;
   final List<AssemblyRole> assemblyRoles;
+  final String jurisdiction;
 
   UserProfile({
     required this.uid,
@@ -19,9 +20,11 @@ class UserProfile {
     this.assemblyNumber,
     List<CouncilRole>? councilRoles,
     List<AssemblyRole>? assemblyRoles,
+    String? jurisdiction,
   }) : 
     councilRoles = councilRoles ?? [],
-    assemblyRoles = assemblyRoles ?? [];
+    assemblyRoles = assemblyRoles ?? [],
+    jurisdiction = jurisdiction ?? 'TN';  // Default to TN if not provided
 
   // Convert membership number string to int, removing leading zeros
   static int parseMembershipNumber(String value) {
@@ -38,6 +41,7 @@ class UserProfile {
       'assemblyNumber': assemblyNumber,
       'councilRoles': councilRoles.map((role) => role.name).toList(),
       'assemblyRoles': assemblyRoles.map((role) => role.name).toList(),
+      'jurisdiction': jurisdiction,
     };
   }
 
@@ -55,13 +59,14 @@ class UserProfile {
       assemblyRoles: (map['assemblyRoles'] as List<dynamic>?)
           ?.map((role) => AssemblyRole.values.firstWhere((e) => e.name == role))
           .toList() ?? [],
+      jurisdiction: (map['jurisdiction'] as String?) ?? 'TN',
     );
   }
 
   String getOrganizationId(bool isAssembly) {
     return isAssembly 
       ? (assemblyNumber ?? '').toString()
-      : (councilNumber ?? '').toString();
+      : councilNumber.toString();
   }
 
   bool get isAssembly => assemblyNumber != null;
