@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'dart:convert';
 import '../models/form1728p_program.dart';
 import '../services/program_entry_service.dart';
 import '../services/user_service.dart';
 import '../models/user_profile.dart';
+import '../models/program_entry_adapter.dart';
 import '../utils/logger.dart';
 import '../theme/app_theme.dart';
 import '../components/organization_toggle.dart';
+import '../components/log_display.dart';
 import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
 
@@ -29,6 +32,8 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
   final _descriptionController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   UserProfile? _userProfile;
+  StreamSubscription<List<ProgramEntry>>? _entriesSubscription;
+  List<ProgramEntry> _entries = [];
   
   Form1728PCategory? _selectedCategory;
   Form1728PProgram? _selectedProgram;
@@ -46,44 +51,81 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     _hoursController.dispose();
     _disbursementController.dispose();
     _descriptionController.dispose();
+    _entriesSubscription?.cancel();
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final organizationId = _getFormattedOrganizationId();
+    if (organizationId.isNotEmpty) {
+      _subscribeToEntries(organizationId);
+    }
+  }
+
+  String _getFormattedOrganizationId() {
+    if (_userProfile == null) return '';
+    
+    final isAssembly = Provider.of<OrganizationProvider>(context, listen: false).isAssembly;
+    final organizationId = _userProfile!.getOrganizationId(isAssembly);
+    
+    // Ensure proper formatting with C or A prefix and 6 digits
+    if (organizationId.isEmpty) return '';
+    
+    // Remove any existing prefix
+    final numericId = organizationId.replaceAll(RegExp(r'[AC]'), '');
+    
+    // Format with prefix and padding
+    final prefix = isAssembly ? 'A' : 'C';
+    return '$prefix${numericId.padLeft(6, '0')}';
+  }
+
   Future<void> _loadData() async {
+    if (!mounted) return;
+    
     try {
       setState(() => _isLoading = true);
       
       // Load user profile
       final userProfile = await _userService.getUserProfile();
+      if (!mounted) return;
+      
       if (userProfile == null) {
         throw Exception('User profile not found');
       }
       
-      // Load and parse the JSON file
+      // Load and parse JSON
       final String jsonString = await rootBundle.loadString('assets/data/form1728p_programs.json');
-      final Map<String, dynamic> jsonData = json.decode(jsonString);
+      if (!mounted) return;
+      
+      final jsonData = json.decode(jsonString);
       
       // Initialize programs by category
+      final programsMap = <Form1728PCategory, List<Form1728PProgram>>{};
       for (var category in Form1728PCategory.values) {
-        final categoryPrograms = (jsonData[category.name] as List)
+        programsMap[category] = (jsonData[category.name] as List)
           .map((program) => Form1728PProgram.fromJson(program))
           .toList();
-        _programs[category] = categoryPrograms;
       }
+
+      if (!mounted) return;
 
       setState(() {
         _userProfile = userProfile;
+        _programs.clear();
+        _programs.addAll(programsMap);
         _isLoading = false;
       });
 
       AppLogger.debug('Loaded Form 1728P programs: $_programs');
     } catch (e, stackTrace) {
       AppLogger.error('Error loading Form 1728P programs', e, stackTrace);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading data: ${e.toString()}')),
-        );
-      }
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error loading data: ${e.toString()}')),
+      );
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -91,11 +133,31 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     }
   }
 
-  String _getFormattedOrganizationId() {
-    if (_userProfile == null) return '';
-    return _userProfile!.getOrganizationId(
-      Provider.of<OrganizationProvider>(context, listen: false).isAssembly
-    );
+  void _subscribeToEntries(String organizationId) {
+    _entriesSubscription?.cancel();
+    
+    if (organizationId.isEmpty) {
+      setState(() => _entries = []);
+      return;
+    }
+
+    _entriesSubscription = _programEntryService
+        .getProgramEntries(organizationId)
+        .listen(
+          (entries) {
+            if (mounted) {
+              setState(() => _entries = entries);
+            }
+          },
+          onError: (error) {
+            AppLogger.error('Error loading program entries', error);
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Error loading entries: $error')),
+              );
+            }
+          },
+        );
   }
 
   void _onCategoryChanged(Form1728PCategory? category) {
@@ -239,10 +301,14 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                   DropdownButtonFormField<Form1728PCategory>(
                     decoration: AppTheme.formFieldDecorationWithLabel('Category'),
                     value: _selectedCategory,
-                    items: Form1728PCategory.values.map((category) => DropdownMenuItem(
-                      value: category,
-                      child: Text(category.displayName),
-                    )).toList(),
+                    items: Form1728PCategory.values
+                      .where((category) => organizationProvider.isAssembly 
+                        ? category == Form1728PCategory.patriotic
+                        : category != Form1728PCategory.patriotic)
+                      .map((category) => DropdownMenuItem(
+                        value: category,
+                        child: Text(category.displayName),
+                      )).toList(),
                     onChanged: _onCategoryChanged,
                   ),
                   const SizedBox(height: 24),
@@ -332,6 +398,15 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                     label: Text(_isSaving ? 'Saving...' : 'Submit'),
                     style: AppTheme.filledButtonStyle,
                   ),
+                  SizedBox(height: AppTheme.spacing),
+
+                  // Log Display
+                  LogDisplay<ProgramEntryAdapter>(
+                    entries: _entries.map((entry) => ProgramEntryAdapter(entry)).toList(),
+                    emptyMessage: 'No program entries found',
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                  ),
                 ],
               ),
             ),
@@ -340,4 +415,4 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
       },
     );
   }
-} 
+}

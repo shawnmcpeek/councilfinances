@@ -41,6 +41,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
   final Set<String> _expandedYears = {};
   final Set<String> _expandedMonths = {};
   late Map<int, Map<int, List<T>>> _groupedEntries;
+  bool _isVisible = false;
 
   @override
   void initState() {
@@ -77,6 +78,22 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
     }
 
     _groupedEntries = grouped;
+  }
+
+  Widget _buildToggleButton() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Text(_isVisible ? 'Hide Log' : 'View Log'),
+        const SizedBox(width: 8),
+        Switch(
+          value: _isVisible,
+          onChanged: (value) {
+            setState(() => _isVisible = value);
+          },
+        ),
+      ],
+    );
   }
 
   void _toggleYear(String yearKey) {
@@ -154,28 +171,39 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.entries.isEmpty) {
-      return Center(child: Text(widget.emptyMessage));
-    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildToggleButton(),
+        if (_isVisible) ...[
+          if (widget.entries.isEmpty)
+            Padding(
+              padding: EdgeInsets.all(AppTheme.spacing),
+              child: Center(child: Text(widget.emptyMessage)),
+            )
+          else
+            _buildLogContent(),
+        ],
+      ],
+    );
+  }
 
+  Widget _buildLogContent() {
     final years = _groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
     
-    return ListView.builder(
-      shrinkWrap: widget.shrinkWrap,
-      physics: widget.physics,
-      itemCount: years.length,
-      itemBuilder: (context, yearIndex) {
-        final year = years[yearIndex];
-        final yearKey = year.toString();
-        final isYearExpanded = _expandedYears.contains(yearKey);
-        final months = _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a));
+    return Card(
+      margin: EdgeInsets.symmetric(vertical: AppTheme.smallSpacing),
+      child: ListView.builder(
+        shrinkWrap: widget.shrinkWrap,
+        physics: widget.physics,
+        itemCount: years.length,
+        itemBuilder: (context, yearIndex) {
+          final year = years[yearIndex];
+          final yearKey = year.toString();
+          final isYearExpanded = _expandedYears.contains(yearKey);
+          final months = _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a));
 
-        return Card(
-          margin: EdgeInsets.symmetric(
-            horizontal: AppTheme.spacing,
-            vertical: AppTheme.smallSpacing,
-          ),
-          child: Column(
+          return Column(
             children: [
               // Year header
               InkWell(
@@ -236,89 +264,90 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
                             itemCount: entries.length,
-                            itemBuilder: (context, entryIndex) {
-                              final entry = entries[entryIndex];
-                              final isEven = entryIndex.isEven;
-
-                              return InkWell(
-                                onTap: () => _showEntryDetails(entry),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    color: isEven ? Colors.grey.withAlpha(13) : null,
-                                    border: Border(
-                                      left: BorderSide(
-                                        color: _getEntryColor(entry),
-                                        width: 3,
-                                      ),
-                                    ),
-                                  ),
-                                  child: Padding(
-                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                    child: Row(
-                                      children: [
-                                        // Date
-                                        SizedBox(
-                                          width: 80,
-                                          child: Text(
-                                            formatDate(entry.date),
-                                            style: const TextStyle(fontFamily: 'monospace'),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // Title
-                                        Expanded(
-                                          flex: 2,
-                                          child: Text(entry.title),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        // Subtitle (usually amount)
-                                        Expanded(
-                                          child: Text(
-                                            entry.subtitle,
-                                            style: const TextStyle(fontFamily: 'monospace'),
-                                            textAlign: TextAlign.right,
-                                          ),
-                                        ),
-                                        // Action buttons
-                                        if (widget.onView != null || entry.canEdit || entry.canDelete)
-                                          Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (widget.onView != null)
-                                                IconButton(
-                                                  icon: const Icon(Icons.info_outline, size: 18),
-                                                  onPressed: () => _showEntryDetails(entry),
-                                                  visualDensity: VisualDensity.compact,
-                                                ),
-                                              if (entry.canEdit && widget.onEdit != null)
-                                                IconButton(
-                                                  icon: const Icon(Icons.edit_outlined, size: 18),
-                                                  onPressed: () => widget.onEdit!(entry),
-                                                  visualDensity: VisualDensity.compact,
-                                                ),
-                                              if (entry.canDelete && widget.onDelete != null)
-                                                IconButton(
-                                                  icon: const Icon(Icons.delete_outline, size: 18),
-                                                  onPressed: () => widget.onDelete!(entry),
-                                                  visualDensity: VisualDensity.compact,
-                                                ),
-                                            ],
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                            itemBuilder: (context, entryIndex) => _buildEntryRow(entries[entryIndex], entryIndex),
                           ),
                       ],
                     );
                   },
                 ),
             ],
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildEntryRow(T entry, int index) {
+    final isEven = index.isEven;
+    
+    return InkWell(
+      onTap: () => _showEntryDetails(entry),
+      child: Container(
+        decoration: BoxDecoration(
+          color: isEven ? Colors.grey.withAlpha(13) : null,
+          border: Border(
+            left: BorderSide(
+              color: _getEntryColor(entry),
+              width: 3,
+            ),
           ),
-        );
-      },
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Row(
+            children: [
+              // Date
+              SizedBox(
+                width: 80,
+                child: Text(
+                  formatDate(entry.date),
+                  style: const TextStyle(fontFamily: 'monospace'),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // Title
+              Expanded(
+                flex: 2,
+                child: Text(entry.title),
+              ),
+              const SizedBox(width: 8),
+              // Subtitle (usually amount)
+              Expanded(
+                child: Text(
+                  entry.subtitle,
+                  style: const TextStyle(fontFamily: 'monospace'),
+                  textAlign: TextAlign.right,
+                ),
+              ),
+              // Action buttons
+              if (widget.onView != null || entry.canEdit || entry.canDelete)
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (widget.onView != null)
+                      IconButton(
+                        icon: const Icon(Icons.info_outline, size: 18),
+                        onPressed: () => _showEntryDetails(entry),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    if (entry.canEdit && widget.onEdit != null)
+                      IconButton(
+                        icon: const Icon(Icons.edit_outlined, size: 18),
+                        onPressed: () => widget.onEdit!(entry),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                    if (entry.canDelete && widget.onDelete != null)
+                      IconButton(
+                        icon: const Icon(Icons.delete_outline, size: 18),
+                        onPressed: () => widget.onDelete!(entry),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 } 
