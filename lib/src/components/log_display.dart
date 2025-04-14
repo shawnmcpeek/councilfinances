@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../utils/formatters.dart';
+import '../utils/logger.dart';
 
 /// A generic entry that can be displayed in the log
 abstract class LogEntry {
@@ -89,6 +90,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
         Switch(
           value: _isVisible,
           onChanged: (value) {
+            AppLogger.debug('Log visibility toggle changed to: $value');
             setState(() => _isVisible = value);
           },
         ),
@@ -157,18 +159,6 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
     );
   }
 
-  Color _getEntryColor(T entry) {
-    // Only check for expense type if it's a financial entry
-    if (entry.details.containsKey('Type')) {
-      final isExpense = entry.details['Type'] == 'Expense';
-      return isExpense 
-          ? Colors.red.withAlpha(77)
-          : Colors.green.withAlpha(77);
-    }
-    // Default color for non-financial entries
-    return Colors.transparent;
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -196,6 +186,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
       child: ListView.builder(
         shrinkWrap: widget.shrinkWrap,
         physics: widget.physics,
+        padding: EdgeInsets.zero,
         itemCount: years.length,
         itemBuilder: (context, yearIndex) {
           final year = years[yearIndex];
@@ -208,18 +199,19 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
               // Year header
               InkWell(
                 onTap: () => _toggleYear(yearKey),
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Container(
+                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 26),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   child: Row(
                     children: [
                       Icon(
                         isYearExpanded ? Icons.expand_less : Icons.expand_more,
-                        size: 20,
+                        size: 18,
                       ),
-                      const SizedBox(width: 8),
+                      const SizedBox(width: AppTheme.smallSpacing),
                       Text(
                         yearKey,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: AppTheme.subheadingStyle,
                       ),
                     ],
                   ),
@@ -229,6 +221,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
                 ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
+                  padding: EdgeInsets.zero,
                   itemCount: months.length,
                   itemBuilder: (context, monthIndex) {
                     final month = months[monthIndex];
@@ -242,18 +235,19 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
                         // Month header
                         InkWell(
                           onTap: () => _toggleMonth(monthKey),
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
+                          child: Container(
+                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 13),
+                            padding: EdgeInsets.symmetric(horizontal: AppTheme.spacing, vertical: AppTheme.smallSpacing),
                             child: Row(
                               children: [
                                 Icon(
                                   isMonthExpanded ? Icons.expand_less : Icons.expand_more,
-                                  size: 18,
+                                  size: 16,
                                 ),
-                                const SizedBox(width: 8),
+                                const SizedBox(width: AppTheme.smallSpacing),
                                 Text(
                                   formatMonth(month),
-                                  style: Theme.of(context).textTheme.titleSmall,
+                                  style: AppTheme.bodyStyle,
                                 ),
                               ],
                             ),
@@ -263,6 +257,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
                           ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
+                            padding: EdgeInsets.zero,
                             itemCount: entries.length,
                             itemBuilder: (context, entryIndex) => _buildEntryRow(entries[entryIndex], entryIndex),
                           ),
@@ -284,7 +279,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
       onTap: () => _showEntryDetails(entry),
       child: Container(
         decoration: BoxDecoration(
-          color: isEven ? Colors.grey.withAlpha(13) : null,
+          color: isEven ? Colors.grey.withValues(alpha: 13) : null,
           border: Border(
             left: BorderSide(
               color: _getEntryColor(entry),
@@ -293,61 +288,62 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
           ),
         ),
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: EdgeInsets.all(AppTheme.spacing),
           child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Date
-              SizedBox(
-                width: 80,
-                child: Text(
-                  formatDate(entry.date),
-                  style: const TextStyle(fontFamily: 'monospace'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              // Title
+              // Title and Description
               Expanded(
-                flex: 2,
-                child: Text(entry.title),
-              ),
-              const SizedBox(width: 8),
-              // Subtitle (usually amount)
-              Expanded(
-                child: Text(
-                  entry.subtitle,
-                  style: const TextStyle(fontFamily: 'monospace'),
-                  textAlign: TextAlign.right,
-                ),
-              ),
-              // Action buttons
-              if (widget.onView != null || entry.canEdit || entry.canDelete)
-                Row(
-                  mainAxisSize: MainAxisSize.min,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (widget.onView != null)
-                      IconButton(
-                        icon: const Icon(Icons.info_outline, size: 18),
-                        onPressed: () => _showEntryDetails(entry),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    if (entry.canEdit && widget.onEdit != null)
-                      IconButton(
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        onPressed: () => widget.onEdit!(entry),
-                        visualDensity: VisualDensity.compact,
-                      ),
-                    if (entry.canDelete && widget.onDelete != null)
-                      IconButton(
-                        icon: const Icon(Icons.delete_outline, size: 18),
-                        onPressed: () => widget.onDelete!(entry),
-                        visualDensity: VisualDensity.compact,
+                    Text(
+                      entry.title,
+                      style: AppTheme.labelStyle,
+                    ),
+                    if (entry.details['Description']?.isNotEmpty == true)
+                      Padding(
+                        padding: const EdgeInsets.only(top: AppTheme.smallSpacing),
+                        child: Text(
+                          entry.details['Description'] ?? '',
+                          style: AppTheme.bodyStyle,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
                   ],
                 ),
+              ),
+              // Date, Hours and Amount
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    formatDate(entry.date),
+                    style: AppTheme.labelStyle.copyWith(fontFamily: 'monospace'),
+                  ),
+                  Text(
+                    entry.subtitle,
+                    style: AppTheme.bodyStyle.copyWith(fontFamily: 'monospace'),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Color _getEntryColor(T entry) {
+    // Only check for expense type if it's a financial entry
+    if (entry.details.containsKey('Type')) {
+      final isExpense = entry.details['Type'] == 'Expense';
+      return isExpense 
+          ? AppTheme.errorColor.withValues(alpha: 50)
+          : AppTheme.primaryColor.withValues(alpha: 50);
+    }
+    // Default color for non-financial entries
+    return AppTheme.secondaryColor.withValues(alpha: 50);
   }
 } 

@@ -36,7 +36,9 @@ class HoursEntry {
       startTime: data['startTime'] as Timestamp,
       endTime: data['endTime'] as Timestamp,
       totalHours: (data['totalHours'] as num).toDouble(),
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
+      createdAt: data['createdAt'] != null 
+          ? (data['createdAt'] as Timestamp).toDate()
+          : DateTime.now(), // Fallback to current time if server timestamp not set yet
       updatedAt: data['updatedAt'] != null 
           ? (data['updatedAt'] as Timestamp).toDate()
           : null,

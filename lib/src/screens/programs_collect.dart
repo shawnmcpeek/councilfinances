@@ -41,12 +41,14 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
   @override
   void initState() {
     super.initState();
+    AppLogger.debug('ProgramsCollectScreen: Navigated to Programs screen');
     AppLogger.debug('ProgramsCollectScreen: initState called');
     _loadData();
   }
 
   @override
   void dispose() {
+    AppLogger.debug('ProgramsCollectScreen: Leaving Programs screen');
     AppLogger.debug('ProgramsCollectScreen: dispose called');
     _hoursController.dispose();
     _disbursementController.dispose();
@@ -58,27 +60,27 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final organizationId = _getFormattedOrganizationId();
-    if (organizationId.isNotEmpty) {
-      _subscribeToEntries(organizationId);
+    AppLogger.debug('ProgramsCollectScreen: didChangeDependencies called');
+    
+    if (_userProfile != null) {
+      final organizationId = _getFormattedOrganizationId();
+      AppLogger.debug('Got formatted organization ID: $organizationId');
+      
+      if (organizationId.isNotEmpty) {
+        AppLogger.debug('About to subscribe to entries for organization: $organizationId');
+        _subscribeToEntries(organizationId);
+      } else {
+        AppLogger.error('Organization ID is empty in didChangeDependencies');
+      }
+    } else {
+      AppLogger.debug('UserProfile is null in didChangeDependencies');
     }
   }
 
   String _getFormattedOrganizationId() {
     if (_userProfile == null) return '';
-    
     final isAssembly = Provider.of<OrganizationProvider>(context, listen: false).isAssembly;
-    final organizationId = _userProfile!.getOrganizationId(isAssembly);
-    
-    // Ensure proper formatting with C or A prefix and 6 digits
-    if (organizationId.isEmpty) return '';
-    
-    // Remove any existing prefix
-    final numericId = organizationId.replaceAll(RegExp(r'[AC]'), '');
-    
-    // Format with prefix and padding
-    final prefix = isAssembly ? 'A' : 'C';
-    return '$prefix${numericId.padLeft(6, '0')}';
+    return _userProfile!.getOrganizationId(isAssembly);
   }
 
   Future<void> _loadData() async {
@@ -119,6 +121,13 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
       });
 
       AppLogger.debug('Loaded Form 1728P programs: $_programs');
+
+      // Subscribe to entries after user profile is loaded
+      final organizationId = _getFormattedOrganizationId();
+      if (organizationId.isNotEmpty) {
+        AppLogger.debug('Subscribing to entries after loading data for organization: $organizationId');
+        _subscribeToEntries(organizationId);
+      }
     } catch (e, stackTrace) {
       AppLogger.error('Error loading Form 1728P programs', e, stackTrace);
       if (!mounted) return;
@@ -141,10 +150,13 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
       return;
     }
 
+    AppLogger.debug('Subscribing to entries for organization: $organizationId');
+
     _entriesSubscription = _programEntryService
         .getProgramEntries(organizationId)
         .listen(
           (entries) {
+            AppLogger.debug('Received ${entries.length} entries from Firestore');
             if (mounted) {
               setState(() => _entries = entries);
             }

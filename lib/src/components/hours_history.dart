@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'dart:async';
 import '../services/hours_service.dart';
 import '../models/hours_entry.dart';
+import '../models/hours_entry_adapter.dart';
+import '../components/log_display.dart';
 import '../theme/app_theme.dart';
-import 'dart:async';
 
 class HoursHistoryList extends StatefulWidget {
   final String organizationId;
@@ -21,8 +22,6 @@ class HoursHistoryList extends StatefulWidget {
 
 class _HoursHistoryListState extends State<HoursHistoryList> {
   final _hoursService = HoursService();
-  final _dateFormat = DateFormat('M/d/yyyy');
-  final _timeFormat = DateFormat('h:mm a');
   StreamSubscription<List<HoursEntry>>? _subscription;
   List<HoursEntry> _entries = [];
   bool _isLoading = true;
@@ -98,37 +97,11 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (_entries.isEmpty) {
-      return const Center(child: Text('No hours entries found'));
-    }
-
-    return ListView.builder(
+    return LogDisplay<HoursEntryAdapter>(
+      entries: _entries.map((entry) => HoursEntryAdapter(entry)).toList(),
+      emptyMessage: 'No hours entries found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: _entries.length,
-      itemBuilder: (context, index) {
-        final entry = _entries[index];
-        final startDate = entry.startTime.toDate();
-        final endDate = entry.endTime.toDate();
-        
-        final sameDay = startDate.year == endDate.year && 
-                       startDate.month == endDate.month && 
-                       startDate.day == endDate.day;
-        
-        final timeRange = sameDay
-            ? '${_dateFormat.format(startDate)} ${_timeFormat.format(startDate)} - ${_timeFormat.format(endDate)}'
-            : '${_dateFormat.format(startDate)} ${_timeFormat.format(startDate)} - ${_dateFormat.format(endDate)} ${_timeFormat.format(endDate)}';
-
-        return Card(
-          margin: EdgeInsets.only(bottom: AppTheme.spacing),
-          child: ListTile(
-            title: Text(entry.programName),
-            subtitle: Text(
-              '$timeRange\n${entry.totalHours} hours',
-            ),
-          ),
-        );
-      },
     );
   }
 } 

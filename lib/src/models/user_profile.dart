@@ -64,9 +64,11 @@ class UserProfile {
   }
 
   String getOrganizationId(bool isAssembly) {
-    return isAssembly 
-      ? (assemblyNumber ?? '').toString()
-      : councilNumber.toString();
+    if (isAssembly) {
+      if (assemblyNumber == null) return '';
+      return 'A${assemblyNumber.toString().padLeft(6, '0')}';
+    }
+    return 'C${councilNumber.toString().padLeft(6, '0')}';
   }
 
   bool get isAssembly => assemblyNumber != null;

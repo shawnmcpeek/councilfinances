@@ -91,6 +91,8 @@ class HoursService {
       if (user == null) throw Exception('No authenticated user found');
 
       final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
+      AppLogger.debug('Getting hours entries for organization: $formattedOrgId and user: ${user.uid}');
+      
       return _firestore.collection('organizations')
           .doc(formattedOrgId)
           .collection('hours')
@@ -98,9 +100,12 @@ class HoursService {
           .orderBy('startTime', descending: true)
           .limit(20)
           .snapshots()
-          .map((snapshot) => snapshot.docs
-              .map((doc) => HoursEntry.fromFirestore(doc))
-              .toList());
+          .map((snapshot) {
+            AppLogger.debug('Received ${snapshot.docs.length} hours entries from Firestore');
+            return snapshot.docs
+                .map((doc) => HoursEntry.fromFirestore(doc))
+                .toList();
+          });
     } catch (e) {
       AppLogger.error('Error getting hours entries', e);
       rethrow;

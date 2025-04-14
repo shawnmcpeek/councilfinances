@@ -17,4 +17,8 @@ String formatDate(DateTime date) {
 
 String formatMonth(int month) {
   return DateFormat('MMMM').format(DateTime(2024, month));
+}
+
+String formatTime(DateTime time) {
+  return DateFormat('h:mm a').format(time);
 } 

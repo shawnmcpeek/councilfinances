@@ -42,7 +42,7 @@ class ProgramEntryAdapter implements LogEntry {
   String get title => entry.program.name;
 
   @override
-  String get subtitle => '${formatDate(entry.date)} - ${entry.hours} hrs, ${formatCurrency(entry.disbursement)}';
+  String get subtitle => '${entry.hours} hrs, ${formatCurrency(entry.disbursement)}';
 
   @override
   Map<String, String> get details => {

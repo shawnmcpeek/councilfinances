@@ -95,44 +95,68 @@ class ProgramEntryService {
 
   Stream<List<ProgramEntry>> getProgramEntries(String organizationId) {
     try {
+      AppLogger.debug('getProgramEntries called for organization: $organizationId');
+      
       if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        throw Exception('Invalid organization ID format: $organizationId');
+        final error = 'Invalid organization ID format: $organizationId';
+        AppLogger.error(error);
+        throw Exception(error);
       }
 
       final currentYear = DateTime.now().year.toString();
       final lastYear = (DateTime.now().year - 1).toString();
+
+      AppLogger.debug('Querying program entries for organization: $organizationId');
+      AppLogger.debug('Years being queried: $currentYear, $lastYear');
 
       // Create a stream for each category and year
       final streams = <Stream<List<ProgramEntry>>>[];
 
       for (final year in [currentYear, lastYear]) {
         for (final category in Form1728PCategory.values) {
+          final path = 'organizations/$organizationId/program_entries/$year/${category.name}';
+          AppLogger.debug('Creating stream for path: $path');
+          
           final stream = _firestore
               .collection('organizations')
               .doc(organizationId)
               .collection('program_entries')
               .doc(year)
               .collection(category.name)
+              .orderBy('lastUpdated', descending: true)
               .snapshots()
               .map((snapshot) {
+                AppLogger.debug('Received snapshot for $path: ${snapshot.docs.length} documents');
                 final entries = <ProgramEntry>[];
+                
                 for (final doc in snapshot.docs) {
-                  final data = doc.data();
-                  final programEntries = (data['entries'] as List<dynamic>?) ?? [];
-                  
-                  for (final entry in programEntries) {
-                    entries.add(ProgramEntry(
-                      id: entry['id'] as String,
-                      date: DateTime.parse(entry['date'] as String),
-                      category: category,
-                      program: Form1728PProgram(
-                        id: data['programId'] as String,
-                        name: data['programName'] as String,
-                      ),
-                      hours: entry['hours'] as int,
-                      disbursement: (entry['disbursement'] as num).toDouble(),
-                      description: entry['description'] as String,
-                    ));
+                  try {
+                    final data = doc.data();
+                    AppLogger.debug('Processing document data: $data');
+                    final programEntries = (data['entries'] as List<dynamic>?) ?? [];
+                    AppLogger.debug('Processing document ${doc.id} with ${programEntries.length} entries');
+                    
+                    for (final entry in programEntries) {
+                      try {
+                        entries.add(ProgramEntry(
+                          id: entry['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                          date: DateTime.parse(entry['date'] as String),
+                          category: category,
+                          program: Form1728PProgram(
+                            id: data['programId']?.toString() ?? '',
+                            name: data['programName']?.toString() ?? 'Unknown Program',
+                          ),
+                          hours: entry['hours'] as int? ?? 0,
+                          disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
+                          description: entry['description']?.toString() ?? '',
+                        ));
+                      } catch (e) {
+                        AppLogger.error('Error processing entry in document ${doc.id}: $e');
+                        AppLogger.debug('Entry data causing error: $entry');
+                      }
+                    }
+                  } catch (e) {
+                    AppLogger.error('Error processing document ${doc.id}: $e');
                   }
                 }
                 return entries;
@@ -145,10 +169,11 @@ class ProgramEntryService {
       return Rx.combineLatestList(streams).map((lists) {
         final allEntries = lists.expand((list) => list).toList();
         allEntries.sort((a, b) => b.date.compareTo(a.date));
+        AppLogger.debug('Combined all streams: ${allEntries.length} total entries');
         return allEntries;
       });
     } catch (e) {
-      AppLogger.error('Error getting program entries', e);
+      AppLogger.error('Error in getProgramEntries: $e');
       rethrow;
     }
   }
