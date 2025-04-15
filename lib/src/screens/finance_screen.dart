@@ -60,14 +60,13 @@ class _FinanceScreenState extends State<FinanceScreen> {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         const OrganizationToggle(),
-                        SizedBox(height: AppTheme.spacing),
                         IncomeEntry(
                           isAssembly: organizationProvider.isAssembly,
                           organizationId: _userProfile?.getOrganizationId(
                             organizationProvider.isAssembly,
                           ) ?? '',
                         ),
-                        SizedBox(height: AppTheme.spacing),
+                        SizedBox(height: AppTheme.smallSpacing),
                         ExpenseEntry(
                           isAssembly: organizationProvider.isAssembly,
                           organizationId: _userProfile?.getOrganizationId(

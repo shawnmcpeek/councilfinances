@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import '../../utils/logger.dart';
 import '../../services/finance_service.dart';
 import '../../models/finance_entry.dart';
+import '../../models/finance_entry_adapter.dart';
+import '../../components/log_display.dart';
 
 class TransactionHistory extends StatefulWidget {
   final String organizationId;
@@ -20,12 +21,8 @@ class TransactionHistory extends StatefulWidget {
 
 class _TransactionHistoryState extends State<TransactionHistory> {
   final _financeService = FinanceService();
-  final _currencyFormat = NumberFormat.currency(symbol: '\$');
-  final _expandedYears = <int>{};
-  final _expandedMonths = <String>{};
-  
   bool _isLoading = true;
-  Map<int, Map<int, List<FinanceEntry>>> _groupedEntries = {};
+  List<FinanceEntry> _entries = [];
 
   @override
   void initState() {
@@ -52,27 +49,9 @@ class _TransactionHistoryState extends State<TransactionHistory> {
         widget.isAssembly,
       );
 
-      // Group entries by year and month
-      final grouped = <int, Map<int, List<FinanceEntry>>>{};
-      for (var entry in entries) {
-        final year = entry.date.year;
-        final month = entry.date.month;
-        
-        grouped.putIfAbsent(year, () => {});
-        grouped[year]!.putIfAbsent(month, () => []);
-        grouped[year]![month]!.add(entry);
-      }
-
-      // Sort entries within each month by date (newest first)
-      for (var year in grouped.keys) {
-        for (var month in grouped[year]!.keys) {
-          grouped[year]![month]!.sort((a, b) => b.date.compareTo(a.date));
-        }
-      }
-
       if (mounted) {
         setState(() {
-          _groupedEntries = grouped;
+          _entries = entries;
           _isLoading = false;
         });
       }
@@ -87,33 +66,6 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     }
   }
 
-  void _toggleYear(int year) {
-    setState(() {
-      if (_expandedYears.contains(year)) {
-        _expandedYears.remove(year);
-        // Remove all month expansions for this year
-        _expandedMonths.removeWhere((key) => key.startsWith('$year-'));
-      } else {
-        _expandedYears.add(year);
-      }
-    });
-  }
-
-  void _toggleMonth(int year, int month) {
-    final key = '$year-$month';
-    setState(() {
-      if (_expandedMonths.contains(key)) {
-        _expandedMonths.remove(key);
-      } else {
-        _expandedMonths.add(key);
-      }
-    });
-  }
-
-  String _formatMonth(int month) {
-    return DateFormat('MMMM').format(DateTime(2000, month));
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -123,283 +75,11 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       );
     }
 
-    if (_groupedEntries.isEmpty) {
-      return const Center(
-        child: Padding(
-          padding: EdgeInsets.all(16.0),
-          child: Text('No transactions found'),
-        ),
-      );
-    }
-
-    final years = _groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
-    
-    return ListView.builder(
+    return LogDisplay<FinanceEntryAdapter>(
+      entries: _entries.map((entry) => FinanceEntryAdapter(entry)).toList(),
+      emptyMessage: 'No transactions found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      itemCount: years.length,
-      itemBuilder: (context, yearIndex) {
-        final year = years[yearIndex];
-        final isYearExpanded = _expandedYears.contains(year);
-        
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            ListTile(
-              title: Text(
-                year.toString(),
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              trailing: Icon(
-                isYearExpanded ? Icons.expand_less : Icons.expand_more,
-              ),
-              onTap: () => _toggleYear(year),
-            ),
-            if (isYearExpanded)
-              for (var month in _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a)))
-                _buildMonthSection(year, month),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _buildMonthSection(int year, int month) {
-    final monthKey = '$year-$month';
-    final isMonthExpanded = _expandedMonths.contains(monthKey);
-    final entries = _groupedEntries[year]![month]!;
-    
-    return Padding(
-      padding: const EdgeInsets.only(left: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          ListTile(
-            title: Text(
-              _formatMonth(month),
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            trailing: Icon(
-              isMonthExpanded ? Icons.expand_less : Icons.expand_more,
-            ),
-            onTap: () => _toggleMonth(year, month),
-          ),
-          if (isMonthExpanded)
-            Column(
-              children: [
-                // Header row
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withAlpha(26), // 0.1 opacity
-                    border: Border(
-                      bottom: BorderSide(color: Colors.grey.withAlpha(51)), // 0.2 opacity
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 3), // Space for indicator
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Date',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 3,
-                        child: Text(
-                          'Description',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                      Expanded(
-                        flex: 2,
-                        child: Text(
-                          'Amount',
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.right,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Entries
-                ...entries.asMap().entries.map((entry) {
-                  final index = entry.key;
-                  final financeEntry = entry.value;
-                  return Container(
-                    decoration: BoxDecoration(
-                      color: index.isEven ? Colors.grey.withAlpha(13) : null, // 0.05 opacity
-                      border: Border(
-                        left: BorderSide(
-                          color: financeEntry.isExpense 
-                            ? Colors.red.withAlpha(77)    // 0.3 opacity
-                            : Colors.green.withAlpha(77), // 0.3 opacity
-                          width: 3,
-                        ),
-                      ),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              DateFormat('MM/dd/yy').format(financeEntry.date),
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
-                          ),
-                          Expanded(
-                            flex: 3,
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  financeEntry.program.name,
-                                  style: Theme.of(context).textTheme.bodyMedium,
-                                ),
-                                Text(
-                                  financeEntry.description,
-                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                if (financeEntry.checkNumber != null)
-                                  Text(
-                                    'Check #${financeEntry.checkNumber}',
-                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                      color: Colors.grey[600],
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              _currencyFormat.format(financeEntry.amount),
-                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                color: financeEntry.isExpense ? Colors.red : Colors.green,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.right,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }),
-                // Monthly total
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.withAlpha(26), // 0.1 opacity
-                    border: Border(
-                      top: BorderSide(color: Colors.grey.withAlpha(51)), // 0.2 opacity
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Row(
-                        children: [
-                          const Spacer(),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              // Total Income
-                              Row(
-                                children: [
-                                  Text(
-                                    'Total Income: ',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Text(
-                                    _currencyFormat.format(
-                                      entries.where((entry) => !entry.isExpense)
-                                        .fold<double>(0, (sum, entry) => sum + entry.amount),
-                                    ),
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.green,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              // Total Expenses
-                              Row(
-                                children: [
-                                  Text(
-                                    'Total Expenses: ',
-                                    style: Theme.of(context).textTheme.bodyMedium,
-                                  ),
-                                  Text(
-                                    _currencyFormat.format(
-                                      entries.where((entry) => entry.isExpense)
-                                        .fold<double>(0, (sum, entry) => sum + entry.amount),
-                                    ),
-                                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                      color: Colors.red,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              // Net Total with divider
-                              Container(
-                                decoration: BoxDecoration(
-                                  border: Border(
-                                    top: BorderSide(
-                                      color: Colors.grey.withAlpha(77),
-                                      width: 1,
-                                    ),
-                                  ),
-                                ),
-                                padding: const EdgeInsets.only(top: 4),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      'Net Total: ',
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      _currencyFormat.format(
-                                        entries.fold<double>(
-                                          0,
-                                          (sum, entry) => sum + (entry.isExpense ? -entry.amount : entry.amount),
-                                        ),
-                                      ),
-                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: entries.fold<double>(
-                                          0,
-                                          (sum, entry) => sum + (entry.isExpense ? -entry.amount : entry.amount),
-                                        ) >= 0 ? Colors.green : Colors.red,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-        ],
-      ),
     );
   }
 } 

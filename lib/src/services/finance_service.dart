@@ -10,6 +10,12 @@ class FinanceService {
   final AuthService _authService = AuthService();
 
   String _getFormattedOrgId(String organizationId, bool isAssembly) {
+    // If the ID already starts with C or A, return it as is
+    if (organizationId.startsWith('C') || organizationId.startsWith('A')) {
+      return organizationId;
+    }
+    
+    // Otherwise, add the prefix
     final orgPrefix = isAssembly ? 'A' : 'C';
     return '$orgPrefix${organizationId.padLeft(6, '0')}';
   }

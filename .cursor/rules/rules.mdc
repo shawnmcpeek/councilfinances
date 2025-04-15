@@ -16,5 +16,6 @@ alwaysApply: true
 # For styling fixes, identify the correct pattern first and enforce it consistently. No incremental fixes - ensure full compliance with global styling rules.
 # My computer has Java SDK 21 and 23. We will not use any SDK previous to 21.
 # If I ask a question or start a dialogue/discussion, only respond. You can provide example code, but do not start changing code. I will tell you when I am ready to resume code.
+# this is a very separated component app. There are re-usable components like log_display that gets used in different locations. Same with organizer_toggle and program_dropdown. Don't re-create them in individual components, import and implement them in the components as specified.
 - You can @ files here
 - You can use markdown but dont have to

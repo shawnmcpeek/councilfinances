@@ -309,9 +309,12 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
                 SizedBox(height: AppTheme.spacing),
 
                 // Submit Button
-                ElevatedButton(
-                  onPressed: _saveEntry,
-                  child: const Text('Log Hours'),
+                FilledButton(
+                  style: AppTheme.baseButtonStyle,
+                  onPressed: _isLoading ? null : _saveEntry,
+                  child: _isLoading
+                    ? const CircularProgressIndicator()
+                    : const Text('Log Hours'),
                 ),
               ],
             ],

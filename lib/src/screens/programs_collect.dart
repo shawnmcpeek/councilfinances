@@ -30,6 +30,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
   final _hoursController = TextEditingController();
   final _disbursementController = TextEditingController();
   final _descriptionController = TextEditingController();
+  final _dateController = TextEditingController();
   DateTime _selectedDate = DateTime.now();
   UserProfile? _userProfile;
   StreamSubscription<List<ProgramEntry>>? _entriesSubscription;
@@ -43,6 +44,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     super.initState();
     AppLogger.debug('ProgramsCollectScreen: Navigated to Programs screen');
     AppLogger.debug('ProgramsCollectScreen: initState called');
+    _dateController.text = '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}';
     _loadData();
   }
 
@@ -53,6 +55,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     _hoursController.dispose();
     _disbursementController.dispose();
     _descriptionController.dispose();
+    _dateController.dispose();
     _entriesSubscription?.cancel();
     super.dispose();
   }
@@ -203,6 +206,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     if (picked != null && picked != _selectedDate) {
       setState(() {
         _selectedDate = picked;
+        _dateController.text = '${picked.month}/${picked.day}/${picked.year}';
       });
     }
   }
@@ -309,110 +313,86 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const OrganizationToggle(),
-                  SizedBox(height: AppTheme.spacing),
-                  DropdownButtonFormField<Form1728PCategory>(
-                    decoration: AppTheme.formFieldDecorationWithLabel('Category'),
-                    value: _selectedCategory,
-                    items: Form1728PCategory.values
-                      .where((category) => organizationProvider.isAssembly 
-                        ? category == Form1728PCategory.patriotic
-                        : category != Form1728PCategory.patriotic)
-                      .map((category) => DropdownMenuItem(
-                        value: category,
-                        child: Text(category.displayName),
-                      )).toList(),
-                    onChanged: _onCategoryChanged,
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Program Dropdown
-                  DropdownButtonFormField<Form1728PProgram>(
-                    decoration: AppTheme.formFieldDecorationWithLabel('Charitable Program'),
-                    value: _selectedProgram,
-                    items: _selectedCategory != null 
-                      ? _programs[_selectedCategory]?.map((program) {
-                          return DropdownMenuItem(
-                            value: program,
-                            child: Text(program.name),
-                          );
-                        }).toList() ?? []
-                      : [],
-                    onChanged: _onProgramChanged,
-                  ),
-                  SizedBox(height: AppTheme.spacing),
-
-                  // Date Picker
-                  InkWell(
-                    onTap: () => _selectDate(context),
-                    child: InputDecorator(
-                      decoration: AppTheme.formFieldDecorationWithLabel('Program Date'),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  Card(
+                    child: Padding(
+                      padding: EdgeInsets.all(AppTheme.spacing),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Text(
-                            '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}',
+                          DropdownButtonFormField<Form1728PCategory>(
+                            decoration: AppTheme.formFieldDecorationWithLabel('Category'),
+                            value: _selectedCategory,
+                            items: Form1728PCategory.values
+                              .where((category) => organizationProvider.isAssembly 
+                                ? category == Form1728PCategory.patriotic
+                                : category != Form1728PCategory.patriotic)
+                              .map((category) => DropdownMenuItem(
+                                value: category,
+                                child: Text(category.displayName),
+                              )).toList(),
+                            onChanged: _onCategoryChanged,
                           ),
-                          const Icon(Icons.calendar_today),
+                          SizedBox(height: AppTheme.spacing),
+                          if (_selectedCategory != null) ...[
+                            DropdownButtonFormField<Form1728PProgram>(
+                              decoration: AppTheme.formFieldDecorationWithLabel('Charitable Program'),
+                              value: _selectedProgram,
+                              items: _programs[_selectedCategory]
+                                ?.map((program) => DropdownMenuItem(
+                                  value: program,
+                                  child: Text(program.name),
+                                )).toList() ?? [],
+                              onChanged: _onProgramChanged,
+                            ),
+                            SizedBox(height: AppTheme.spacing),
+                          ],
+                          TextFormField(
+                            controller: _dateController,
+                            decoration: AppTheme.formFieldDecorationWithLabel(
+                              'Program Date',
+                            ).copyWith(
+                              suffixIcon: IconButton(
+                                icon: const Icon(Icons.calendar_today),
+                                onPressed: () => _selectDate(context),
+                              ),
+                            ),
+                            readOnly: true,
+                          ),
+                          SizedBox(height: AppTheme.spacing),
+                          TextFormField(
+                            controller: _hoursController,
+                            decoration: AppTheme.formFieldDecorationWithLabel('Service Hours'),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                          ),
+                          SizedBox(height: AppTheme.spacing),
+                          TextFormField(
+                            controller: _disbursementController,
+                            decoration: AppTheme.formFieldDecorationWithLabel('Charitable Disbursements'),
+                            keyboardType: TextInputType.numberWithOptions(decimal: true),
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                            ],
+                          ),
+                          SizedBox(height: AppTheme.spacing),
+                          TextFormField(
+                            controller: _descriptionController,
+                            decoration: AppTheme.formFieldDecorationWithLabel('Description'),
+                            maxLines: 3,
+                          ),
+                          SizedBox(height: AppTheme.largeSpacing),
+                          FilledButton(
+                            style: AppTheme.baseButtonStyle,
+                            onPressed: _isSaving ? null : _submitEntry,
+                            child: _isSaving
+                              ? const CircularProgressIndicator()
+                              : const Text('Submit'),
+                          ),
                         ],
                       ),
                     ),
                   ),
                   SizedBox(height: AppTheme.spacing),
-
-                  // Hours Input
-                  TextField(
-                    controller: _hoursController,
-                    decoration: AppTheme.formFieldDecorationWithLabel('Service Hours')
-                        .copyWith(hintText: 'Enter total volunteer hours'),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  ),
-                  SizedBox(height: AppTheme.spacing),
-
-                  // Disbursement Input
-                  TextField(
-                    controller: _disbursementController,
-                    decoration: AppTheme.formFieldDecorationWithLabel('Charitable Disbursements')
-                        .copyWith(
-                          hintText: 'Enter total charitable disbursements',
-                          prefixText: '\$',
-                        ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
-                    ],
-                  ),
-                  SizedBox(height: AppTheme.spacing),
-
-                  // Description Input
-                  TextField(
-                    controller: _descriptionController,
-                    decoration: AppTheme.formFieldDecorationWithLabel('Description')
-                        .copyWith(hintText: 'Describe the activity (e.g., "March for Life Rally in DC")'),
-                    maxLines: 3,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  SizedBox(height: AppTheme.largeSpacing),
-
-                  // Submit Button
-                  FilledButton.icon(
-                    onPressed: _isSaving ? null : _submitEntry,
-                    icon: _isSaving 
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Icon(Icons.save),
-                    label: Text(_isSaving ? 'Saving...' : 'Submit'),
-                    style: AppTheme.filledButtonStyle,
-                  ),
-                  SizedBox(height: AppTheme.spacing),
-
-                  // Log Display
                   LogDisplay<ProgramEntryAdapter>(
                     entries: _entries.map((entry) => ProgramEntryAdapter(entry)).toList(),
                     emptyMessage: 'No program entries found',

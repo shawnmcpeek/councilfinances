@@ -118,7 +118,10 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
           InkWell(
             onTap: () => setState(() => _isExpanded = !_isExpanded),
             child: Padding(
-              padding: EdgeInsets.all(AppTheme.spacing),
+              padding: EdgeInsets.symmetric(
+                horizontal: AppTheme.spacing,
+                vertical: _isExpanded ? AppTheme.spacing : AppTheme.smallSpacing,
+              ),
               child: Row(
                 children: [
                   Expanded(

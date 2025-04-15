@@ -4,7 +4,6 @@ import '../services/hours_service.dart';
 import '../models/hours_entry.dart';
 import '../models/hours_entry_adapter.dart';
 import '../components/log_display.dart';
-import '../theme/app_theme.dart';
 
 class HoursHistoryList extends StatefulWidget {
   final String organizationId;

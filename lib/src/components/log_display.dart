@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../utils/formatters.dart';
-import '../utils/logger.dart';
+import '../models/finance_entry_adapter.dart';
+import 'package:intl/intl.dart';
 
 /// A generic entry that can be displayed in the log
 abstract class LogEntry {
@@ -12,6 +12,7 @@ abstract class LogEntry {
   Map<String, String> get details;
   bool get canEdit;
   bool get canDelete;
+  BoxDecoration? get decoration => null;
 }
 
 class LogDisplay<T extends LogEntry> extends StatefulWidget {
@@ -43,6 +44,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
   final Set<String> _expandedMonths = {};
   late Map<int, Map<int, List<T>>> _groupedEntries;
   bool _isVisible = false;
+  final _currencyFormat = NumberFormat.currency(symbol: '\$');
 
   @override
   void initState() {
@@ -81,6 +83,77 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
     _groupedEntries = grouped;
   }
 
+  Widget _buildMonthSummary(List<T> entries) {
+    if (entries.isEmpty || entries.first is! FinanceEntryAdapter) return const SizedBox();
+
+    final financeEntries = entries.map((e) => e as FinanceEntryAdapter).toList();
+    final totalIncome = financeEntries
+        .where((entry) => !entry.entry.isExpense)
+        .fold<double>(0, (sum, entry) => sum + entry.entry.amount);
+    
+    final totalExpenses = financeEntries
+        .where((entry) => entry.entry.isExpense)
+        .fold<double>(0, (sum, entry) => sum + entry.entry.amount);
+    
+    final netTotal = totalIncome - totalExpenses;
+
+    return Card(
+      margin: EdgeInsets.all(AppTheme.smallSpacing),
+      child: Padding(
+        padding: EdgeInsets.all(AppTheme.spacing),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              'Monthly Summary',
+              style: Theme.of(context).textTheme.titleSmall,
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: AppTheme.smallSpacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Income:'),
+                Text(
+                  _currencyFormat.format(totalIncome),
+                  style: const TextStyle(color: Colors.green),
+                ),
+              ],
+            ),
+            SizedBox(height: AppTheme.smallSpacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text('Total Expenses:'),
+                Text(
+                  _currencyFormat.format(totalExpenses),
+                  style: const TextStyle(color: Colors.red),
+                ),
+              ],
+            ),
+            Divider(height: AppTheme.spacing),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'Net Total:',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  _currencyFormat.format(netTotal),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: netTotal >= 0 ? Colors.green : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildToggleButton() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -89,10 +162,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
         const SizedBox(width: 8),
         Switch(
           value: _isVisible,
-          onChanged: (value) {
-            AppLogger.debug('Log visibility toggle changed to: $value');
-            setState(() => _isVisible = value);
-          },
+          onChanged: (value) => setState(() => _isVisible = value),
         ),
       ],
     );
@@ -120,45 +190,6 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
     });
   }
 
-  void _showEntryDetails(T entry) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(entry.title),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: entry.details.entries.map((detail) => 
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      detail.key,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    Text(
-                      detail.value,
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
-                ),
-              ),
-            ).toList(),
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('CLOSE'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -181,169 +212,89 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
   Widget _buildLogContent() {
     final years = _groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
     
-    return Card(
-      margin: EdgeInsets.symmetric(vertical: AppTheme.smallSpacing),
-      child: ListView.builder(
-        shrinkWrap: widget.shrinkWrap,
-        physics: widget.physics,
-        padding: EdgeInsets.zero,
-        itemCount: years.length,
-        itemBuilder: (context, yearIndex) {
-          final year = years[yearIndex];
-          final yearKey = year.toString();
-          final isYearExpanded = _expandedYears.contains(yearKey);
-          final months = _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a));
-
-          return Column(
-            children: [
-              // Year header
-              InkWell(
-                onTap: () => _toggleYear(yearKey),
-                child: Container(
-                  color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 26),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  child: Row(
-                    children: [
-                      Icon(
-                        isYearExpanded ? Icons.expand_less : Icons.expand_more,
-                        size: 18,
-                      ),
-                      const SizedBox(width: AppTheme.smallSpacing),
-                      Text(
-                        yearKey,
-                        style: AppTheme.subheadingStyle,
-                      ),
-                    ],
-                  ),
-                ),
+    return ListView.builder(
+      shrinkWrap: widget.shrinkWrap,
+      physics: widget.physics,
+      itemCount: years.length,
+      itemBuilder: (context, yearIndex) {
+        final year = years[yearIndex];
+        final yearKey = year.toString();
+        final isYearExpanded = _expandedYears.contains(yearKey);
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ListTile(
+              title: Text(
+                yearKey,
+                style: Theme.of(context).textTheme.titleMedium,
               ),
-              if (isYearExpanded)
-                ListView.builder(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  padding: EdgeInsets.zero,
-                  itemCount: months.length,
-                  itemBuilder: (context, monthIndex) {
-                    final month = months[monthIndex];
-                    final monthKey = '$yearKey-$month';
-                    final isMonthExpanded = _expandedMonths.contains(monthKey);
-                    final entries = _groupedEntries[year]![month]!;
-
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Month header
-                        InkWell(
-                          onTap: () => _toggleMonth(monthKey),
-                          child: Container(
-                            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 13),
-                            padding: EdgeInsets.symmetric(horizontal: AppTheme.spacing, vertical: AppTheme.smallSpacing),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  isMonthExpanded ? Icons.expand_less : Icons.expand_more,
-                                  size: 16,
-                                ),
-                                const SizedBox(width: AppTheme.smallSpacing),
-                                Text(
-                                  formatMonth(month),
-                                  style: AppTheme.bodyStyle,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                        if (isMonthExpanded)
-                          ListView.builder(
-                            shrinkWrap: true,
-                            physics: const NeverScrollableScrollPhysics(),
-                            padding: EdgeInsets.zero,
-                            itemCount: entries.length,
-                            itemBuilder: (context, entryIndex) => _buildEntryRow(entries[entryIndex], entryIndex),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-            ],
-          );
-        },
-      ),
+              trailing: Icon(
+                isYearExpanded ? Icons.expand_less : Icons.expand_more,
+              ),
+              onTap: () => _toggleYear(yearKey),
+            ),
+            if (isYearExpanded)
+              for (var month in _groupedEntries[year]!.keys.toList()..sort((a, b) => b.compareTo(a)))
+                _buildMonthSection(year, month),
+          ],
+        );
+      },
     );
   }
 
-  Widget _buildEntryRow(T entry, int index) {
-    final isEven = index.isEven;
+  Widget _buildMonthSection(int year, int month) {
+    final monthKey = '$year-$month';
+    final isMonthExpanded = _expandedMonths.contains(monthKey);
+    final entries = _groupedEntries[year]![month]!;
     
-    return InkWell(
-      onTap: () => _showEntryDetails(entry),
-      child: Container(
-        decoration: BoxDecoration(
-          color: isEven ? Colors.grey.withValues(alpha: 13) : null,
-          border: Border(
-            left: BorderSide(
-              color: _getEntryColor(entry),
-              width: 3,
+    return Padding(
+      padding: const EdgeInsets.only(left: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ListTile(
+            title: Text(
+              DateFormat('MMMM').format(DateTime(2000, month)),
+              style: Theme.of(context).textTheme.titleSmall,
             ),
+            trailing: Icon(
+              isMonthExpanded ? Icons.expand_less : Icons.expand_more,
+            ),
+            onTap: () => _toggleMonth(monthKey),
           ),
-        ),
-        child: Padding(
-          padding: EdgeInsets.all(AppTheme.spacing),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Title and Description
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          if (isMonthExpanded) ...[
+            _buildMonthSummary(entries),
+            ...entries.map((entry) => Container(
+              decoration: entry.decoration,
+              child: ListTile(
+                title: Text(entry.title),
+                subtitle: Text(entry.subtitle),
+                onTap: () {
+                  if (widget.onView != null) {
+                    widget.onView!(entry);
+                  }
+                },
+                trailing: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      entry.title,
-                      style: AppTheme.labelStyle,
-                    ),
-                    if (entry.details['Description']?.isNotEmpty == true)
-                      Padding(
-                        padding: const EdgeInsets.only(top: AppTheme.smallSpacing),
-                        child: Text(
-                          entry.details['Description'] ?? '',
-                          style: AppTheme.bodyStyle,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                    if (entry.canEdit && widget.onEdit != null)
+                      IconButton(
+                        icon: const Icon(Icons.edit),
+                        onPressed: () => widget.onEdit!(entry),
+                      ),
+                    if (entry.canDelete && widget.onDelete != null)
+                      IconButton(
+                        icon: const Icon(Icons.delete),
+                        onPressed: () => widget.onDelete!(entry),
                       ),
                   ],
                 ),
               ),
-              // Date, Hours and Amount
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    formatDate(entry.date),
-                    style: AppTheme.labelStyle.copyWith(fontFamily: 'monospace'),
-                  ),
-                  Text(
-                    entry.subtitle,
-                    style: AppTheme.bodyStyle.copyWith(fontFamily: 'monospace'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
+            )),
+          ],
+        ],
       ),
     );
-  }
-
-  Color _getEntryColor(T entry) {
-    // Only check for expense type if it's a financial entry
-    if (entry.details.containsKey('Type')) {
-      final isExpense = entry.details['Type'] == 'Expense';
-      return isExpense 
-          ? AppTheme.errorColor.withValues(alpha: 50)
-          : AppTheme.primaryColor.withValues(alpha: 50);
-    }
-    // Default color for non-financial entries
-    return AppTheme.secondaryColor.withValues(alpha: 50);
   }
 } 

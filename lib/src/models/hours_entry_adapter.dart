@@ -1,6 +1,7 @@
 import '../components/log_display.dart';
 import '../models/hours_entry.dart';
 import '../utils/formatters.dart';
+import 'package:flutter/material.dart';
 
 class HoursEntryAdapter implements LogEntry {
   final HoursEntry entry;
@@ -36,4 +37,7 @@ class HoursEntryAdapter implements LogEntry {
 
   @override
   bool get canDelete => hasDeletePermission;
+
+  @override
+  BoxDecoration? get decoration => null;
 } 

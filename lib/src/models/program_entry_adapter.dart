@@ -1,6 +1,7 @@
 import '../components/log_display.dart';
 import '../models/form1728p_program.dart';
 import '../utils/formatters.dart';
+import 'package:flutter/material.dart';
 
 class ProgramEntry {
   final String id;
@@ -59,4 +60,7 @@ class ProgramEntryAdapter implements LogEntry {
 
   @override
   bool get canDelete => hasDeletePermission;
+
+  @override
+  BoxDecoration? get decoration => null;
 } 

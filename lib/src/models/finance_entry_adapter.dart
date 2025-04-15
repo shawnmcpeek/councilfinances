@@ -1,6 +1,7 @@
 import '../components/log_display.dart';
 import '../models/finance_entry.dart';
 import '../utils/formatters.dart';
+import 'package:flutter/material.dart';
 
 class FinanceEntryAdapter implements LogEntry {
   final FinanceEntry entry;
@@ -40,4 +41,14 @@ class FinanceEntryAdapter implements LogEntry {
 
   @override
   bool get canDelete => hasDeletePermission;
+
+  @override
+  BoxDecoration? get decoration => BoxDecoration(
+    border: Border(
+      left: BorderSide(
+        color: entry.isExpense ? Colors.red : Colors.green,
+        width: 3,
+      ),
+    ),
+  );
 } 
