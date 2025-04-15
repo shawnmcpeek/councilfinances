@@ -1,0 +1,6 @@
+flutter_native_splash:
+  color: "#FFFFFF"
+  image: assets/images/knights3.png
+  android_12:
+    image: assets/images/knights3.png
+  web: false 

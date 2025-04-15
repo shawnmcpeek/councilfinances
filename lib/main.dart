@@ -8,6 +8,7 @@ import 'package:kcmanagement/src/screens/programs_collect.dart';
 import 'package:kcmanagement/src/screens/hours_entry_screen.dart';
 import 'package:kcmanagement/src/screens/finance_screen.dart';
 import 'package:kcmanagement/src/screens/programs_screen.dart';
+import 'package:kcmanagement/src/screens/reports_screen.dart';
 import 'package:kcmanagement/src/services/auth_service.dart';
 import 'package:kcmanagement/src/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -150,6 +151,7 @@ class _MainScreenState extends State<MainScreen> {
           const ProgramsCollectScreen(),
           const HoursEntryScreen(),
           const FinanceScreen(),
+          const ReportsScreen(),
           ProfileScreen(
             onProgramsPressed: _handleProgramsPressed,
           ),
@@ -178,6 +180,10 @@ class _MainScreenState extends State<MainScreen> {
           NavigationDestination(
             icon: Icon(Icons.attach_money),
             label: 'Finance',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.summarize),
+            label: 'Reports',
           ),
           NavigationDestination(
             icon: Icon(Icons.person),
