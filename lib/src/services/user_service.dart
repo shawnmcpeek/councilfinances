@@ -43,6 +43,39 @@ class UserService {
     }
   }
 
+  // Get user profile by ID
+  Future<UserProfile?> getUserProfileById(String userId) async {
+    try {
+      AppLogger.info('Fetching user profile for ID: $userId');
+      final doc = await _firestore.collection('users').doc(userId).get();
+      
+      if (!doc.exists) {
+        AppLogger.info('No profile document exists for user $userId');
+        return null;
+      }
+
+      final data = doc.data();
+      if (data == null) {
+        AppLogger.warning('Document exists but data is null for user $userId');
+        return null;
+      }
+
+      return UserProfile.fromMap({
+        ...data,
+        'uid': doc.id,
+        'firstName': data['firstName'] ?? '',
+        'lastName': data['lastName'] ?? '',
+        'membershipNumber': data['membershipNumber'] ?? 0,
+        'councilNumber': data['councilNumber'] ?? 0,
+        'councilRoles': data['councilRoles'] ?? [],
+        'assemblyRoles': data['assemblyRoles'] ?? [],
+      });
+    } catch (e, stackTrace) {
+      AppLogger.error('Error fetching user profile by ID', e, stackTrace);
+      return null;
+    }
+  }
+
   // Update user profile
   Future<void> updateUserProfile(UserProfile profile) async {
     try {

@@ -65,6 +65,8 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
   }
 
   List<Program> _getEnabledPrograms() {
+    if (_systemPrograms == null) return [];
+    
     final List<Program> enabledPrograms = [];
     
     // Add system programs
@@ -110,19 +112,20 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
       );
     }
 
+    final programs = _getEnabledPrograms();
+    
     return DropdownButtonFormField<Program>(
       isExpanded: true,
       decoration: AppTheme.formFieldDecorationWithLabel('Program', 'Select a program'),
       value: widget.selectedProgram,
-      items: _getEnabledPrograms()
-          .map((program) => DropdownMenuItem(
-                value: program,
-                child: Text(
-                  program.name,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ))
+      items: programs.map((program) => DropdownMenuItem(
+            value: program,
+            child: Text(
+              program.name,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 14),
+            ),
+          ))
           .toList(),
       onChanged: widget.onChanged,
       validator: widget.validator,

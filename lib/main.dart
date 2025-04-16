@@ -17,6 +17,8 @@ import 'package:kcmanagement/src/theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'src/providers/organization_provider.dart';
+import 'src/reports/form1728_report_service.dart';
+import 'src/reports/volunteer_hours_report_service.dart';
 
 void main() async {
   try {
@@ -43,11 +45,19 @@ void main() async {
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
     
+    // Create shared instances
+    final userService = UserService();
+    final firestore = FirebaseFirestore.instance;
+    
     runApp(
       MultiProvider(
         providers: [
+          Provider<AuthService>(create: (_) => AuthService()),
           ChangeNotifierProvider(create: (_) => OrganizationProvider()),
-          // ... any other existing providers ...
+          Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
+          Provider<VolunteerHoursReportService>(
+            create: (_) => VolunteerHoursReportService(userService, firestore),
+          ),
         ],
         child: const MyApp(),
       ),

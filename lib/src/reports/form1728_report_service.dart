@@ -4,8 +4,6 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../utils/logger.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
-import 'package:path_provider/path_provider.dart';
-import 'dart:io';
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -127,7 +125,7 @@ class Form1728FieldMap {
   };
 }
 
-class ReportService {
+class Form1728ReportService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final UserService _userService = UserService();
 
@@ -247,7 +245,7 @@ class ReportService {
     return programMapping[programId] ?? '';
   }
 
-  Future<void> generateForm1728Report(String organizationId, String year) async {
+  Future<void> generateReport(String organizationId, String year) async {
     try {
       // 1. Aggregate the data
       final totals = await aggregateProgramData(organizationId, year);
@@ -313,137 +311,6 @@ class ReportService {
       AppLogger.debug('Shared Form 1728 report for $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error generating Form 1728 report', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  Future<void> generateVolunteerHoursReport(String userId, String year) async {
-    try {
-      // Get user profile for organization info
-      final userService = UserService();
-      final userProfile = await userService.getUserProfile();
-      if (userProfile == null) {
-        throw Exception('User profile not found');
-      }
-
-      // Query hours for the user and year
-      final hoursSnapshot = await FirebaseFirestore.instance
-          .collection('hours')
-          .where('userId', isEqualTo: userId)
-          .where('date', isGreaterThanOrEqualTo: DateTime(int.parse(year), 1, 1))
-          .where('date', isLessThan: DateTime(int.parse(year) + 1, 1, 1))
-          .get();
-
-      // Group hours by program
-      final Map<String, double> programHours = {};
-      double totalHours = 0;
-
-      for (var doc in hoursSnapshot.docs) {
-        final data = doc.data();
-        final program = data['program'] as String;
-        final hours = (data['hours'] as num).toDouble();
-        
-        programHours[program] = (programHours[program] ?? 0) + hours;
-        totalHours += hours;
-      }
-
-      // Create PDF document
-      final PdfDocument document = PdfDocument();
-      final PdfPage page = document.pages.add();
-      final PdfGraphics graphics = page.graphics;
-
-      // Set up fonts
-      final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 16);
-      final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 14);
-      final PdfFont bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 12);
-
-      // Draw header
-      graphics.drawString(
-        'Volunteer Hours Report - ${userProfile.councilNumber}',
-        headerFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(50, 50, 500, 30),
-      );
-
-      // Draw year
-      graphics.drawString(
-        'Year: $year',
-        titleFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(50, 90, 500, 30),
-      );
-
-      // Draw program hours table
-      double yPosition = 130;
-      graphics.drawString(
-        'Program Hours',
-        titleFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(50, yPosition, 500, 30),
-      );
-      yPosition += 40;
-
-      // Draw table headers
-      graphics.drawString(
-        'Program',
-        bodyFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(50, yPosition, 300, 30),
-      );
-      graphics.drawString(
-        'Hours',
-        bodyFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(350, yPosition, 100, 30),
-      );
-      yPosition += 30;
-
-      // Draw program hours
-      programHours.forEach((program, hours) {
-        graphics.drawString(
-          program,
-          bodyFont,
-          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-          bounds: Rect.fromLTWH(50, yPosition, 300, 30),
-        );
-        graphics.drawString(
-          hours.toStringAsFixed(1),
-          bodyFont,
-          brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-          bounds: Rect.fromLTWH(350, yPosition, 100, 30),
-        );
-        yPosition += 30;
-      });
-
-      // Draw total hours
-      yPosition += 20;
-      graphics.drawString(
-        'Total Hours',
-        titleFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(50, yPosition, 300, 30),
-      );
-      graphics.drawString(
-        totalHours.toStringAsFixed(1),
-        titleFont,
-        brush: PdfSolidBrush(PdfColor(0, 0, 0)),
-        bounds: Rect.fromLTWH(350, yPosition, 100, 30),
-      );
-
-      // Save and share the document
-      final List<int> bytes = await document.save();
-      document.dispose();
-
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/volunteer_hours_$year.pdf');
-      await file.writeAsBytes(bytes);
-
-      await Share.shareXFiles(
-        [XFile(file.path)],
-        text: 'Volunteer Hours Report for $year',
-      );
-    } catch (e) {
-      AppLogger.error('Error generating volunteer hours report', e);
       rethrow;
     }
   }

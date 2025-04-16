@@ -1,7 +1,13 @@
 import 'package:flutter/material.dart';
-import '../services/report_service.dart';
+import 'package:provider/provider.dart';
 import '../services/user_service.dart';
-import '../utils/logger.dart';
+import '../models/user_profile.dart';
+import '../theme/app_theme.dart';
+import '../components/organization_toggle.dart';
+import '../components/program_budget.dart';
+import '../reports/form1728_report.dart';
+import '../reports/volunteer_hours_report.dart';
+import '../providers/organization_provider.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -11,125 +17,103 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  final _reportService = ReportService();
   final _userService = UserService();
-  String _selectedYear = '2024';
-  bool _isGenerating = false;
+  String selectedYear = DateTime.now().year.toString();
+  bool isGeneratingForm1728 = false;
+  bool isGeneratingVolunteerHours = false;
+  bool _isLoading = false;
+  UserProfile? _userProfile;
 
-  final List<String> _availableYears = [
-    '2024', '2025', '2026', '2027', '2028', '2029'
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
 
-  Future<void> _generateForm1728Report() async {
-    setState(() => _isGenerating = true);
+  Future<void> _loadUserProfile() async {
+    setState(() => _isLoading = true);
     try {
       final userProfile = await _userService.getUserProfile();
-      if (userProfile == null) {
-        throw Exception('User profile not found');
-      }
-
-      final organizationId = userProfile.assemblyNumber != null 
-          ? 'A${userProfile.assemblyNumber.toString().padLeft(6, '0')}'
-          : 'C${userProfile.councilNumber.toString().padLeft(6, '0')}';
-
-      await _reportService.generateForm1728Report(organizationId, _selectedYear);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report generated successfully')),
-        );
-      }
+      setState(() {
+        _userProfile = userProfile;
+        _isLoading = false;
+      });
     } catch (e) {
-      AppLogger.error('Error generating report', e);
+      setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating report: $e')),
+          SnackBar(content: Text('Error loading user profile: ${e.toString()}')),
         );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isGenerating = false);
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_userProfile == null) {
+      return const Scaffold(
+        body: Center(child: Text('Please sign in to view reports')),
+      );
+    }
+
+    final organizationProvider = context.watch<OrganizationProvider>();
+    final organizationId = _userProfile?.getOrganizationId(
+      organizationProvider.isAssembly,
+    ) ?? '';
+
+    if (organizationId.isEmpty) {
+      return const Scaffold(
+        body: Center(child: Text('Please select an organization')),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Reports'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        foregroundColor: Colors.white,
       ),
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Form 1728 Program Report',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+      body: AppTheme.screenContent(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const OrganizationToggle(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: [
+                    Form1728Report(
+                      organizationId: organizationId,
+                      selectedYear: selectedYear,
+                      isGenerating: isGeneratingForm1728,
+                      onGeneratingChange: (value) => setState(() => isGeneratingForm1728 = value),
+                      onYearChange: (value) => setState(() => selectedYear = value),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Generate annual program activity report',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
+                    SizedBox(height: AppTheme.spacing),
+                    VolunteerHoursReport(
+                      userId: _userProfile!.uid,
+                      organizationId: organizationId,
+                      selectedYear: selectedYear,
+                      isGenerating: isGeneratingVolunteerHours,
+                      onGeneratingChange: (value) => setState(() => isGeneratingVolunteerHours = value),
+                      onYearChange: (value) => setState(() => selectedYear = value),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(
-                      labelText: 'Report Year',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    ),
-                    value: _selectedYear,
-                    items: _availableYears.map((year) {
-                      return DropdownMenuItem(
-                        value: year,
-                        child: Text(year),
-                      );
-                    }).toList(),
-                    onChanged: (value) {
-                      if (value != null) {
-                        setState(() => _selectedYear = value);
-                      }
-                    },
-                  ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _isGenerating ? null : _generateForm1728Report,
-                      icon: _isGenerating 
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.picture_as_pdf),
-                      label: Text(_isGenerating ? 'Generating...' : 'Generate Report'),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.all(16),
+                    SizedBox(height: AppTheme.spacing),
+                    if (organizationId.isNotEmpty)
+                      ProgramBudget(
+                        organizationId: organizationId,
                       ),
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-          // More report types can be added here
-        ],
+          ],
+        ),
       ),
     );
   }
-} 
+}

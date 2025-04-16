@@ -257,4 +257,54 @@ class FinanceService {
       rethrow;
     }
   }
+
+  Future<List<FinanceEntry>> getFinanceEntriesForProgram(
+    String organizationId,
+    bool isAssembly,
+    String programId,
+    String year,
+  ) async {
+    try {
+      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
+      AppLogger.debug('Getting finance entries for organization: $formattedOrgId, program: $programId, year: $year');
+      
+      final List<FinanceEntry> entries = [];
+
+      // Get income entries
+      final incomeSnapshot = await _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc('income')
+          .collection(year)
+          .where('programId', isEqualTo: programId)
+          .get();
+
+      // Get expense entries
+      final expenseSnapshot = await _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc('expenses')
+          .collection(year)
+          .where('programId', isEqualTo: programId)
+          .get();
+
+      // Process income entries
+      entries.addAll(_processEntries(incomeSnapshot, false));
+
+      // Process expense entries
+      entries.addAll(_processEntries(expenseSnapshot, true));
+
+      // Sort all entries by date
+      entries.sort((a, b) => b.date.compareTo(a.date));
+      
+      AppLogger.debug('Returning ${entries.length} entries for program $programId');
+      return entries;
+    } catch (e, stackTrace) {
+      AppLogger.error('Error getting finance entries for program', e);
+      AppLogger.error('Stack trace:', stackTrace);
+      rethrow;
+    }
+  }
 } 
