@@ -22,34 +22,37 @@ class OrganizationToggle extends StatelessWidget {
       builder: (context, organizationProvider, child) {
         final isAssemblyValue = isAssembly ?? organizationProvider.isAssembly;
         
-        return Row(
-          children: [
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  if (isAssemblyValue) {
-                    onChanged?.call(false);
-                    organizationProvider.setOrganization(false);
-                  }
-                },
-                style: AppTheme.getButtonStyle(isSelected: !isAssemblyValue),
-                child: const Text('Council'),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppTheme.smallSpacing),
+          child: Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (isAssemblyValue) {
+                      onChanged?.call(false);
+                      organizationProvider.setOrganization(false);
+                    }
+                  },
+                  style: AppTheme.getButtonStyle(isSelected: !isAssemblyValue),
+                  child: const Text('Council'),
+                ),
               ),
-            ),
-            SizedBox(width: AppTheme.spacing),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: () {
-                  if (!isAssemblyValue) {
-                    onChanged?.call(true);
-                    organizationProvider.setOrganization(true);
-                  }
-                },
-                style: AppTheme.getButtonStyle(isSelected: isAssemblyValue),
-                child: const Text('Assembly'),
+              SizedBox(width: AppTheme.spacing),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    if (!isAssemblyValue) {
+                      onChanged?.call(true);
+                      organizationProvider.setOrganization(true);
+                    }
+                  },
+                  style: AppTheme.getButtonStyle(isSelected: isAssemblyValue),
+                  child: const Text('Assembly'),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );

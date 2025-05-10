@@ -211,7 +211,7 @@ class _ProgramBudgetState extends State<ProgramBudget> {
                       valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
-                : const Icon(Icons.calculate),
+                : const Icon(Icons.summarize),
               label: Text(_isCalculating ? 'Calculating...' : 'Calculate Budget'),
             ),
             _buildResults(),

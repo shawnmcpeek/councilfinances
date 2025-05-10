@@ -5,9 +5,12 @@ import '../models/user_profile.dart';
 import '../theme/app_theme.dart';
 import '../components/organization_toggle.dart';
 import '../components/program_budget.dart';
+import '../components/period_report_selector.dart';
 import '../reports/form1728_report.dart';
 import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
+import '../reports/period_report_service.dart';
+import '../models/member_roles.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -48,6 +51,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     }
   }
 
+  bool _hasFinancialAccess() {
+    return (_userProfile?.councilRoles.any((role) => role.accessLevel == AccessLevel.full) ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => role.accessLevel == AccessLevel.full) ?? false);
+  }
+
+  bool _hasProgramAccess() {
+    return (_userProfile?.councilRoles.any((role) => role.accessLevel == AccessLevel.read || role.accessLevel == AccessLevel.full) ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => role.accessLevel == AccessLevel.read || role.accessLevel == AccessLevel.full) ?? false);
+  }
+
+  bool _hasVolunteerAccess() {
+    return (_userProfile?.councilRoles.isNotEmpty ?? false) ||
+           (_userProfile?.assemblyRoles.isNotEmpty ?? false);
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -85,28 +103,39 @@ class _ReportsScreenState extends State<ReportsScreen> {
             Expanded(
               child: SingleChildScrollView(
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Form1728Report(
-                      organizationId: organizationId,
-                      selectedYear: selectedYear,
-                      isGenerating: isGeneratingForm1728,
-                      onGeneratingChange: (value) => setState(() => isGeneratingForm1728 = value),
-                      onYearChange: (value) => setState(() => selectedYear = value),
-                    ),
-                    SizedBox(height: AppTheme.spacing),
-                    VolunteerHoursReport(
-                      userId: _userProfile!.uid,
-                      organizationId: organizationId,
-                      selectedYear: selectedYear,
-                      isGenerating: isGeneratingVolunteerHours,
-                      onGeneratingChange: (value) => setState(() => isGeneratingVolunteerHours = value),
-                      onYearChange: (value) => setState(() => selectedYear = value),
-                    ),
-                    SizedBox(height: AppTheme.spacing),
-                    if (organizationId.isNotEmpty)
-                      ProgramBudget(
+                    if (_hasFinancialAccess()) ...[
+                      const PeriodReportSelector(),
+                      const SizedBox(height: 24),
+                      const Divider(),
+                    ],
+                    if (_hasProgramAccess()) ...[
+                      Form1728Report(
                         organizationId: organizationId,
+                        selectedYear: selectedYear,
+                        isGenerating: isGeneratingForm1728,
+                        onGeneratingChange: (value) => setState(() => isGeneratingForm1728 = value),
+                        onYearChange: (value) => setState(() => selectedYear = value),
                       ),
+                      SizedBox(height: AppTheme.spacing),
+                      if (organizationId.isNotEmpty)
+                        ProgramBudget(
+                          organizationId: organizationId,
+                        ),
+                      const SizedBox(height: 24),
+                      const Divider(),
+                    ],
+                    if (_hasVolunteerAccess()) ...[
+                      VolunteerHoursReport(
+                        userId: _userProfile!.uid,
+                        organizationId: organizationId,
+                        selectedYear: selectedYear,
+                        isGenerating: isGeneratingVolunteerHours,
+                        onGeneratingChange: (value) => setState(() => isGeneratingVolunteerHours = value),
+                        onYearChange: (value) => setState(() => selectedYear = value),
+                      ),
+                    ],
                   ],
                 ),
               ),

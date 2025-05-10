@@ -9,6 +9,7 @@ import 'package:kcmanagement/src/screens/hours_entry_screen.dart';
 import 'package:kcmanagement/src/screens/finance_screen.dart';
 import 'package:kcmanagement/src/screens/programs_screen.dart';
 import 'package:kcmanagement/src/screens/reports_screen.dart';
+import 'package:kcmanagement/src/screens/periodic_report_data.dart';
 import 'package:kcmanagement/src/services/auth_service.dart';
 import 'package:kcmanagement/src/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -80,6 +81,9 @@ class MyApp extends StatelessWidget {
       theme: AppTheme.lightTheme,
       navigatorKey: GlobalKey<NavigatorState>(),
       home: const AuthWrapper(),
+      routes: {
+        '/auditData': (context) => const PeriodicReportDataScreen(),
+      },
     );
   }
 }
