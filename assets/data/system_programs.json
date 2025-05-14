@@ -133,6 +133,71 @@
         "systemDefault": true,
         "financialType": "both"
       }
+    ],
+    "council": [
+      {
+        "id": "membership_dues",
+        "name": "Membership Dues",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "incomeOnly"
+      },
+      {
+        "id": "council_insurance",
+        "name": "Council Insurance",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "interest",
+        "name": "Interest",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "incomeOnly"
+      },
+      {
+        "id": "convention",
+        "name": "Convention",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "postage",
+        "name": "Postage",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "supplies",
+        "name": "Supplies",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "per_capita_state",
+        "name": "Per Capita - State",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "per_capita_supreme",
+        "name": "Per Capita - Supreme",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "bank_charges",
+        "name": "Bank Charges",
+        "category": "COUNCIL",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      }
     ]
   },
   "assembly_programs": {

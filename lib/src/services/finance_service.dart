@@ -307,4 +307,29 @@ class FinanceService {
       rethrow;
     }
   }
+
+  Future<void> deleteFinanceEntry({
+    required String organizationId,
+    required String entryId,
+    required bool isAssembly,
+    required bool isExpense,
+    required int year,
+  }) async {
+    try {
+      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
+      final type = isExpense ? 'expenses' : 'income';
+      final docRef = _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc(type)
+          .collection(year.toString())
+          .doc(entryId);
+      await docRef.delete();
+      AppLogger.debug('Deleted $type entry: $entryId for $formattedOrgId, year $year');
+    } catch (e, stackTrace) {
+      AppLogger.error('Error deleting finance entry', e, stackTrace);
+      rethrow;
+    }
+  }
 } 

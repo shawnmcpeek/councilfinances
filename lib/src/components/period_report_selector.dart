@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class PeriodReportSelector extends StatelessWidget {
-  const PeriodReportSelector({Key? key}) : super(key: key);
+  const PeriodReportSelector({super.key});
 
   void _navigateToAuditData(BuildContext context) {
     Navigator.of(context).pushNamed('/auditData');

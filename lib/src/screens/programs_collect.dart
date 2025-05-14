@@ -394,10 +394,45 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                   ),
                   SizedBox(height: AppTheme.spacing),
                   LogDisplay<ProgramEntryAdapter>(
-                    entries: _entries.map((entry) => ProgramEntryAdapter(entry)).toList(),
+                    entries: _entries.map((entry) => ProgramEntryAdapter(entry, hasEditPermission: true, hasDeletePermission: true)).toList(),
                     emptyMessage: 'No program entries found',
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
+                    onEdit: (adapter) async {
+                      await showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Edit'),
+                          content: const Text('Edit not implemented yet.'),
+                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+                        ),
+                      );
+                    },
+                    onDelete: (adapter) async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Entry'),
+                          content: const Text('Are you sure you want to delete this entry?'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                          ],
+                        ),
+                      );
+                      if (confirm == true) {
+                        final organizationId = _getFormattedOrganizationId();
+                        if (organizationId.isNotEmpty) {
+                          await _programEntryService.deleteProgramEntry(
+                            organizationId: organizationId,
+                            category: adapter.entry.category,
+                            programId: adapter.entry.program.id,
+                            year: adapter.entry.date.year.toString(),
+                          );
+                          _subscribeToEntries(organizationId);
+                        }
+                      }
+                    },
                   ),
                 ],
               ),

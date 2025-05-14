@@ -5,7 +5,7 @@ import '../reports/period_report_service.dart';
 class PeriodReportScreen extends StatelessWidget {
   final PeriodReportService _reportService = PeriodReportService();
 
-  PeriodReportScreen({Key? key}) : super(key: key);
+  PeriodReportScreen({super.key});
 
   Future<void> _handleGenerateReport(String period, int year) async {
     try {
@@ -33,9 +33,7 @@ class PeriodReportScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PeriodReportSelector(
-              onGenerateReport: _handleGenerateReport,
-            ),
+            PeriodReportSelector(),
             const SizedBox(height: 24),
             // TODO: Add a preview or status section here
           ],

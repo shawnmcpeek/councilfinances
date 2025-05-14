@@ -6,10 +6,12 @@ import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/user_service.dart';
 import '../utils/logger.dart';
+import '../services/report_service.dart';
 
 class VolunteerHoursReportService {
   final UserService _userService;
   final FirebaseFirestore _firestore;
+  final ReportService _reportService = ReportService();
 
   VolunteerHoursReportService(this._userService, this._firestore);
 
@@ -107,13 +109,17 @@ class VolunteerHoursReportService {
       );
 
       // Save and share the document
-      final tempDir = await getTemporaryDirectory();
-      final file = File('${tempDir.path}/volunteer_hours_$year.pdf');
-      await file.writeAsBytes(await document.save());
+      final List<int> bytes = await document.save();
       document.dispose();
 
-      AppLogger.info('Report generated successfully, sharing file: ${file.path}');
-      await Share.shareXFiles([XFile(file.path)], subject: 'Volunteer Hours Report $year');
+      final fileName = 'volunteer_hours_${organizationId}_$year.pdf';
+      await _reportService.saveOrShareFile(
+        bytes,
+        fileName,
+        'Volunteer Hours Report for $year'
+      );
+
+      AppLogger.info('Report generated and saved/shared successfully');
     } catch (e, stackTrace) {
       AppLogger.error('Error generating volunteer hours report', e, stackTrace);
       rethrow;

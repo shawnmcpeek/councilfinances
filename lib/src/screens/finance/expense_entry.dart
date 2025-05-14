@@ -206,9 +206,8 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
                     SizedBox(height: AppTheme.spacing),
                     TextFormField(
                       controller: _descriptionController,
-                      decoration: AppTheme.formFieldDecorationWithLabel('Description/Notes'),
+                      decoration: AppTheme.formFieldDecorationWithLabel('Description/Notes (Optional)'),
                       maxLines: 3,
-                      validator: (value) => value?.isEmpty ?? true ? 'Please enter a description' : null,
                     ),
                     SizedBox(height: AppTheme.largeSpacing),
                     FilledButton(

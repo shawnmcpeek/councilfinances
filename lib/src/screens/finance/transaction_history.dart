@@ -76,10 +76,43 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     }
 
     return LogDisplay<FinanceEntryAdapter>(
-      entries: _entries.map((entry) => FinanceEntryAdapter(entry)).toList(),
+      entries: _entries.map((entry) => FinanceEntryAdapter(entry, hasEditPermission: true, hasDeletePermission: true)).toList(),
       emptyMessage: 'No transactions found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      onEdit: (adapter) async {
+        await showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Edit'),
+            content: const Text('Edit not implemented yet.'),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+          ),
+        );
+      },
+      onDelete: (adapter) async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Entry'),
+            content: const Text('Are you sure you want to delete this entry?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+            ],
+          ),
+        );
+        if (confirm == true) {
+          await _financeService.deleteFinanceEntry(
+            organizationId: widget.organizationId,
+            entryId: adapter.entry.id,
+            isAssembly: widget.isAssembly,
+            isExpense: adapter.entry.isExpense,
+            year: adapter.entry.date.year,
+          );
+          _loadTransactions();
+        }
+      },
     );
   }
 } 

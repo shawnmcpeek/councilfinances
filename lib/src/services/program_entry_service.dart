@@ -213,4 +213,27 @@ class ProgramEntryService {
       rethrow;
     }
   }
+
+  Future<void> deleteProgramEntry({
+    required String organizationId,
+    required Form1728PCategory category,
+    required String programId,
+    String? year,
+  }) async {
+    try {
+      final yearStr = year ?? DateTime.now().year.toString();
+      final docRef = _firestore
+          .collection('organizations')
+          .doc(organizationId)
+          .collection('program_entries')
+          .doc(yearStr)
+          .collection(category.name)
+          .doc(programId);
+      await docRef.delete();
+      AppLogger.debug('Deleted program entry: $organizationId, $category, $programId, $yearStr');
+    } catch (e, stackTrace) {
+      AppLogger.error('Error deleting program entry', e, stackTrace);
+      rethrow;
+    }
+  }
 } 

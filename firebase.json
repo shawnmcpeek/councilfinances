@@ -1,1 +1,39 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"council-finance","appId":"1:606365253863:android:91637a0d87298836c0a242","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"council-finance","configurations":{"android":"1:606365253863:android:91637a0d87298836c0a242","ios":"1:606365253863:ios:97caf1eba44231b6c0a242","macos":"1:606365253863:ios:97caf1eba44231b6c0a242","web":"1:606365253863:web:525cfc96f84daa9bc0a242","windows":"1:606365253863:web:79209ed7d54408ecc0a242"}}}}}}
+{
+  "hosting": {
+    "public": "build/web",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "rewrites": [
+      {
+        "source": "**",
+        "destination": "/index.html"
+      }
+    ]
+  },
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "council-finance",
+          "appId": "1:606365253863:android:91637a0d87298836c0a242",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "council-finance",
+          "configurations": {
+            "android": "1:606365253863:android:91637a0d87298836c0a242",
+            "ios": "1:606365253863:ios:97caf1eba44231b6c0a242",
+            "macos": "1:606365253863:ios:97caf1eba44231b6c0a242",
+            "web": "1:606365253863:web:525cfc96f84daa9bc0a242",
+            "windows": "1:606365253863:web:79209ed7d54408ecc0a242"
+          }
+        }
+      }
+    }
+  }
+}

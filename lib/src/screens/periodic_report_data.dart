@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 class PeriodicReportDataScreen extends StatelessWidget {
-  const PeriodicReportDataScreen({Key? key}) : super(key: key);
+  const PeriodicReportDataScreen({super.key});
 
   @override
   Widget build(BuildContext context) {

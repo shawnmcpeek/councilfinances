@@ -6,6 +6,8 @@ import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
+import './report_file_saver.dart';
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -299,16 +301,7 @@ class ReportService {
 
       // 5. Share the PDF bytes directly
       final String fileName = 'Form1728P_${organizationId}_$year.pdf';
-      final XFile pdfXFile = XFile.fromData(
-        Uint8List.fromList(pdfBytes),
-        name: fileName,
-        mimeType: 'application/pdf',
-      );
-      
-      await Share.shareXFiles(
-        [pdfXFile],
-        subject: 'Form 1728P Report for $year',
-      );
+      await saveOrShareFile(pdfBytes, fileName, 'Form 1728P Report for $year');
 
       AppLogger.debug('Shared Form 1728 report for $year');
     } catch (e, stackTrace) {
@@ -446,5 +439,10 @@ class ReportService {
       AppLogger.error('Error generating volunteer hours report', e);
       rethrow;
     }
+  }
+
+  Future<void> saveOrShareFile(List<int> pdfBytes, String fileName, String subject) async {
+    // This is now handled by the platform-specific implementation in report_file_saver.dart
+    await saveOrShareFile(pdfBytes, fileName, subject);
   }
 } 

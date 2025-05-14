@@ -32,7 +32,7 @@ class FinanceEntryAdapter implements LogEntry {
     'Amount': formatCurrency(entry.amount),
     'Payment Method': entry.paymentMethod,
     if (entry.checkNumber != null) 'Check Number': entry.checkNumber!,
-    'Description': entry.description,
+    if (entry.description != null && entry.description!.isNotEmpty) 'Description': entry.description!,
     'Type': entry.isExpense ? 'Expense' : 'Income',
   };
 

@@ -3,6 +3,7 @@ import '../theme/app_theme.dart';
 import '../models/program.dart';
 import '../services/program_service.dart';
 import '../utils/logger.dart';
+import 'package:dropdown_search/dropdown_search.dart';
 
 class ProgramDropdown extends StatefulWidget {
   final String organizationId;
@@ -114,21 +115,26 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
 
     final programs = _getEnabledPrograms();
     
-    return DropdownButtonFormField<Program>(
-      isExpanded: true,
-      decoration: AppTheme.formFieldDecorationWithLabel('Program', 'Select a program'),
-      value: widget.selectedProgram,
-      items: programs.map((program) => DropdownMenuItem(
-            value: program,
-            child: Text(
-              program.name,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 14),
-            ),
-          ))
-          .toList(),
+    return DropdownSearch<Program>(
+      popupProps: const PopupProps.menu(
+        showSearchBox: true,
+        searchFieldProps: TextFieldProps(
+          decoration: InputDecoration(
+            labelText: 'Search programs',
+            hintText: 'Type to search...',
+            prefixIcon: Icon(Icons.search),
+          ),
+        ),
+      ),
+      items: programs,
+      itemAsString: (Program program) => program.name,
       onChanged: widget.onChanged,
+      selectedItem: widget.selectedProgram,
+      dropdownDecoratorProps: DropDownDecoratorProps(
+        dropdownSearchDecoration: AppTheme.formFieldDecorationWithLabel('Program', 'Select a program'),
+      ),
       validator: widget.validator,
+      compareFn: (Program p1, Program p2) => p1.id == p2.id,
     );
   }
 } 

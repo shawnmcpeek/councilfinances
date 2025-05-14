@@ -37,7 +37,14 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   void initState() {
     super.initState();
     _organizationId = widget.organizationId;
+    _userService.getUserProfile().then((profile) {
+      if (profile != null) {
+        setState(() {
+          _userProfile = profile;
+        });
     _loadPrograms();
+      }
+    });
   }
 
   @override
@@ -48,7 +55,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         _organizationId = widget.organizationId;
       });
       // Only reload if we haven't loaded these programs before
-      if (_systemPrograms == null) {
+      if (_systemPrograms == null && _userProfile != null) {
         _loadPrograms();
       }
     }
@@ -90,12 +97,25 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       
       // Always load the current organization's program states and custom programs
       await _programService.loadProgramStates(_systemPrograms!, orgId, isAssembly);
-      final customPrograms = await _programService.getCustomPrograms(orgId, isAssembly);
+
+      // Determine correct orgId and isAssembly for custom programs
+      String customOrgId = orgId;
+      bool customIsAssembly = isAssembly;
+      if (!isAssembly && orgId.startsWith('A')) {
+        // If in council mode but orgId is assembly, switch to council orgId
+        if (_userProfile?.councilNumber != null) {
+          customOrgId = 'C' + _userProfile!.councilNumber.toString().padLeft(6, '0');
+          customIsAssembly = false;
+        }
+      }
+      AppLogger.debug('getCustomPrograms called with orgId: ' + customOrgId + ', isAssembly: ' + customIsAssembly.toString());
+      final customPrograms = await _programService.getCustomPrograms(customOrgId, customIsAssembly);
 
       if (!mounted) return;
       setState(() {
         _userProfile = userProfile;
         _customPrograms = customPrograms;
+        AppLogger.debug('Loaded custom programs: \\${_customPrograms.map((p) => p.name).toList()}');
         _hasFullAccess = _checkFullAccess();
         _hasUnsavedChanges = false;
         _pendingStateChanges.clear();
@@ -364,7 +384,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
               child: ListView(
                 padding: EdgeInsets.all(AppTheme.spacing),
                 children: [
-                  // System programs by category
+                  // System and custom programs by category
                   for (var entry in programs.entries) ...[
                     Card(
                       child: Padding(
@@ -377,31 +397,16 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                               style: Theme.of(context).textTheme.titleMedium,
                             ),
                             SizedBox(height: AppTheme.spacing),
-                            ...entry.value.map((program) => _buildProgramTile(program)),
+                            // Combine system and custom programs for this category
+                            ...[
+                              ...entry.value,
+                              ..._customPrograms.where((p) => p.category.toLowerCase() == entry.key.toLowerCase())
+                            ].map((program) => _buildProgramTile(program)),
                           ],
                         ),
                       ),
                     ),
                     SizedBox(height: AppTheme.spacing),
-                  ],
-                  // Custom programs section if any exist
-                  if (_customPrograms.isNotEmpty) ...[
-                    Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(AppTheme.spacing),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Custom Programs',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            SizedBox(height: AppTheme.spacing),
-                            ..._customPrograms.map((program) => _buildProgramTile(program)),
-                          ],
-                        ),
-                      ),
-                    ),
                   ],
                 ],
               ),

@@ -3,12 +3,12 @@ description:
 globs: 
 alwaysApply: true
 ---
-
 # Review the conversation to avoid repeating mistakes
 # Review the codebase for correct inclusion/implementation
 # Review outside sources for proper implementation
 # Use the most simple and straightforward solution
 # If making changes or correcting errors, don't ask me if I want you to continue, the answer is always yes
+# It is your job to do the coding. Don't tell me to review, check, or anything like that. That is your job.
 # Keep secrets secret. I have a .env file for you for a reason
 # Always use proper project formatting
 # Keep all styling in a global css and use it for all aspects
@@ -17,5 +17,4 @@ alwaysApply: true
 # My computer has Java SDK 21 and 23. We will not use any SDK previous to 21.
 # If I ask a question or start a dialogue/discussion, only respond. You can provide example code, but do not start changing code. I will tell you when I am ready to resume code.
 # this is a very separated component app. There are re-usable components like log_display that gets used in different locations. Same with organizer_toggle and program_dropdown. Don't re-create them in individual components, import and implement them in the components as specified.
-- You can @ files here
-- You can use markdown but dont have to
+

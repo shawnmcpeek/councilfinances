@@ -4,6 +4,7 @@ import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../utils/logger.dart';
 import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
+import '../services/report_service.dart';
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -128,6 +129,7 @@ class Form1728FieldMap {
 class Form1728ReportService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final UserService _userService = UserService();
+  final ReportService _reportService = ReportService();
 
   Future<Map<String, dynamic>> aggregateProgramData(String organizationId, String year) async {
     final Map<String, dynamic> totals = {
@@ -295,20 +297,15 @@ class Form1728ReportService {
       document.dispose();
       AppLogger.debug('Generated PDF bytes');
 
-      // 5. Share the PDF bytes directly
+      // 5. Save or share the PDF
       final String fileName = 'Form1728P_${organizationId}_$year.pdf';
-      final XFile pdfXFile = XFile.fromData(
-        Uint8List.fromList(pdfBytes),
-        name: fileName,
-        mimeType: 'application/pdf',
-      );
-      
-      await Share.shareXFiles(
-        [pdfXFile],
-        subject: 'Form 1728P Report for $year',
+      await _reportService.saveOrShareFile(
+        pdfBytes,
+        fileName,
+        'Form 1728P Report for $year'
       );
 
-      AppLogger.debug('Shared Form 1728 report for $year');
+      AppLogger.debug('Form 1728 report saved/shared for $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error generating Form 1728 report', e, stackTrace);
       rethrow;

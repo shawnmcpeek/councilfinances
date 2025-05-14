@@ -4,6 +4,7 @@ import '../services/hours_service.dart';
 import '../models/hours_entry.dart';
 import '../models/hours_entry_adapter.dart';
 import '../components/log_display.dart';
+import '../components/hours_entry.dart';
 
 class HoursHistoryList extends StatefulWidget {
   final String organizationId;
@@ -97,10 +98,41 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
     }
 
     return LogDisplay<HoursEntryAdapter>(
-      entries: _entries.map((entry) => HoursEntryAdapter(entry)).toList(),
+      entries: _entries.map((entry) => HoursEntryAdapter(entry, hasEditPermission: true, hasDeletePermission: true)).toList(),
       emptyMessage: 'No hours entries found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      onEdit: (adapter) async {
+        final updated = await showDialog<HoursEntry>(
+          context: context,
+          builder: (context) => HoursEntryForm(
+            organizationId: widget.organizationId,
+            isAssembly: widget.isAssembly,
+          ),
+        );
+        if (updated != null) _subscribeToEntries();
+      },
+      onDelete: (adapter) async {
+        final confirm = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Delete Entry'),
+            content: const Text('Are you sure you want to delete this entry?'),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+              TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+            ],
+          ),
+        );
+        if (confirm == true) {
+          await _hoursService.deleteHoursEntry(
+            widget.organizationId,
+            adapter.entry.id,
+            widget.isAssembly,
+          );
+          _subscribeToEntries();
+        }
+      },
     );
   }
 } 

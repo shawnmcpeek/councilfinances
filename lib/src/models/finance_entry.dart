@@ -8,7 +8,7 @@ class FinanceEntry {
   final double amount;
   final String paymentMethod;
   final String? checkNumber;
-  final String description;
+  final String? description;
   final bool isExpense;
 
   FinanceEntry({
@@ -18,7 +18,7 @@ class FinanceEntry {
     required this.amount,
     required this.paymentMethod,
     this.checkNumber,
-    required this.description,
+    this.description,
     required this.isExpense,
   });
 
@@ -31,7 +31,7 @@ class FinanceEntry {
       amount: (data['amount'] as num).toDouble(),
       paymentMethod: data['paymentMethod'] as String,
       checkNumber: data['checkNumber'] as String?,
-      description: data['description'] as String,
+      description: data['description'] as String?,
       isExpense: data['isExpense'] as bool,
     );
   }
@@ -43,7 +43,7 @@ class FinanceEntry {
       'amount': amount,
       'paymentMethod': paymentMethod,
       'checkNumber': checkNumber,
-      'description': description,
+      if (description != null) 'description': description,
       'isExpense': isExpense,
     };
   }
