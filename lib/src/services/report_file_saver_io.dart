@@ -4,7 +4,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:typed_data';
 import '../utils/logger.dart';
-import 'package:file_selector/file_selector.dart';
+
 
 Future<void> saveOrShareFile(List<int> pdfBytes, String fileName, String subject) async {
   try {

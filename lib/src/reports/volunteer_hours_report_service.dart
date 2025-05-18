@@ -1,17 +1,14 @@
-import 'dart:io';
+
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/user_service.dart';
 import '../utils/logger.dart';
-import '../services/report_service.dart';
+import '../services/report_file_saver.dart';
 
 class VolunteerHoursReportService {
   final UserService _userService;
   final FirebaseFirestore _firestore;
-  final ReportService _reportService = ReportService();
 
   VolunteerHoursReportService(this._userService, this._firestore);
 
@@ -108,16 +105,12 @@ class VolunteerHoursReportService {
         bounds: Rect.fromLTWH(0, yOffset, page.getClientSize().width, 20)
       );
 
-      // Save and share the document
+      // Save and share the document using platform-specific implementation
       final List<int> bytes = await document.save();
       document.dispose();
 
       final fileName = 'volunteer_hours_${organizationId}_$year.pdf';
-      await _reportService.saveOrShareFile(
-        bytes,
-        fileName,
-        'Volunteer Hours Report for $year'
-      );
+      await saveOrShareFile(bytes, fileName, 'Volunteer Hours Report for $year');
 
       AppLogger.info('Report generated and saved/shared successfully');
     } catch (e, stackTrace) {

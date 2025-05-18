@@ -6,8 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-import 'package:file_picker/file_picker.dart';
-import './report_file_saver.dart';
+
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -442,7 +441,7 @@ class ReportService {
   }
 
   Future<void> saveOrShareFile(List<int> pdfBytes, String fileName, String subject) async {
-    // This is now handled by the platform-specific implementation in report_file_saver.dart
-    await saveOrShareFile(pdfBytes, fileName, subject);
+    // This method is now just a stub - the actual implementation is in platform-specific files
+    throw UnimplementedError('saveOrShareFile should be implemented by platform-specific code');
   }
 } 

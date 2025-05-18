@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class PeriodReportSelector extends StatelessWidget {
-  const PeriodReportSelector({super.key});
+  final bool isGenerating;
+  final void Function(String period, int year) onGenerate;
+
+  const PeriodReportSelector({
+    Key? key,
+    required this.isGenerating,
+    required this.onGenerate,
+  }) : super(key: key);
 
   void _navigateToAuditData(BuildContext context) {
     Navigator.of(context).pushNamed('/auditData');
@@ -29,10 +36,10 @@ class PeriodReportSelector extends StatelessWidget {
             ),
             const SizedBox(height: AppTheme.spacing),
             FilledButton.icon(
-              onPressed: () => _navigateToAuditData(context),
+              onPressed: isGenerating ? null : () => onGenerate('December', DateTime.now().year),
               style: AppTheme.filledButtonStyle,
               icon: const Icon(Icons.summarize),
-              label: const Text('Build Audit Report'),
+              label: isGenerating ? const CircularProgressIndicator() : const Text('Generate Report'),
             ),
           ],
         ),

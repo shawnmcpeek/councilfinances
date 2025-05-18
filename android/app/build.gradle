@@ -1,10 +1,10 @@
 plugins {
-    id "com.android.application"
+    id 'com.android.application'
     // START: FlutterFire Configuration
     id 'com.google.gms.google-services'
     // END: FlutterFire Configuration
     // The Flutter Gradle Plugin must be applied after the Android Gradle plugins.
-    id "dev.flutter.flutter-gradle-plugin"
+    id 'dev.flutter.flutter-gradle-plugin'
 }
 
 android {
@@ -46,4 +46,26 @@ dependencies {
     implementation platform('com.google.firebase:firebase-bom:32.7.4')
     implementation 'com.google.firebase:firebase-analytics'
     implementation 'com.google.firebase:firebase-auth'
+    // AndroidX Lifecycle dependencies
+    def lifecycle_version = "2.7.0"
+    implementation "androidx.lifecycle:lifecycle-runtime:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-process:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-common-java8:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-livedata:$lifecycle_version"
+    implementation "androidx.lifecycle:lifecycle-runtime-ktx:$lifecycle_version"
+    implementation "androidx.startup:startup-runtime:1.1.1"
+}
+
+configurations.all {
+    resolutionStrategy {
+        force "androidx.lifecycle:lifecycle-runtime:2.7.0"
+        force "androidx.lifecycle:lifecycle-process:2.7.0"
+        force "androidx.lifecycle:lifecycle-common-java8:2.7.0"
+        force "androidx.lifecycle:lifecycle-viewmodel:2.7.0"
+        force "androidx.lifecycle:lifecycle-viewmodel-ktx:2.7.0"
+        force "androidx.lifecycle:lifecycle-livedata:2.7.0"
+        force "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
+    }
 }

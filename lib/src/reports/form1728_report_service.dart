@@ -2,9 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../utils/logger.dart';
-import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
 import '../services/report_service.dart';
+import '../services/report_file_saver.dart';  // Import the platform-specific implementation
 
 class Form1728FieldMap {
   // Map field IDs to their corresponding data points
@@ -297,13 +297,9 @@ class Form1728ReportService {
       document.dispose();
       AppLogger.debug('Generated PDF bytes');
 
-      // 5. Save or share the PDF
+      // 5. Save or share the PDF using platform-specific implementation
       final String fileName = 'Form1728P_${organizationId}_$year.pdf';
-      await _reportService.saveOrShareFile(
-        pdfBytes,
-        fileName,
-        'Form 1728P Report for $year'
-      );
+      await saveOrShareFile(pdfBytes, fileName, 'Form 1728P Report for $year');
 
       AppLogger.debug('Form 1728 report saved/shared for $year');
     } catch (e, stackTrace) {

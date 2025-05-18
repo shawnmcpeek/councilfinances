@@ -100,12 +100,31 @@ class _AuthFormState extends State<AuthForm> {
               prefixIcon: Icon(Icons.email),
             ),
             keyboardType: TextInputType.emailAddress,
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
+            enableSuggestions: false,
+            onChanged: (value) {
+              // Trim whitespace as user types
+              if (value != value.trim()) {
+                final trimmed = value.trim();
+                _emailController.value = TextEditingValue(
+                  text: trimmed,
+                  selection: TextSelection.collapsed(offset: trimmed.length),
+                );
+              }
+            },
             validator: (value) {
               if (value == null || value.isEmpty) {
                 return 'Please enter your email';
               }
-              if (!value.contains('@')) {
-                return 'Please enter a valid email';
+              final trimmed = value.trim();
+              if (trimmed.isEmpty) {
+                return 'Please enter your email';
+              }
+              // Basic email validation regex
+              final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+              if (!emailRegex.hasMatch(trimmed)) {
+                return 'Please enter a valid email address';
               }
               return null;
             },

@@ -1,24 +1,42 @@
 import 'package:flutter/material.dart';
 import '../components/period_report_selector.dart';
 import '../reports/period_report_service.dart';
+import '../theme/app_theme.dart';
+import '../utils/logger.dart';
 
-class PeriodReportScreen extends StatelessWidget {
+class PeriodReportScreen extends StatefulWidget {
+  const PeriodReportScreen({super.key});
+
+  @override
+  State<PeriodReportScreen> createState() => _PeriodReportScreenState();
+}
+
+class _PeriodReportScreenState extends State<PeriodReportScreen> {
   final PeriodReportService _reportService = PeriodReportService();
-
-  PeriodReportScreen({super.key});
+  bool _isGenerating = false;
 
   Future<void> _handleGenerateReport(String period, int year) async {
+    if (_isGenerating) return;
+
+    setState(() => _isGenerating = true);
     try {
-      final reportFile = await _reportService.generateReport(period, year);
-      // TODO: Handle the generated report file
-      // This could include:
-      // 1. Opening the PDF
-      // 2. Saving it to a specific location
-      // 3. Sharing it
-      // 4. etc.
+      await _reportService.generateReport(period, year);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report generated successfully')),
+        );
+      }
     } catch (e) {
-      // TODO: Handle errors appropriately
-      print('Error generating report: $e');
+      AppLogger.error('Error generating report', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating report: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
     }
   }
 
@@ -28,14 +46,26 @@ class PeriodReportScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Generate Audit Report'),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
+      body: AppTheme.screenContent(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            PeriodReportSelector(),
-            const SizedBox(height: 24),
-            // TODO: Add a preview or status section here
+            PeriodReportSelector(
+              isGenerating: _isGenerating,
+              onGenerate: _handleGenerateReport,
+            ),
+            if (_isGenerating) ...[
+              const SizedBox(height: 24),
+              const Center(
+                child: Column(
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('Generating report...'),
+                  ],
+                ),
+              ),
+            ],
           ],
         ),
       ),
