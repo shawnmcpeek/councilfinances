@@ -6,6 +6,7 @@ import 'package:share_plus/share_plus.dart';
 import '../services/user_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
+import 'report_file_saver.dart';
 
 
 class Form1728FieldMap {
@@ -255,7 +256,7 @@ class ReportService {
       AppLogger.debug('Starting PDF generation with data: $totals');
 
       // 2. Load the PDF template
-      final ByteData templateData = await rootBundle.load('assets/forms/fraternal_survey1728_p.pdf');
+      final ByteData templateData = await rootBundle.load('forms/fraternal_survey1728_p.pdf');
       AppLogger.debug('Loaded PDF template');
       
       final List<int> bytes = templateData.buffer.asUint8List();
@@ -438,10 +439,5 @@ class ReportService {
       AppLogger.error('Error generating volunteer hours report', e);
       rethrow;
     }
-  }
-
-  Future<void> saveOrShareFile(List<int> pdfBytes, String fileName, String subject) async {
-    // This method is now just a stub - the actual implementation is in platform-specific files
-    throw UnimplementedError('saveOrShareFile should be implemented by platform-specific code');
   }
 } 

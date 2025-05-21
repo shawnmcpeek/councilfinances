@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
 import '../services/hours_service.dart';
 import '../services/program_service.dart';
@@ -29,11 +30,14 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
   final _hoursService = HoursService();
   final _programService = ProgramService();
   final _userService = UserService();
+  final _disbursementController = TextEditingController();
+  final _descriptionController = TextEditingController();
   
   bool _isLoading = false;
   UserProfile? _userProfile;
   ProgramsData? _systemPrograms;
   Program? _selectedProgram;
+  HoursCategory? _selectedCategory;
   DateTime _startDate = DateTime.now();
   TimeOfDay _startTime = TimeOfDay.now();
   DateTime _endDate = DateTime.now();
@@ -43,6 +47,13 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
   void initState() {
     super.initState();
     _loadUserProfile();
+  }
+
+  @override
+  void dispose() {
+    _disbursementController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUserProfile() async {
@@ -154,6 +165,12 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
       );
       return;
     }
+    if (_selectedCategory == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a category')),
+      );
+      return;
+    }
 
     setState(() => _isLoading = true);
     try {
@@ -164,11 +181,15 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         id: '',  // Will be set by Firestore
         userId: '',  // Will be set by service
         organizationId: widget.organizationId,
+        isAssembly: widget.isAssembly,
         programId: _selectedProgram!.id,
         programName: _selectedProgram!.name,
+        category: _selectedCategory!,
         startTime: Timestamp.fromDate(startDateTime),
         endTime: Timestamp.fromDate(endDateTime),
         totalHours: _calculateTotalHours(),
+        disbursement: double.tryParse(_disbursementController.text),
+        description: _descriptionController.text.trim(),
         createdAt: DateTime.now(),
       );
 
@@ -178,10 +199,13 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         // Reset form
         setState(() {
           _selectedProgram = null;
+          _selectedCategory = null;
           _startDate = DateTime.now();
           _startTime = TimeOfDay.now();
           _endDate = DateTime.now();
           _endTime = TimeOfDay.now();
+          _disbursementController.clear();
+          _descriptionController.clear();
           _isLoading = false;
         });
         
@@ -219,6 +243,22 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
               if (_isLoading)
                 const Center(child: CircularProgressIndicator())
               else ...[
+                // Category Dropdown
+                DropdownButtonFormField<HoursCategory>(
+                  decoration: AppTheme.formFieldDecorationWithLabel('Category'),
+                  value: _selectedCategory,
+                  items: HoursCategory.values
+                      .where((category) => !category.isAssemblyOnly || widget.isAssembly)
+                      .map((category) => DropdownMenuItem(
+                            value: category,
+                            child: Text(category.displayName),
+                          ))
+                      .toList(),
+                  onChanged: (category) => setState(() => _selectedCategory = category),
+                  validator: (value) => value == null ? 'Please select a category' : null,
+                ),
+                SizedBox(height: AppTheme.spacing),
+
                 // Program Dropdown
                 ProgramDropdown(
                   organizationId: widget.organizationId,
@@ -305,6 +345,25 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
                   'Total Hours: ${_calculateTotalHours().toStringAsFixed(1)}',
                   style: Theme.of(context).textTheme.titleMedium,
                   textAlign: TextAlign.center,
+                ),
+                SizedBox(height: AppTheme.spacing),
+
+                // Disbursement Field
+                TextFormField(
+                  controller: _disbursementController,
+                  decoration: AppTheme.formFieldDecorationWithLabel('Charitable Disbursement (Optional)'),
+                  keyboardType: TextInputType.numberWithOptions(decimal: true),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
+                  ],
+                ),
+                SizedBox(height: AppTheme.spacing),
+
+                // Description Field
+                TextFormField(
+                  controller: _descriptionController,
+                  decoration: AppTheme.formFieldDecorationWithLabel('Description (Optional)'),
+                  maxLines: 3,
                 ),
                 SizedBox(height: AppTheme.spacing),
 

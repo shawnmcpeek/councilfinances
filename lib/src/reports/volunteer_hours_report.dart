@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../theme/app_theme.dart';
 import 'volunteer_hours_report_service.dart';
 import 'package:provider/provider.dart';
+import '../services/user_service.dart';
 
 class VolunteerHoursReport extends StatelessWidget {
   final String userId;
@@ -26,8 +28,11 @@ class VolunteerHoursReport extends StatelessWidget {
     
     onGeneratingChange(true);
     try {
-      final service = context.read<VolunteerHoursReportService>();
-      await service.generateReport(userId, selectedYear, organizationId);
+      final service = VolunteerHoursReportService(
+        context.read<UserService>(),
+        FirebaseFirestore.instance,
+      );
+      await service.generateVolunteerHoursReport(userId, selectedYear, organizationId);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Report generated successfully')),

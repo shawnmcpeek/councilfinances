@@ -31,11 +31,27 @@ class HoursService {
           .collection('hours')
           .doc();
 
-      final data = entry.toMap()..addAll({
+      final data = {
         'id': docRef.id,
         'userId': user.uid,
+        'organizationId': formattedOrgId,
+        'isAssembly': isAssembly,
+        'programId': entry.programId,
+        'programName': entry.programName,
+        'category': entry.category.name,
+        'startTime': entry.startTime,
+        'endTime': entry.endTime,
+        'totalHours': entry.totalHours,
         'createdAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Add optional fields only if they have values
+      if (entry.disbursement != null) {
+        data['disbursement'] = entry.disbursement as Object;
+      }
+      if (entry.description?.isNotEmpty == true) {
+        data['description'] = entry.description as Object;
+      }
 
       AppLogger.debug('Adding hours entry: $data');
       await docRef.set(data);
@@ -51,9 +67,29 @@ class HoursService {
       if (user == null) throw Exception('No authenticated user found');
 
       final formattedOrgId = _formatOrganizationId(entry.organizationId, isAssembly);
-      final data = entry.toMap()..addAll({
+      final data = {
+        'organizationId': formattedOrgId,
+        'isAssembly': isAssembly,
+        'programId': entry.programId,
+        'programName': entry.programName,
+        'category': entry.category.name,
+        'startTime': entry.startTime,
+        'endTime': entry.endTime,
+        'totalHours': entry.totalHours,
         'updatedAt': FieldValue.serverTimestamp(),
-      });
+      };
+
+      // Add optional fields only if they have values
+      if (entry.disbursement != null) {
+        data['disbursement'] = entry.disbursement as Object;
+      } else {
+        data['disbursement'] = FieldValue.delete();
+      }
+      if (entry.description?.isNotEmpty == true) {
+        data['description'] = entry.description as Object;
+      } else {
+        data['description'] = FieldValue.delete();
+      }
 
       AppLogger.debug('Updating hours entry: $data');
       await _firestore.collection('organizations')

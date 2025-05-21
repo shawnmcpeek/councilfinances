@@ -1,25 +1,28 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
-import 'package:kcmanagement/firebase_options.dart';
-import 'package:kcmanagement/src/screens/login_screen.dart';
-import 'package:kcmanagement/src/screens/profile_screen.dart';
-import 'package:kcmanagement/src/screens/home_screen.dart';
-import 'package:kcmanagement/src/screens/programs_collect.dart';
-import 'package:kcmanagement/src/screens/hours_entry_screen.dart';
-import 'package:kcmanagement/src/screens/finance_screen.dart';
-import 'package:kcmanagement/src/screens/programs_screen.dart';
-import 'package:kcmanagement/src/screens/reports_screen.dart';
-import 'package:kcmanagement/src/screens/periodic_report_data.dart';
-import 'package:kcmanagement/src/services/auth_service.dart';
-import 'package:kcmanagement/src/services/user_service.dart';
+import 'package:knights_management/firebase_options.dart';
+import 'package:knights_management/src/screens/login_screen.dart';
+import 'package:knights_management/src/screens/profile_screen.dart';
+import 'package:knights_management/src/screens/home_screen.dart';
+import 'package:knights_management/src/screens/programs_collect.dart';
+import 'package:knights_management/src/screens/hours_entry_screen.dart';
+import 'package:knights_management/src/screens/finance_screen.dart';
+import 'package:knights_management/src/screens/programs_screen.dart';
+import 'package:knights_management/src/screens/reports_screen.dart';
+import 'package:knights_management/src/screens/periodic_report_data.dart';
+import 'package:knights_management/src/services/auth_service.dart';
+import 'package:knights_management/src/services/user_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:kcmanagement/src/utils/logger.dart';
-import 'package:kcmanagement/src/theme/app_theme.dart';
+import 'package:knights_management/src/utils/logger.dart';
+import 'package:knights_management/src/theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'src/providers/organization_provider.dart';
 import 'src/reports/form1728_report_service.dart';
 import 'src/reports/volunteer_hours_report_service.dart';
+import 'src/reports/pdf_template_manager.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:io' show Platform;
 
 void main() async {
   try {
@@ -33,18 +36,26 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
 
-    // Initialize path_provider
-    await getApplicationDocumentsDirectory().then((directory) {
-      AppLogger.debug('Application documents directory initialized: ${directory.path}');
-    }).catchError((e) {
-      AppLogger.error('Failed to initialize application documents directory', e);
-    });
+    // Initialize path_provider only on supported platforms
+    if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux || Platform.isAndroid || Platform.isIOS)) {
+      await getApplicationDocumentsDirectory().then((directory) {
+        AppLogger.debug('Application documents directory initialized: \\${directory.path}');
+      }).catchError((e) {
+        AppLogger.error('Failed to initialize application documents directory', e);
+      });
+    } else {
+      AppLogger.debug('Application documents directory not supported on this platform.');
+    }
 
     // Configure Firestore settings
     FirebaseFirestore.instance.settings = const Settings(
       persistenceEnabled: true,
       cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
     );
+    
+    // Initialize PDF templates
+    initializeTemplates();
+    AppLogger.debug('PDF templates initialized');
     
     // Create shared instances
     final userService = UserService();

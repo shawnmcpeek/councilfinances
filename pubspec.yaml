@@ -1,5 +1,5 @@
-name: kcmanagement
-description: "A new Flutter project."
+name: knights_management
+description: "Knights Management - Council and Assembly Financial Management System"
 
 # Prevent accidental publishing to pub.dev.
 publish_to: 'none'
@@ -32,6 +32,8 @@ dependencies:
   dropdown_search: ^5.0.6
   file_picker: ^10.1.9
   file_selector: ^1.0.3
+  http: ^1.2.1
+  file_saver: ^0.2.14
 
 dev_dependencies:
   flutter_test:
@@ -53,3 +55,5 @@ flutter:
     - assets/data/system_programs.json
     - assets/data/form1728p_programs.json
     - assets/forms/fraternal_survey1728_p.pdf
+    - assets/forms/audit1_1295_p.pdf
+    - assets/forms/audit2_1295_p.pdf

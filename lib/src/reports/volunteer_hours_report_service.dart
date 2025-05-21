@@ -1,18 +1,20 @@
-
 import 'dart:ui';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/user_service.dart';
 import '../utils/logger.dart';
-import '../services/report_file_saver.dart';
+import 'base_pdf_report_service.dart';
 
-class VolunteerHoursReportService {
+class VolunteerHoursReportService extends BasePdfReportService {
   final UserService _userService;
   final FirebaseFirestore _firestore;
 
   VolunteerHoursReportService(this._userService, this._firestore);
 
-  Future<void> generateReport(String userId, String year, String organizationId) async {
+  @override
+  String get templatePath => '';  // No template file, we generate from scratch
+
+  Future<void> generateVolunteerHoursReport(String userId, String year, String organizationId) async {
     try {
       AppLogger.info('Generating volunteer hours report for user $userId for year $year');
       
@@ -54,68 +56,79 @@ class VolunteerHoursReportService {
       AppLogger.debug('Program hours: $programHours');
       AppLogger.debug('Total hours: $totalHours');
 
-      // Create PDF document
-      final document = PdfDocument();
-      final page = document.pages.add();
+      // Prepare data for PDF generation
+      final data = {
+        'title': 'Volunteer Hours Report',
+        'organization': organizationId,
+        'year': year,
+        'program_hours': programHours,
+        'total_hours': totalHours,
+      };
 
-      // Draw report header
-      page.graphics.drawString(
-        'Volunteer Hours Report',
-        PdfStandardFont(PdfFontFamily.helvetica, 24),
-        bounds: Rect.fromLTWH(0, 0, page.getClientSize().width, 50),
-        format: PdfStringFormat(alignment: PdfTextAlignment.center)
-      );
-
-      // Draw organization and year
-      page.graphics.drawString(
-        'Organization: $organizationId',
-        PdfStandardFont(PdfFontFamily.helvetica, 12),
-        bounds: Rect.fromLTWH(0, 60, page.getClientSize().width, 20)
-      );
-
-      page.graphics.drawString(
-        'Year: $year',
-        PdfStandardFont(PdfFontFamily.helvetica, 12),
-        bounds: Rect.fromLTWH(0, 80, page.getClientSize().width, 20)
-      );
-
-      // Draw program hours table
-      var yOffset = 120.0;
-      page.graphics.drawString(
-        'Program Hours:',
-        PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
-        bounds: Rect.fromLTWH(0, yOffset, page.getClientSize().width, 20)
-      );
-
-      yOffset += 30;
-      for (var entry in programHours.entries) {
-        page.graphics.drawString(
-          '${entry.key}: ${entry.value.toStringAsFixed(1)} hours',
-          PdfStandardFont(PdfFontFamily.helvetica, 12),
-          bounds: Rect.fromLTWH(20, yOffset, page.getClientSize().width - 40, 20)
-        );
-        yOffset += 20;
-      }
-
-      // Draw total hours
-      yOffset += 20;
-      page.graphics.drawString(
-        'Total Hours: ${totalHours.toStringAsFixed(1)}',
-        PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
-        bounds: Rect.fromLTWH(0, yOffset, page.getClientSize().width, 20)
-      );
-
-      // Save and share the document using platform-specific implementation
-      final List<int> bytes = await document.save();
-      document.dispose();
-
+      // Generate the PDF using the base service's generateNewPdf method
       final fileName = 'volunteer_hours_${organizationId}_$year.pdf';
-      await saveOrShareFile(bytes, fileName, 'Volunteer Hours Report for $year');
+      await generateNewPdf(data, fileName, 'Volunteer Hours Report for $year');
 
       AppLogger.info('Report generated and saved/shared successfully');
     } catch (e, stackTrace) {
       AppLogger.error('Error generating volunteer hours report', e, stackTrace);
       rethrow;
     }
+  }
+
+  @override
+  Future<void> drawReportContent(PdfPage page, Map<String, dynamic> data) async {
+    final title = data['title'] as String;
+    final organization = data['organization'] as String;
+    final year = data['year'] as String;
+    final programHours = data['program_hours'] as Map<String, double>;
+    final totalHours = data['total_hours'] as double;
+
+    // Draw report header
+    page.graphics.drawString(
+      title,
+      PdfStandardFont(PdfFontFamily.helvetica, 24),
+      bounds: Rect.fromLTWH(0, 0, page.getClientSize().width, 50),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    );
+
+    // Draw organization and year
+    page.graphics.drawString(
+      'Organization: $organization',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: Rect.fromLTWH(0, 60, page.getClientSize().width, 20)
+    );
+
+    page.graphics.drawString(
+      'Year: $year',
+      PdfStandardFont(PdfFontFamily.helvetica, 12),
+      bounds: Rect.fromLTWH(0, 80, page.getClientSize().width, 20)
+    );
+
+    // Draw program hours table
+    var yOffset = 120.0;
+    page.graphics.drawString(
+      'Program Hours:',
+      PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(0, yOffset, page.getClientSize().width, 20)
+    );
+
+    yOffset += 30;
+    for (var entry in programHours.entries) {
+      page.graphics.drawString(
+        '${entry.key}: ${entry.value.toStringAsFixed(1)} hours',
+        PdfStandardFont(PdfFontFamily.helvetica, 12),
+        bounds: Rect.fromLTWH(20, yOffset, page.getClientSize().width - 40, 20)
+      );
+      yOffset += 20;
+    }
+
+    // Draw total hours
+    yOffset += 20;
+    page.graphics.drawString(
+      'Total Hours: ${totalHours.toStringAsFixed(1)}',
+      PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold),
+      bounds: Rect.fromLTWH(0, yOffset, page.getClientSize().width, 20)
+    );
   }
 } 

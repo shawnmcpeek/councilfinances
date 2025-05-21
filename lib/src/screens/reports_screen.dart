@@ -5,12 +5,17 @@ import '../models/user_profile.dart';
 import '../theme/app_theme.dart';
 import '../components/organization_toggle.dart';
 import '../components/program_budget.dart';
-import '../components/period_report_selector.dart';
 import '../reports/form1728_report.dart';
 import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
-import '../reports/period_report_service.dart';
+import '../reports/semi_annual_audit_service.dart';
 import '../models/member_roles.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
+import 'package:syncfusion_flutter_pdf/pdf.dart';
+import '../services/report_file_saver.dart';
+import '../components/semi_annual_audit_selector.dart';
+import '../screens/semi_annual_audit_entry_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -24,6 +29,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   String selectedYear = DateTime.now().year.toString();
   bool isGeneratingForm1728 = false;
   bool isGeneratingVolunteerHours = false;
+  bool isGeneratingPeriodReport = false;
   bool _isLoading = false;
   UserProfile? _userProfile;
 
@@ -66,6 +72,29 @@ class _ReportsScreenState extends State<ReportsScreen> {
            (_userProfile?.assemblyRoles.isNotEmpty ?? false);
   }
 
+  Future<void> _onGeneratePeriodReport(String period, int year) async {
+    setState(() => isGeneratingPeriodReport = true);
+    try {
+      final service = SemiAnnualAuditService();
+      await service.generateAuditReport(period, year, {});
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Report generated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating report: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isGeneratingPeriodReport = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -106,7 +135,49 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (_hasFinancialAccess()) ...[
-                      const PeriodReportSelector(),
+                      Card(
+                        child: Padding(
+                          padding: AppTheme.cardPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Semi-Annual Audit Report',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: AppTheme.smallSpacing),
+                              Text(
+                                'Generate the Semi-Annual Audit',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.spacing),
+                              FilledButton.icon(
+                                onPressed: isGeneratingPeriodReport ? null : () async {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => const SemiAnnualAuditEntryScreen(),
+                                    ),
+                                  );
+                                },
+                                style: AppTheme.filledButtonStyle,
+                                icon: isGeneratingPeriodReport
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(Icons.summarize),
+                                label: Text(isGeneratingPeriodReport ? 'Generating...' : 'Generate Audit Report'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const SizedBox(height: 24),
                       const Divider(),
                     ],

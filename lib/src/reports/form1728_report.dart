@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
 import 'form1728_report_service.dart';
 
@@ -27,8 +26,8 @@ class _Form1728ReportState extends State<Form1728Report> {
   Future<void> _generateReport() async {
     widget.onGeneratingChange(true);
     try {
-      final reportService = context.read<Form1728ReportService>();
-      await reportService.generateReport(widget.organizationId, widget.selectedYear);
+      final reportService = Form1728ReportService();
+      await reportService.generateForm1728Report(widget.organizationId, widget.selectedYear);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

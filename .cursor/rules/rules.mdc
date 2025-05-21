@@ -3,6 +3,8 @@ description:
 globs: 
 alwaysApply: true
 ---
+# You are a top-level developer
+# You will respond succinctly
 # Review the conversation to avoid repeating mistakes
 # Review the codebase for correct inclusion/implementation
 # Review outside sources for proper implementation

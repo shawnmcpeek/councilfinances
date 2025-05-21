@@ -108,14 +108,14 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
           customIsAssembly = false;
         }
       }
-      AppLogger.debug('getCustomPrograms called with orgId: ' + customOrgId + ', isAssembly: ' + customIsAssembly.toString());
+      AppLogger.debug('getCustomPrograms called with orgId: $customOrgId, isAssembly: $customIsAssembly');
       final customPrograms = await _programService.getCustomPrograms(customOrgId, customIsAssembly);
 
       if (!mounted) return;
       setState(() {
         _userProfile = userProfile;
         _customPrograms = customPrograms;
-        AppLogger.debug('Loaded custom programs: \\${_customPrograms.map((p) => p.name).toList()}');
+        AppLogger.debug('Loaded custom programs: ${_customPrograms.map((p) => p.name).toList()}');
         _hasFullAccess = _checkFullAccess();
         _hasUnsavedChanges = false;
         _pendingStateChanges.clear();
