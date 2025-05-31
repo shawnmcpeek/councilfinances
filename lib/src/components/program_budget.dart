@@ -31,7 +31,6 @@ class _ProgramBudgetState extends State<ProgramBudget> {
   @override
   void initState() {
     super.initState();
-    // Set default year to current year
     _selectedYear = DateTime.now().year.toString();
   }
 
@@ -108,6 +107,7 @@ class _ProgramBudgetState extends State<ProgramBudget> {
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: AppTheme.spacing),
         const Divider(),
@@ -153,6 +153,7 @@ class _ProgramBudgetState extends State<ProgramBudget> {
         padding: AppTheme.cardPadding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
             Text(
               'Program Budget',
@@ -166,53 +167,62 @@ class _ProgramBudgetState extends State<ProgramBudget> {
               ),
             ),
             const SizedBox(height: AppTheme.spacing),
-            ProgramDropdown(
-              organizationId: widget.organizationId,
-              isAssembly: context.watch<OrganizationProvider>().isAssembly,
-              selectedProgram: _selectedProgram,
-              onChanged: (program) {
-                setState(() {
-                  _selectedProgram = program;
-                  _hasCalculated = false;
-                });
-              },
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            DropdownButtonFormField<String>(
-              decoration: AppTheme.formFieldDecoration.copyWith(
-                labelText: 'Year',
-              ),
-              value: _selectedYear,
-              items: _availableYears.map((year) {
-                return DropdownMenuItem(
-                  value: year,
-                  child: Text(year),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
+            SizedBox(
+              width: double.infinity,
+              child: ProgramDropdown(
+                organizationId: widget.organizationId,
+                isAssembly: context.watch<OrganizationProvider>().isAssembly,
+                selectedProgram: _selectedProgram,
+                onChanged: (program) {
                   setState(() {
-                    _selectedYear = value;
+                    _selectedProgram = program;
                     _hasCalculated = false;
                   });
-                }
-              },
+                },
+              ),
             ),
             const SizedBox(height: AppTheme.spacing),
-            FilledButton.icon(
-              onPressed: _isCalculating ? null : _calculateBudget,
-              style: AppTheme.filledButtonStyle,
-              icon: _isCalculating 
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.summarize),
-              label: Text(_isCalculating ? 'Calculating...' : 'Calculate Budget'),
+            SizedBox(
+              width: double.infinity,
+              child: DropdownButtonFormField<String>(
+                decoration: AppTheme.formFieldDecoration.copyWith(
+                  labelText: 'Year',
+                ),
+                value: _selectedYear,
+                items: _availableYears.map((year) {
+                  return DropdownMenuItem(
+                    value: year,
+                    child: Text(year),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  if (value != null) {
+                    setState(() {
+                      _selectedYear = value;
+                      _hasCalculated = false;
+                    });
+                  }
+                },
+              ),
+            ),
+            const SizedBox(height: AppTheme.spacing),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _isCalculating ? null : _calculateBudget,
+                style: AppTheme.filledButtonStyle,
+                icon: _isCalculating 
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.summarize),
+                label: Text(_isCalculating ? 'Calculating...' : 'Calculate Budget'),
+              ),
             ),
             _buildResults(),
           ],

@@ -268,27 +268,48 @@
         "financialType": "both"
       }
     ],
-    "faith": [
+    "assembly": [
       {
-        "id": "chalice_program",
-        "name": "Chalice Program",
-        "category": "FAITH",
+        "id": "assembly_dues",
+        "name": "Assembly Dues",
+        "category": "ASSEMBLY",
         "systemDefault": true,
-        "financialType": "both"
+        "financialType": "incomeOnly"
       },
       {
-        "id": "religious_ceremonies",
-        "name": "Religious Ceremonies Support",
-        "category": "FAITH",
+        "id": "assembly_insurance",
+        "name": "Assembly Insurance",
+        "category": "ASSEMBLY",
         "systemDefault": true,
-        "financialType": "both"
+        "financialType": "expenseOnly"
       },
       {
-        "id": "pilgrimage_program",
-        "name": "Pilgrimage Program",
-        "category": "FAITH",
+        "id": "assembly_interest",
+        "name": "Interest",
+        "category": "ASSEMBLY",
         "systemDefault": true,
-        "financialType": "both"
+        "financialType": "incomeOnly"
+      },
+      {
+        "id": "assembly_postage",
+        "name": "Postage",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "assembly_supplies",
+        "name": "Supplies",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "assembly_bank_charges",
+        "name": "Bank Charges",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
       }
     ]
   }

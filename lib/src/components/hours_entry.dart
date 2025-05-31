@@ -10,6 +10,8 @@ import '../models/user_profile.dart';
 import '../utils/logger.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'program_dropdown.dart';
+import 'package:provider/provider.dart';
+import '../providers/program_provider.dart';
 
 class HoursEntryForm extends StatefulWidget {
   final String organizationId;
@@ -212,6 +214,8 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Hours logged successfully')),
         );
+        
+        Provider.of<ProgramProvider>(context, listen: false).reload();
       }
     } catch (e) {
       AppLogger.error('Error saving hours entry', e);

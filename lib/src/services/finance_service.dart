@@ -104,6 +104,8 @@ class FinanceService {
             category: (data['category'] as String?) ?? 'unknown',
             isSystemDefault: false,
             financialType: isExpense ? FinancialType.expenseOnly : FinancialType.incomeOnly,
+            isEnabled: true,
+            isAssembly: isExpense,
           ),
           amount: amount.toDouble(),
           paymentMethod: (data['paymentMethod'] as String?) ?? 'Unknown',
@@ -329,6 +331,98 @@ class FinanceService {
       AppLogger.debug('Deleted $type entry: $entryId for $formattedOrgId, year $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting finance entry', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<void> updateFinanceEntry({
+    required String organizationId,
+    required String entryId,
+    required bool isAssembly,
+    required bool isExpense,
+    required int year,
+    required DateTime date,
+    required double amount,
+    required String description,
+    required PaymentMethod paymentMethod,
+    required String programId,
+    required String programName,
+    String? checkNumber,
+  }) async {
+    try {
+      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
+      final type = isExpense ? 'expenses' : 'income';
+      final docRef = _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc(type)
+          .collection(year.toString())
+          .doc(entryId);
+
+      final data = _createEntryData(
+        docId: entryId,
+        date: date,
+        amount: amount,
+        description: description,
+        paymentMethod: paymentMethod,
+        programId: programId,
+        programName: programName,
+        userId: _authService.currentUser?.uid ?? '',
+        checkNumber: checkNumber,
+      );
+
+      AppLogger.debug('Updating $type entry: $data');
+      await docRef.update(data);
+    } catch (e, stackTrace) {
+      AppLogger.error('Error updating finance entry', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<List<FinanceEntry>> getFinanceEntriesForYear(
+    String organizationId,
+    bool isAssembly,
+    String year,
+  ) async {
+    try {
+      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
+      AppLogger.debug('Getting finance entries for organization: $formattedOrgId, year: $year');
+      
+      final List<FinanceEntry> entries = [];
+
+      // Get income entries
+      final incomeSnapshot = await _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc('income')
+          .collection(year)
+          .get();
+
+      // Get expense entries
+      final expenseSnapshot = await _firestore
+          .collection('organizations')
+          .doc(formattedOrgId)
+          .collection('finance')
+          .doc('expenses')
+          .collection(year)
+          .get();
+
+      // Process income entries
+      entries.addAll(_processEntries(incomeSnapshot, false));
+
+      // Process expense entries
+      entries.addAll(_processEntries(expenseSnapshot, true));
+
+      // Sort all entries by date
+      entries.sort((a, b) => b.date.compareTo(a.date));
+      
+      AppLogger.debug('Returning ${entries.length} entries for year $year');
+      return entries;
+    } catch (e, stackTrace) {
+      AppLogger.error('Error getting finance entries for year', e);
+      AppLogger.error('Stack trace:', stackTrace);
       rethrow;
     }
   }

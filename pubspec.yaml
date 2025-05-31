@@ -34,6 +34,7 @@ dependencies:
   file_selector: ^1.0.3
   http: ^1.2.1
   file_saver: ^0.2.14
+  csv: ^5.1.1
 
 dev_dependencies:
   flutter_test:

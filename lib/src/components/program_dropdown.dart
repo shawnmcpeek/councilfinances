@@ -3,7 +3,8 @@ import '../theme/app_theme.dart';
 import '../models/program.dart';
 import '../services/program_service.dart';
 import '../utils/logger.dart';
-import 'package:dropdown_search/dropdown_search.dart';
+import 'package:provider/provider.dart';
+import '../providers/program_provider.dart';
 
 class ProgramDropdown extends StatefulWidget {
   final String organizationId;
@@ -32,11 +33,24 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
   bool _isLoading = true;
   ProgramsData? _systemPrograms;
   List<Program>? _customPrograms;
+  late final VoidCallback _providerListener;
 
   @override
   void initState() {
     super.initState();
+    _providerListener = () {
+      _loadPrograms();
+    };
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<ProgramProvider>(context, listen: false).addListener(_providerListener);
+    });
     _loadPrograms();
+  }
+
+  @override
+  void dispose() {
+    Provider.of<ProgramProvider>(context, listen: false).removeListener(_providerListener);
+    super.dispose();
   }
 
   Future<void> _loadPrograms() async {
@@ -91,6 +105,7 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
       enabledPrograms.addAll(
         _customPrograms!.where((program) => 
           program.isEnabled &&
+          program.isAssembly == widget.isAssembly &&
           (widget.filterType == null || 
            program.financialType == widget.filterType ||
            program.financialType == FinancialType.both)
@@ -100,7 +115,6 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
     
     // Sort alphabetically by name
     enabledPrograms.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    
     return enabledPrograms;
   }
 
@@ -115,26 +129,18 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
 
     final programs = _getEnabledPrograms();
     
-    return DropdownSearch<Program>(
-      popupProps: const PopupProps.menu(
-        showSearchBox: true,
-        searchFieldProps: TextFieldProps(
-          decoration: InputDecoration(
-            labelText: 'Search programs',
-            hintText: 'Type to search...',
-            prefixIcon: Icon(Icons.search),
-          ),
-        ),
-      ),
-      items: programs,
-      itemAsString: (Program program) => program.name,
+    return DropdownButtonFormField<Program>(
+      decoration: AppTheme.formFieldDecorationWithLabel('Program', 'Select a program'),
+      value: widget.selectedProgram,
+      items: programs.map((program) {
+        return DropdownMenuItem(
+          value: program,
+          child: Text(program.name),
+        );
+      }).toList(),
       onChanged: widget.onChanged,
-      selectedItem: widget.selectedProgram,
-      dropdownDecoratorProps: DropDownDecoratorProps(
-        dropdownSearchDecoration: AppTheme.formFieldDecorationWithLabel('Program', 'Select a program'),
-      ),
       validator: widget.validator,
-      compareFn: (Program p1, Program p2) => p1.id == p2.id,
+      isExpanded: true,
     );
   }
 } 

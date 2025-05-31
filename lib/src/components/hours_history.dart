@@ -4,7 +4,7 @@ import '../services/hours_service.dart';
 import '../models/hours_entry.dart';
 import '../models/hours_entry_adapter.dart';
 import '../components/log_display.dart';
-import '../components/hours_entry.dart';
+import 'hours_entry_edit_dialog.dart';
 
 class HoursHistoryList extends StatefulWidget {
   final String organizationId;
@@ -103,14 +103,15 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       onEdit: (adapter) async {
-        final updated = await showDialog<HoursEntry>(
+        await showDialog(
           context: context,
-          builder: (context) => HoursEntryForm(
+          builder: (context) => HoursEntryEditDialog(
+            entry: adapter.entry,
             organizationId: widget.organizationId,
             isAssembly: widget.isAssembly,
+            onSuccess: _subscribeToEntries,
           ),
         );
-        if (updated != null) _subscribeToEntries();
       },
       onDelete: (adapter) async {
         final confirm = await showDialog<bool>(

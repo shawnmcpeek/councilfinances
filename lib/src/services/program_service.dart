@@ -187,14 +187,20 @@ class ProgramService {
           .collection('programs')
           .doc('states');
 
+      AppLogger.debug('Attempting to write to Firestore path: \\${docRef.path}');
+      AppLogger.debug('Data being written: \\${{
+        'states': states,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }}');
+
       await docRef.set({
         'states': states,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      
-      AppLogger.debug('Updated program states: $states');
-    } catch (e) {
-      AppLogger.error('Error updating program states', e);
+
+      AppLogger.debug('Successfully wrote to Firestore path: \\${docRef.path}');
+    } catch (e, stackTrace) {
+      AppLogger.error('Error updating program states at path: \\${_firestore.collection('organizations').doc(organizationId).collection('programs').doc('states').path}', e, stackTrace);
       rethrow;
     }
   }
@@ -236,7 +242,7 @@ class ProgramService {
       await _firestore
           .collection('organizations')
           .doc(organizationId)
-          .collection('custom_programs')
+          .collection('programs')
           .doc(programId)
           .delete();
     } catch (e, stackTrace) {
