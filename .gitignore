@@ -13,6 +13,10 @@
 migrate_working_dir/
 council-finance-firebase-adminsdk-e5auu-46ccb83881.json
 
+# Google Services (Firebase)
+google-services.json
+**/google-services.json
+
 # IntelliJ related
 *.iml
 *.ipr
