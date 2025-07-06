@@ -29,33 +29,17 @@ class AuditFirestoreDataService {
       AppLogger.info('Organization ID: $organizationId');
       AppLogger.info('Date range: ${dateRange.start} to ${dateRange.end}');
 
-      // 3. Load all active programs (system + custom)
-      final programService = ProgramService();
-      final systemPrograms = await programService.loadSystemPrograms();
-      await programService.loadProgramStates(systemPrograms, organizationId, false);
-      final activeSystemPrograms = systemPrograms.councilPrograms.values.expand((list) => list).where((p) => p.isEnabled).toList();
-      final customPrograms = await programService.getCustomPrograms(organizationId, false);
-      final activeCustomPrograms = customPrograms.where((p) => p.isEnabled).toList();
-      final allPrograms = [...activeSystemPrograms, ...activeCustomPrograms];
-
-      // 4. Build lookup: programId/name -> Program
-      final Map<String, Program> programLookup = {};
-      for (final p in allPrograms) {
-        programLookup[p.id.toLowerCase()] = p;
-        programLookup[p.name.toLowerCase()] = p;
-      }
-
-      // 5. Get transactions for the period
+      // 3. Get transactions for the period
       final transactions = await _getTransactionsForPeriod(
         organizationId,
         dateRange.start,
         dateRange.end,
       );
 
-      // 6. Process transactions and calculate all Firestore-based values
-      final firestoreData = _processTransactions(transactions, programLookup);
+      // 4. Process transactions and calculate all Firestore-based values
+      final firestoreData = _processTransactions(transactions);
 
-      // 7. Add basic organization info
+      // 5. Add basic organization info
       firestoreData['council_number'] = userProfile.councilNumber.toString().padLeft(6, '0');
       firestoreData['organization_name'] = 'Council ${userProfile.councilNumber}';
       firestoreData['year'] = _getYearSuffix(year);
@@ -168,7 +152,7 @@ class AuditFirestoreDataService {
     return allTransactions;
   }
 
-  Map<String, dynamic> _processTransactions(List<Map<String, dynamic>> transactions, Map<String, Program> programLookup) {
+  Map<String, dynamic> _processTransactions(List<Map<String, dynamic>> transactions) {
     final Map<String, dynamic> firestoreData = {};
     
     // Initialize all program totals
@@ -178,6 +162,9 @@ class AuditFirestoreDataService {
     double statePerCapita = 0.0;
     double councilPrograms = 0.0;
     double otherCouncilPrograms = 0.0;
+    
+    // Group transactions by program for income analysis
+    final Map<String, double> programTotals = {};
     
     // Process each transaction
     for (final transaction in transactions) {
@@ -196,13 +183,9 @@ class AuditFirestoreDataService {
         } else if (programName.contains('state')) {
           statePerCapita += amount;
         } else {
-          // Check if it's a council program
-          final program = programLookup[programName];
-          if (program != null && program.isEnabled) {
-            councilPrograms += amount;
-          } else {
-            otherCouncilPrograms += amount;
-          }
+          // Track other programs for top programs analysis
+          final program = transaction['program'] as String;
+          programTotals[program] = (programTotals[program] ?? 0.0) + amount;
         }
       } else if (type == 'expense') {
         // Map expense programs
@@ -215,16 +198,26 @@ class AuditFirestoreDataService {
             programName.contains('seminarian')) {
           otherCouncilPrograms += amount;
         } else {
-          // Check if it's a council program
-          final program = programLookup[programName];
-          if (program != null && program.isEnabled) {
-            councilPrograms += amount;
-          } else {
-            otherCouncilPrograms += amount;
-          }
+          councilPrograms += amount;
         }
       }
     }
+    
+    // Find top 2 income programs (excluding membership dues)
+    final sortedPrograms = programTotals.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+    
+    final topProgram1 = sortedPrograms.isNotEmpty ? sortedPrograms[0] : null;
+    final topProgram2 = sortedPrograms.length > 1 ? sortedPrograms[1] : null;
+    
+    // Calculate "Other" programs total
+    double otherProgramsTotal = 0.0;
+    for (int i = 2; i < sortedPrograms.length; i++) {
+      otherProgramsTotal += sortedPrograms[i].value;
+    }
+    
+    // Calculate total income
+    final totalIncome = membershipDues + (topProgram1?.value ?? 0.0) + (topProgram2?.value ?? 0.0) + otherProgramsTotal;
     
     // Store the calculated values
     firestoreData['membership_dues'] = _formatCurrency(membershipDues);
@@ -234,6 +227,15 @@ class AuditFirestoreDataService {
     firestoreData['council_program'] = _formatCurrency(councilPrograms);
     firestoreData['other_council_programs'] = _formatCurrency(otherCouncilPrograms);
     
+    // Add top programs data
+    firestoreData['top_program_1_name'] = topProgram1?.key ?? '';
+    firestoreData['top_program_1_amount'] = _formatCurrency(topProgram1?.value ?? 0.0);
+    firestoreData['top_program_2_name'] = topProgram2?.key ?? '';
+    firestoreData['top_program_2_amount'] = _formatCurrency(topProgram2?.value ?? 0.0);
+    firestoreData['other_programs_name'] = 'Other';
+    firestoreData['other_programs_amount'] = _formatCurrency(otherProgramsTotal);
+    firestoreData['total_income'] = _formatCurrency(totalIncome);
+    
     AppLogger.info('=== FIRESTORE CALCULATED VALUES ===');
     AppLogger.info('membership_dues: ${firestoreData['membership_dues']}');
     AppLogger.info('interest_earned: ${firestoreData['interest_earned']}');
@@ -241,6 +243,12 @@ class AuditFirestoreDataService {
     AppLogger.info('state_per_capita: ${firestoreData['state_per_capita']}');
     AppLogger.info('council_program: ${firestoreData['council_program']}');
     AppLogger.info('other_council_programs: ${firestoreData['other_council_programs']}');
+    AppLogger.info('top_program_1_name: ${firestoreData['top_program_1_name']}');
+    AppLogger.info('top_program_1_amount: ${firestoreData['top_program_1_amount']}');
+    AppLogger.info('top_program_2_name: ${firestoreData['top_program_2_name']}');
+    AppLogger.info('top_program_2_amount: ${firestoreData['top_program_2_amount']}');
+    AppLogger.info('other_programs_amount: ${firestoreData['other_programs_amount']}');
+    AppLogger.info('total_income: ${firestoreData['total_income']}');
     
     return firestoreData;
   }

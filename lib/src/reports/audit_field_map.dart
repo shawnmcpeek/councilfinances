@@ -88,13 +88,17 @@ class AuditFieldMap {
     'Text109', 'Text110'
   ];
 
-  // Fields that are auto-calculated
-  static const List<String> autoCalculatedFields = [
+  // Fields that are auto-calculated from Firestore
+  static const List<String> firestoreCalculatedFields = [
     'Text51', 'Text52', 'Text53', 'Text54', 'Text55',
-    'Text56', 'Text57', 'Text58', 'Text60', 'Text64',
-    'Text65', 'Text66', 'Text67', 'Text68', 'Text71',
-    'Text72', 'Text73', 'Text79', 'Text80', 'Text83',
-    'Text88', 'Text103'
+    'Text56', 'Text57', 'Text58', 'Text64', 'Text66',
+    'Text67', 'Text68', 'total_income'
+  ];
+
+  // Fields that are auto-calculated from other fields
+  static const List<String> autoCalculatedFields = [
+    'Text60', 'Text65', 'Text71', 'Text72', 'Text73',
+    'Text79', 'Text80', 'Text83', 'Text88', 'Text103'
   ];
 
   // Default council programs to track
@@ -112,10 +116,14 @@ class AuditFieldMap {
 
   // Helper method to get the date range for a period
   static DateTimeRange getDateRangeForPeriod(String period, int year) {
-    final isJune = period.trim().toLowerCase() == 'june';
-    final startDate = isJune ? DateTime(year, 1, 1) : DateTime(year, 7, 1);
-    final endDate = isJune ? DateTime(year, 6, 30) : DateTime(year, 12, 31);
-    return DateTimeRange(start: startDate, end: endDate);
+    final normalized = period.trim().toLowerCase();
+    if (normalized == 'june' || normalized == 'january-june') {
+      return DateTimeRange(start: DateTime(year, 1, 1), end: DateTime(year, 6, 30));
+    } else if (normalized == 'december' || normalized == 'july-december') {
+      return DateTimeRange(start: DateTime(year, 7, 1), end: DateTime(year, 12, 31));
+    } else {
+      throw ArgumentError('Unknown period: $period');
+    }
   }
 
   // Helper method to format currency values

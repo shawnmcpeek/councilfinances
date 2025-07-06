@@ -13,8 +13,8 @@ android {
     ndkVersion = "25.2.9519653"
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_21
-        targetCompatibility JavaVersion.VERSION_21
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     defaultConfig {
@@ -68,4 +68,8 @@ configurations.all {
         force "androidx.lifecycle:lifecycle-livedata:2.7.0"
         force "androidx.lifecycle:lifecycle-runtime-ktx:2.7.0"
     }
+}
+
+kotlinOptions {
+    jvmTarget = "17"
 }

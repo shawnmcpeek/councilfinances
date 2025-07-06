@@ -221,6 +221,27 @@ class SemiAnnualAuditService extends BasePdfReportService {
     // Text51: Membership dues (from Firestore)
     data['Text51'] = data['membership_dues'] ?? '0.00';
     
+    // Text52: Top program name (from Firestore)
+    data['Text52'] = data['top_program_1_name'] ?? '';
+    
+    // Text53: Top program amount (from Firestore)
+    data['Text53'] = data['top_program_1_amount'] ?? '0.00';
+    
+    // Text54: Second program name (from Firestore)
+    data['Text54'] = data['top_program_2_name'] ?? '';
+    
+    // Text55: Second program amount (from Firestore)
+    data['Text55'] = data['top_program_2_amount'] ?? '0.00';
+    
+    // Text56: Other programs name (always "Other")
+    data['Text56'] = data['other_programs_name'] ?? 'Other';
+    
+    // Text57: Other programs amount (from Firestore)
+    data['Text57'] = data['other_programs_amount'] ?? '0.00';
+    
+    // Text58: Total income (from Firestore)
+    data['Text58'] = data['total_income'] ?? '0.00';
+    
     // Text64: Interest earned (from Firestore)
     data['Text64'] = data['interest_earned'] ?? '0.00';
     
@@ -229,6 +250,9 @@ class SemiAnnualAuditService extends BasePdfReportService {
     
     // Text67: State per capita (from Firestore)
     data['Text67'] = data['state_per_capita'] ?? '0.00';
+    
+    // Text68: Other council programs (from Firestore)
+    data['Text68'] = data['other_council_programs'] ?? '0.00';
     
     // Text72: Net council verify (calculated)
     final text64 = _parseCurrency(data['Text64']);
@@ -284,6 +308,18 @@ class SemiAnnualAuditService extends BasePdfReportService {
     data['Text103'] = data['total_disbursements_sum'];
     
     print('DEBUG CALCULATED TOTALS:');
+    print('Text51 (Membership Dues): ${data['Text51']}');
+    print('Text52 (Top Program Name): ${data['Text52']}');
+    print('Text53 (Top Program Amount): ${data['Text53']}');
+    print('Text54 (2nd Program Name): ${data['Text54']}');
+    print('Text55 (2nd Program Amount): ${data['Text55']}');
+    print('Text56 (Other Programs): ${data['Text56']}');
+    print('Text57 (Other Programs Amount): ${data['Text57']}');
+    print('Text58 (Total Income): ${data['Text58']}');
+    print('Text64 (Interest Earned): ${data['Text64']}');
+    print('Text66 (Supreme Per Capita): ${data['Text66']}');
+    print('Text67 (State Per Capita): ${data['Text67']}');
+    print('Text68 (Other Council Programs): ${data['Text68']}');
     print('Text72 (Net council): ${data['Text72']}');
     print('Text79 (Total current assets): ${data['Text79']}');
     print('Text80 (Total current liabilities): ${data['Text80']}');
