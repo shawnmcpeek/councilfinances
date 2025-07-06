@@ -81,6 +81,7 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       emptyMessage: 'No transactions found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      onRefresh: _loadTransactions,
       onEdit: (adapter) async {
         await showDialog(
           context: context,

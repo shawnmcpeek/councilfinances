@@ -44,7 +44,7 @@ class _PeriodReportSelectorState extends State<PeriodReportSelector> {
                 Expanded(
                   child: DropdownButtonFormField<String>(
                     decoration: AppTheme.formFieldDecoration.copyWith(
-                      labelText: 'Report Period',
+                      labelText: 'Report Period End',
                     ),
                     value: selectedPeriod,
                     items: const [

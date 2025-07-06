@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../components/program_dropdown.dart';
 import '../services/finance_service.dart';
+import '../services/budget_service.dart';
 import '../models/program.dart';
+import '../models/budget_entry.dart';
 import '../utils/logger.dart';
 import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
@@ -21,12 +23,14 @@ class ProgramBudget extends StatefulWidget {
 
 class _ProgramBudgetState extends State<ProgramBudget> {
   final _financeService = FinanceService();
+  final _budgetService = BudgetService();
   Program? _selectedProgram;
   String? _selectedYear;
   bool _isCalculating = false;
   double _totalIncome = 0;
   double _totalExpenses = 0;
   bool _hasCalculated = false;
+  BudgetEntry? _approvedBudget;
 
   @override
   void initState() {
@@ -66,6 +70,14 @@ class _ProgramBudgetState extends State<ProgramBudget> {
         _selectedYear!,
       );
 
+      // Get approved budget for the program
+      _approvedBudget = await _budgetService.getBudgetEntry(
+        widget.organizationId,
+        isAssembly,
+        _selectedYear!,
+        _selectedProgram!.name,
+      );
+
       double income = 0;
       double expenses = 0;
 
@@ -102,46 +114,82 @@ class _ProgramBudgetState extends State<ProgramBudget> {
   Widget _buildResults() {
     if (!_hasCalculated) return const SizedBox.shrink();
 
+    final approvedIncome = _approvedBudget?.income ?? 0;
+    final approvedExpenses = _approvedBudget?.expenses ?? 0;
+    final remainingIncome = approvedIncome - _totalIncome;
+    final remainingExpenses = approvedExpenses - _totalExpenses;
     final netAmount = _totalIncome - _totalExpenses;
-    final isProfit = netAmount >= 0;
+    final approvedNet = approvedIncome - approvedExpenses;
+    final remainingNet = remainingIncome - remainingExpenses;
+
+    TextStyle headerStyle = Theme.of(context).textTheme.bodyLarge!.copyWith(fontWeight: FontWeight.bold);
+    TextStyle valueStyle = Theme.of(context).textTheme.bodyLarge!;
+    TextStyle positiveStyle = valueStyle.copyWith(color: Colors.green, fontWeight: FontWeight.bold);
+    TextStyle negativeStyle = valueStyle.copyWith(color: Colors.red, fontWeight: FontWeight.bold);
+
+    Widget valueCell(double value) {
+      final style = value == 0
+          ? valueStyle
+          : value > 0
+              ? positiveStyle
+              : negativeStyle;
+      return Align(
+        alignment: Alignment.center,
+        child: Text(
+          '${value.toStringAsFixed(2)}',
+          style: style,
+        ),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: AppTheme.spacing),
         const Divider(),
         const SizedBox(height: AppTheme.spacing),
-        Text(
-          'Budget Summary',
-          style: Theme.of(context).textTheme.titleMedium,
+        Text('Budget Summary', style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppTheme.spacing),
+        // Header row
+        Row(
+          children: [
+            Expanded(flex: 2, child: SizedBox()),
+            Expanded(child: Text('Approved', style: headerStyle, textAlign: TextAlign.center)),
+            Expanded(child: Text('Current', style: headerStyle, textAlign: TextAlign.center)),
+            Expanded(child: Text('Remaining', style: headerStyle, textAlign: TextAlign.center)),
+          ],
         ),
-        const SizedBox(height: AppTheme.smallSpacing),
-        _buildSummaryRow('Total Income:', _totalIncome),
-        const SizedBox(height: AppTheme.smallSpacing),
-        _buildSummaryRow('Total Expenses:', _totalExpenses),
-        const SizedBox(height: AppTheme.smallSpacing),
-        _buildSummaryRow(
-          isProfit ? 'Net Profit:' : 'Net Loss:',
-          netAmount.abs(),
-          isProfit ? Colors.green : Colors.red,
+        const SizedBox(height: 8),
+        // Income row
+        Row(
+          children: [
+            Expanded(flex: 2, child: Text('Income', style: headerStyle)),
+            Expanded(child: valueCell(approvedIncome)),
+            Expanded(child: valueCell(_totalIncome)),
+            Expanded(child: valueCell(remainingIncome)),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildSummaryRow(String label, double amount, [Color? valueColor]) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: Theme.of(context).textTheme.bodyLarge),
-        Text(
-          '\$${amount.toStringAsFixed(2)}',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            color: valueColor,
-          ),
+        const SizedBox(height: 8),
+        // Expenses row
+        Row(
+          children: [
+            Expanded(flex: 2, child: Text('Expenses', style: headerStyle)),
+            Expanded(child: valueCell(approvedExpenses)),
+            Expanded(child: valueCell(_totalExpenses)),
+            Expanded(child: valueCell(remainingExpenses)),
+          ],
         ),
+        const SizedBox(height: 8),
+        // Net row
+        Row(
+          children: [
+            Expanded(flex: 2, child: Text('Net', style: headerStyle)),
+            Expanded(child: valueCell(approvedNet)),
+            Expanded(child: valueCell(netAmount)),
+            Expanded(child: valueCell(remainingNet)),
+          ],
+        ),
+        const SizedBox(height: AppTheme.spacing),
       ],
     );
   }

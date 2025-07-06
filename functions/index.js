@@ -42,6 +42,7 @@ exports.fillForm1728 = functions.https.onRequest(async (req, res) => {
 exports.fillAuditReport = functions.https.onRequest(async (req, res) => {
   cors(req, res, async () => {
     try {
+      console.log('AUDIT PDF DATA RECEIVED:', JSON.stringify(req.body));
       if (req.method !== 'POST') {
         return res.status(405).send('Method Not Allowed');
       }
@@ -65,37 +66,92 @@ exports.fillAuditReport = functions.https.onRequest(async (req, res) => {
       form.getTextField('Text3').setText(req.body.year.toString().slice(-2) || ''); // Last 2 digits of year
       form.getTextField('Text4').setText(req.body.organization_name || ''); // Manual entry for now
 
-      // Income Section
-      // Text50: Manual income entry
-      form.getTextField('Text50').setText(req.body.manual_income_1 || '');
+      // === NEW: Calculate and fill Text51–Text58 ===
+      const data = { ...req.body };
+      const period = data.period;
+      const year = data.year;
+      // Parse period for date range
+      let periodStart, periodEnd;
+      if (period === 'January-June') {
+        periodStart = new Date(`${year}-01-01`);
+        periodEnd = new Date(`${year}-06-30`);
+      } else if (period === 'July-December') {
+        periodStart = new Date(`${year}-07-01`);
+        periodEnd = new Date(`${year}-12-31`);
+      } else {
+        throw new Error('Invalid period');
+      }
 
-      // Text51: Total membership dues for period
-      form.getTextField('Text51').setText(req.body.membership_dues || '');
+      // Helper to parse date
+      function parseDate(raw) {
+        if (!raw) return new Date(1900, 0, 1);
+        if (typeof raw === 'string') return new Date(raw);
+        if (raw._seconds) return new Date(raw._seconds * 1000);
+        return new Date(1900, 0, 1);
+      }
 
-      // Text52-57: Top income programs
-      // These should be pre-calculated by the frontend based on program transactions
-      form.getTextField('Text52').setText(req.body.top_program_1_name || '');
-      form.getTextField('Text53').setText(req.body.top_program_1_amount || '');
-      form.getTextField('Text54').setText(req.body.top_program_2_name || '');
-      form.getTextField('Text55').setText(req.body.top_program_2_amount || '');
-      form.getTextField('Text56').setText('Other'); // Always "Other" as per spec
-      form.getTextField('Text57').setText(req.body.other_programs_amount || '');
+      // Combine all entries (income + expenses)
+      const allEntries = [
+        ...(data.income || []),
+        ...(data.expenses || [])
+      ];
+      // Filter for period
+      const periodEntries = allEntries.filter(entry => {
+        const date = parseDate(entry.date);
+        return date >= periodStart && date <= periodEnd;
+      });
 
-      // Text58: Total Income (calculated)
-      const totalIncome = (
-        (parseFloat(req.body.manual_income_1) || 0) +
-        (parseFloat(req.body.membership_dues) || 0) +
-        (parseFloat(req.body.top_program_1_amount) || 0) +
-        (parseFloat(req.body.top_program_2_amount) || 0) +
-        (parseFloat(req.body.other_programs_amount) || 0)
-      ).toFixed(2);
-      form.getTextField('Text58').setText(totalIncome);
+      // Text51: Total of all 'Council - Membership Dues'
+      const membershipDuesEntries = periodEntries.filter(entry => {
+        const programName = entry.programName || (entry.program && entry.program.name) || '';
+        return programName.toLowerCase().includes('membership dues');
+      });
+      const text51 = membershipDuesEntries.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+      // Group all income (excluding membership dues) by program
+      const incomeEntries = periodEntries.filter(entry => {
+        const isExpense = entry.isExpense || false;
+        return !isExpense;
+      }).filter(entry => {
+        const programName = entry.programName || (entry.program && entry.program.name) || '';
+        return !programName.toLowerCase().includes('membership dues');
+      });
+      const incomeByProgram = {};
+      for (const entry of incomeEntries) {
+        const programName = entry.programName || (entry.program && entry.program.name) || 'Unknown';
+        incomeByProgram[programName] = (incomeByProgram[programName] || 0) + (entry.amount || 0);
+      }
+      const sortedPrograms = Object.entries(incomeByProgram).sort((a, b) => b[1] - a[1]);
+      const top1 = sortedPrograms[0] || [null, 0];
+      const top2 = sortedPrograms[1] || [null, 0];
+      const others = sortedPrograms.slice(2);
+      const text52 = top1[0] || '';
+      const text53 = top1[1] || 0;
+      const text54 = top2[0] || '';
+      const text55 = top2[1] || 0;
+      const text56 = others.length > 0 ? 'Other' : '';
+      const text57 = others.reduce((sum, e) => sum + e[1], 0);
+      // Text50 is manual, use data.Text50 if present, else 0
+      const text50 = data.Text50 ? parseFloat(data.Text50) : 0;
+      const text58 = text50 + text51 + text53 + text55 + text57;
+      // Round all
+      function fmt(n) { return Number(n).toFixed(2); }
+      data.Text51 = fmt(text51);
+      data.Text52 = text52;
+      data.Text53 = fmt(text53);
+      data.Text54 = text54;
+      data.Text55 = fmt(text55);
+      data.Text56 = text56;
+      data.Text57 = fmt(text57);
+      data.Text58 = fmt(text58);
+
+      // === END NEW ===
 
       // Text59: Manual income entry
       form.getTextField('Text59').setText(req.body.manual_income_2 || '');
 
       // Text60: Net Income (calculated)
-      const netIncome = (parseFloat(totalIncome) - (parseFloat(req.body.manual_income_2) || 0)).toFixed(2);
+      const netIncome = (parseFloat(text58) - (parseFloat(req.body.manual_income_2) || 0)).toFixed(2);
       form.getTextField('Text60').setText(netIncome);
 
       // Interest and Per Capita Section
@@ -210,14 +266,15 @@ exports.fillAuditReport = functions.https.onRequest(async (req, res) => {
       ).toFixed(2);
       form.getTextField('Text103').setText(totalDisbursementsSum);
 
-      // Remaining manual fields
-      form.getTextField('Text104').setText(req.body.manual_field_14 || '');
-      form.getTextField('Text105').setText(req.body.manual_field_15 || '');
-      form.getTextField('Text106').setText(req.body.manual_field_16 || '');
-      form.getTextField('Text107').setText(req.body.manual_field_17 || '');
-      form.getTextField('Text108').setText(req.body.manual_field_18 || '');
-      form.getTextField('Text109').setText(req.body.manual_field_19 || '');
-      form.getTextField('Text110').setText(req.body.manual_field_20 || '');
+      // Log and fill every field from the request body
+      Object.keys(req.body).forEach((key) => {
+        try {
+          form.getTextField(key).setText(String(req.body[key]));
+          console.log(`PDF FILL: ${key} = ${req.body[key]}`);
+        } catch (e) {
+          // Ignore if field does not exist
+        }
+      });
 
       // Flatten the form
       form.flatten();
@@ -285,6 +342,43 @@ exports.fillIndividualSurveyReport = functions.https.onRequest(async (req, res) 
     } catch (err) {
       console.error('Error filling individual survey report:', err);
       res.status(500).send('Failed to fill individual survey PDF');
+    }
+  });
+});
+
+// TESTING FUNCTION: Fill all PDF fields by name from JSON
+exports.fillAuditReportTest = functions.https.onRequest(async (req, res) => {
+  cors(req, res, async () => {
+    try {
+      console.log('AUDIT PDF TEST DATA RECEIVED:', JSON.stringify(req.body));
+      if (req.method !== 'POST') {
+        return res.status(405).send('Method Not Allowed');
+      }
+
+      // Load the template PDF
+      const templateBytes = fs.readFileSync(__dirname + '/audit2_1295_p.pdf');
+      const pdfDoc = await PDFDocument.load(templateBytes);
+      const form = pdfDoc.getForm();
+
+      // Fill every field in the request body by name
+      Object.keys(req.body).forEach((key) => {
+        try {
+          const field = form.getTextField(key);
+          if (field) {
+            field.setText(String(req.body[key]));
+          }
+        } catch (e) {
+          // Ignore missing fields
+        }
+      });
+
+      // Return the filled PDF
+      const pdfBytes = await pdfDoc.save();
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="filled_audit_test.pdf"');
+      res.status(200).send(Buffer.from(pdfBytes));
+    } catch (e) {
+      res.status(500).send('Error generating test PDF: ' + e.toString());
     }
   });
 }); 

@@ -18,6 +18,12 @@ class _SemiAnnualAuditEntryScreenState extends State<SemiAnnualAuditEntryScreen>
   bool _isGenerating = false;
   final Map<String, String> _manualValues = {};
 
+  String _getBackendPeriod(String selectedPeriod) {
+    if (selectedPeriod == 'June') return 'January-June';
+    if (selectedPeriod == 'December') return 'July-December';
+    return selectedPeriod;
+  }
+
   void _handleManualValuesChanged(Map<String, String> values) {
     setState(() {
       _manualValues.clear();
@@ -28,8 +34,9 @@ class _SemiAnnualAuditEntryScreenState extends State<SemiAnnualAuditEntryScreen>
   Future<void> _handleGenerateReport() async {
     setState(() => _isGenerating = true);
     try {
+      final periodForBackend = _getBackendPeriod(_selectedPeriod);
       await SemiAnnualAuditService().generateAuditReport(
-        _selectedPeriod,
+        periodForBackend,
         _selectedYear,
         _manualValues,
       );
@@ -64,7 +71,7 @@ class _SemiAnnualAuditEntryScreenState extends State<SemiAnnualAuditEntryScreen>
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      decoration: AppTheme.formFieldDecorationWithLabel('Report Period'),
+                      decoration: AppTheme.formFieldDecorationWithLabel('Report Period End'),
                       value: _selectedPeriod,
                       items: const [
                         DropdownMenuItem(value: 'June', child: Text('June')),
@@ -97,6 +104,25 @@ class _SemiAnnualAuditEntryScreenState extends State<SemiAnnualAuditEntryScreen>
               AuditManualEntry(
                 initialValues: _manualValues,
                 onValuesChanged: _handleManualValuesChanged,
+              ),
+              const SizedBox(height: AppTheme.spacing),
+              FilledButton.icon(
+                onPressed: _isGenerating ? null : () async {
+                  final periodForBackend = _getBackendPeriod(_selectedPeriod);
+                  await SemiAnnualAuditService().saveDraft(
+                    periodForBackend,
+                    _selectedYear,
+                    _manualValues,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Draft saved successfully')),
+                    );
+                  }
+                },
+                style: AppTheme.filledButtonStyle,
+                icon: const Icon(Icons.save),
+                label: const Text('Save Draft'),
               ),
               const SizedBox(height: AppTheme.spacing),
               FilledButton.icon(

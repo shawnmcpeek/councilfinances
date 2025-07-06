@@ -7,6 +7,8 @@ import '../services/program_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/logger.dart';
 import '../providers/organization_provider.dart';
+import '../components/organization_toggle.dart';
+import '../reports/annual_budget_report_service.dart';
 
 class AnnualBudgetScreen extends StatefulWidget {
   final String organizationId;
@@ -37,30 +39,43 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
   void initState() {
     super.initState();
     _isAssembly = Provider.of<OrganizationProvider>(context, listen: false).isAssembly;
+    _selectedYear = DateTime.now().year.toString(); // Default to current year
     _loadBudget();
   }
 
   @override
   void dispose() {
     for (var controller in _incomeControllers.values) {
+      controller.removeListener(_updateTotals);
       controller.dispose();
     }
     for (var controller in _expenseControllers.values) {
+      controller.removeListener(_updateTotals);
       controller.dispose();
     }
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final newIsAssembly = Provider.of<OrganizationProvider>(context).isAssembly;
+    if (newIsAssembly != _isAssembly) {
+      setState(() {
+        _isAssembly = newIsAssembly;
+        _isLoading = true;
+      });
+      _loadBudget();
+    }
+  }
+
+  void _updateTotals() {
+    setState(() {}); // Trigger rebuild to update totals
+  }
+
   Future<void> _loadBudget() async {
     try {
       setState(() => _isLoading = true);
-      
-      // Check if budget is already submitted
-      _isSubmitted = await _budgetService.isBudgetSubmitted(
-        widget.organizationId,
-        _isAssembly,
-        _selectedYear,
-      );
       
       // Load system programs
       final programsData = await _programService.loadSystemPrograms();
@@ -91,6 +106,31 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
         _selectedYear,
       );
 
+      // If no entries exist for this year, try to copy from previous year
+      if (entries.isEmpty) {
+        final previousYear = (int.parse(_selectedYear) - 1).toString();
+        final previousEntries = await _budgetService.getBudgetEntries(
+          widget.organizationId,
+          _isAssembly,
+          previousYear,
+        );
+        
+        if (previousEntries.isNotEmpty) {
+          await _budgetService.copyPreviousYearBudget(
+            widget.organizationId,
+            _isAssembly,
+            previousYear,
+            _selectedYear,
+          );
+          // Reload entries after copying
+          entries.addAll(await _budgetService.getBudgetEntries(
+            widget.organizationId,
+            _isAssembly,
+            _selectedYear,
+          ));
+        }
+      }
+
       // Initialize controllers for each program
       _incomeControllers.clear();
       _expenseControllers.clear();
@@ -106,12 +146,19 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
             createdBy: '',
           ),
         );
-        _incomeControllers[program.name] = TextEditingController(
-          text: entry.income > 0 ? entry.income.toString() : '',
+        final incomeController = TextEditingController(
+          text: entry.income.toStringAsFixed(2),
         );
-        _expenseControllers[program.name] = TextEditingController(
-          text: entry.expenses > 0 ? entry.expenses.toString() : '',
+        final expenseController = TextEditingController(
+          text: entry.expenses.toStringAsFixed(2),
         );
+        
+        // Add listeners for instant total updates
+        incomeController.addListener(_updateTotals);
+        expenseController.addListener(_updateTotals);
+        
+        _incomeControllers[program.name] = incomeController;
+        _expenseControllers[program.name] = expenseController;
       }
 
       setState(() {
@@ -130,13 +177,6 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
   }
 
   Future<void> _saveBudget() async {
-    if (_isSubmitted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cannot modify a submitted budget')),
-      );
-      return;
-    }
-
     try {
       setState(() => _isSaving = true);
 
@@ -166,9 +206,10 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
       AppLogger.error('Error saving budget', e, stackTrace);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving budget: ${e.toString()}')),
+          SnackBar(content: Text('Error saving budget: \\${e.toString()}')),
         );
       }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => _isSaving = false);
@@ -177,18 +218,21 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
   }
 
   Future<void> _submitBudget() async {
+    if (mounted) {
+      final submittingToast = ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Submitting...'), duration: Duration(days: 1)),
+      );
+    }
     try {
       setState(() => _isSubmitting = true);
-
       await _budgetService.submitBudget(
         widget.organizationId,
         _isAssembly,
         _selectedYear,
       );
-
       setState(() => _isSubmitted = true);
-
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Budget submitted successfully')),
         );
@@ -196,10 +240,12 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
     } catch (e, stackTrace) {
       AppLogger.error('Error submitting budget', e, stackTrace);
       if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error submitting budget: ${e.toString()}')),
+          SnackBar(content: Text('Error submitting budget: \\${e.toString()}')),
         );
       }
+      rethrow;
     } finally {
       if (mounted) {
         setState(() => _isSubmitting = false);
@@ -207,10 +253,30 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
     }
   }
 
+  Future<bool> _showSubmitWarningDialog() async {
+    return await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Submit Annual Budget'),
+        content: const Text('Once the Annual Budget is submitted, you will not be able to make changes.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Submit'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   Widget _buildNumberInput(TextEditingController controller) {
     return TextField(
       controller: controller,
-      enabled: !_isSubmitted,
+      enabled: true,
       keyboardType: const TextInputType.numberWithOptions(decimal: true),
       inputFormatters: [
         FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}')),
@@ -218,6 +284,7 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
       decoration: const InputDecoration(
         border: OutlineInputBorder(),
         contentPadding: EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+        hintText: '0.00',
       ),
       style: Theme.of(context).textTheme.bodyMedium,
     );
@@ -231,6 +298,8 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
         body: const Center(child: CircularProgressIndicator()),
       );
     }
+
+    final canExport = !_isSaving && (_budgetEntries.isNotEmpty);
 
     return Scaffold(
       appBar: AppBar(
@@ -257,28 +326,62 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
           ],
         ),
         actions: [
-          DropdownButton<String>(
-            value: _selectedYear,
-            items: List.generate(5, (index) {
-              final year = DateTime.now().year - index;
-              return DropdownMenuItem(
-                value: year.toString(),
-                child: Text(year.toString()),
-              );
-            }),
-            onChanged: _isSubmitted ? null : (value) {
-              if (value != null) {
-                setState(() => _selectedYear = value);
-                _loadBudget();
-              }
-            },
-          ),
           const SizedBox(width: 16),
         ],
       ),
-      body: Column(
-        children: [
-          if (!_isSubmitted)
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _selectedYear,
+                  dropdownColor: Colors.white,
+                  style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                  items: () {
+                    final now = DateTime.now().year;
+                    final selected = int.tryParse(_selectedYear) ?? now;
+                    final years = <int>{};
+                    for (int i = -2; i <= 4; i++) {
+                      years.add(now + i);
+                    }
+                    years.add(selected); // Always include selected year
+                    final sortedYears = years.toList()..sort();
+                    return sortedYears.map((year) => DropdownMenuItem(
+                      value: year.toString(),
+                      child: Text(year.toString()),
+                    )).toList();
+                  }(),
+                  onChanged: (value) {
+                    print('Dropdown changed: $value');
+                    if (value != null) {
+                      setState(() => _selectedYear = value);
+                      _loadBudget();
+                    }
+                  },
+                  icon: const Icon(Icons.arrow_drop_down, color: Colors.black),
+                ),
+              ),
+            ),
+            OrganizationToggle(
+              onChanged: (isAssembly) async {
+                setState(() {
+                  _isAssembly = isAssembly;
+                  _isLoading = true;
+                });
+                await _loadBudget();
+              },
+            ),
+            const SizedBox(height: 16),
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Row(
@@ -299,7 +402,12 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
                   const SizedBox(width: 16),
                   Expanded(
                     child: FilledButton.icon(
-                      onPressed: _isSubmitting ? null : _submitBudget,
+                      onPressed: _isSubmitting ? null : () async {
+                        final confirm = await _showSubmitWarningDialog();
+                        if (!confirm) return;
+                        await _saveBudget();
+                        await _submitBudget();
+                      },
                       icon: _isSubmitting 
                         ? const SizedBox(
                             width: 20,
@@ -314,48 +422,107 @@ class _AnnualBudgetScreenState extends State<AnnualBudgetScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: FilledButton.icon(
+                      onPressed: canExport ? () async {
+                        final service = AnnualBudgetReportService();
+                        await service.generateAnnualBudgetReport(
+                          organizationId: widget.organizationId,
+                          year: _selectedYear,
+                          entries: _incomeControllers.keys.map((programName) {
+                            final income = double.tryParse(_incomeControllers[programName]?.text ?? '0') ?? 0;
+                            final expenses = double.tryParse(_expenseControllers[programName]?.text ?? '0') ?? 0;
+                            return BudgetEntry(
+                              id: '',
+                              programName: programName,
+                              income: income,
+                              expenses: expenses,
+                              createdAt: DateTime.now(),
+                              createdBy: '',
+                            );
+                          }).toList(),
+                          status: _isSubmitted ? 'Submitted' : 'Draft',
+                        );
+                      } : null,
+                      icon: const Icon(Icons.picture_as_pdf),
+                      label: const Text('Export/Print/Share'),
+                    ),
+                  ),
                 ],
               ),
             ),
-          Expanded(
-            child: SingleChildScrollView(
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Program', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Income', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Expenses', style: TextStyle(fontWeight: FontWeight.bold))),
-                  DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Row(
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: int.parse(_selectedYear) > DateTime.now().year - 2 ? () async {
+                      final previousYear = (int.parse(_selectedYear) - 1).toString();
+                      await _budgetService.copyPreviousYearBudget(
+                        widget.organizationId,
+                        _isAssembly,
+                        previousYear,
+                        _selectedYear,
+                      );
+                      await _loadBudget();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Copied budget from $previousYear to $_selectedYear')),
+                        );
+                      }
+                    } : null,
+                    icon: const Icon(Icons.copy),
+                    label: const Text('Copy Previous Year'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade700,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                  ),
                 ],
-                rows: _incomeControllers.entries.map((entry) {
-                  final programName = entry.key;
-                  final incomeController = entry.value;
-                  final expenseController = _expenseControllers[programName]!;
-                  
-                  final income = double.tryParse(incomeController.text) ?? 0;
-                  final expenses = double.tryParse(expenseController.text) ?? 0;
-                  final total = income - expenses;
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('Program', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Income', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Expenses', style: TextStyle(fontWeight: FontWeight.bold))),
+                    DataColumn(label: Text('Total', style: TextStyle(fontWeight: FontWeight.bold))),
+                  ],
+                  rows: _incomeControllers.entries.map((entry) {
+                    final programName = entry.key;
+                    final incomeController = entry.value;
+                    final expenseController = _expenseControllers[programName]!;
+                    
+                    final income = double.tryParse(incomeController.text) ?? 0;
+                    final expenses = double.tryParse(expenseController.text) ?? 0;
+                    final total = income - expenses;
 
-                  return DataRow(
-                    cells: [
-                      DataCell(Text(programName)),
-                      DataCell(_buildNumberInput(incomeController)),
-                      DataCell(_buildNumberInput(expenseController)),
-                      DataCell(
-                        Text(
-                          '\$${total.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            color: total >= 0 ? Colors.green : Colors.red,
-                            fontWeight: FontWeight.bold,
+                    return DataRow(
+                      cells: [
+                        DataCell(Text(programName)),
+                        DataCell(_buildNumberInput(incomeController)),
+                        DataCell(_buildNumberInput(expenseController)),
+                        DataCell(
+                          Text(
+                            '\$${total.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              color: total >= 0 ? Colors.green : Colors.red,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                      ),
-                    ],
-                  );
-                }).toList(),
+                      ],
+                    );
+                  }).toList(),
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

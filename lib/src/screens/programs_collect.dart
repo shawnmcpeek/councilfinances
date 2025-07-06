@@ -310,6 +310,13 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
     );
   }
 
+  Future<void> _refreshEntries() async {
+    final organizationId = _getFormattedOrganizationId();
+    if (organizationId.isNotEmpty) {
+      _subscribeToEntries(organizationId);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     AppLogger.debug('ProgramsCollectScreen: build called');
@@ -416,6 +423,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                     emptyMessage: 'No program entries found',
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
+                    onRefresh: _refreshEntries,
                     onEdit: _onEdit,
                     onDelete: (adapter) async {
                       final confirm = await showDialog<bool>(

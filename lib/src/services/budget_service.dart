@@ -81,35 +81,15 @@ class BudgetService {
       if (user == null) throw Exception('User must be logged in to save budget entries');
 
       final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
-      
-      // First check if an entry already exists for this program
-      final querySnapshot = await _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('budget')
-          .doc(year)
-          .collection('entries')
-          .where('programName', isEqualTo: programName)
-          .limit(1)
-          .get();
+      final docRef = _firestore
+        .collection('organizations')
+        .doc(formattedOrgId)
+        .collection('budget')
+        .doc(year)
+        .collection('entries')
+        .doc(programName);
 
-      // If the entry exists and is submitted, don't allow changes
-      if (querySnapshot.docs.isNotEmpty) {
-        final existingEntry = BudgetEntry.fromFirestore(querySnapshot.docs.first);
-        if (existingEntry.status == BudgetStatus.submitted) {
-          throw Exception('Cannot modify a submitted budget entry');
-        }
-      }
-
-      final docRef = querySnapshot.docs.isEmpty
-          ? _firestore
-              .collection('organizations')
-              .doc(formattedOrgId)
-              .collection('budget')
-              .doc(year)
-              .collection('entries')
-              .doc()
-          : querySnapshot.docs.first.reference;
+      final docSnapshot = await docRef.get();
 
       final data = {
         'programName': programName,
@@ -120,14 +100,20 @@ class BudgetService {
         'status': BudgetStatus.draft.name,
       };
 
-      // If the document doesn't exist, add creation metadata
-      if (querySnapshot.docs.isEmpty) {
+      if (!docSnapshot.exists) {
         data['createdAt'] = FieldValue.serverTimestamp();
         data['createdBy'] = user.uid;
       }
 
       AppLogger.debug('Saving budget entry: $data');
-      await docRef.set(data, SetOptions(merge: true));
+      AppLogger.debug('Firestore write path: ' + docRef.path);
+      try {
+        await docRef.set(data, SetOptions(merge: true));
+      } catch (e, stackTrace) {
+        AppLogger.error('Firestore set failed', e);
+        AppLogger.error('Stack trace:', stackTrace);
+        rethrow;
+      }
     } catch (e, stackTrace) {
       AppLogger.error('Error saving budget entry', e);
       AppLogger.error('Stack trace:', stackTrace);
@@ -145,11 +131,6 @@ class BudgetService {
       // Get all entries for the year
       final entries = await getBudgetEntries(organizationId, isAssembly, year);
       
-      // Check if any entries are already submitted
-      if (entries.any((entry) => entry.status == BudgetStatus.submitted)) {
-        throw Exception('Budget for this year has already been submitted');
-      }
-
       // Create a batch write
       final batch = _firestore.batch();
       final collection = _firestore
@@ -162,6 +143,7 @@ class BudgetService {
       // Update all entries to submitted status
       for (var entry in entries) {
         final docRef = collection.doc(entry.id);
+        AppLogger.debug('Firestore batch update path: ' + docRef.path);
         batch.update(docRef, {
           'status': BudgetStatus.submitted.name,
           'updatedAt': FieldValue.serverTimestamp(),
@@ -169,7 +151,13 @@ class BudgetService {
         });
       }
 
-      await batch.commit();
+      try {
+        await batch.commit();
+      } catch (e, stackTrace) {
+        AppLogger.error('Firestore batch commit failed', e);
+        AppLogger.error('Stack trace:', stackTrace);
+        rethrow;
+      }
       AppLogger.debug('Successfully submitted budget for year: $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error submitting budget', e);

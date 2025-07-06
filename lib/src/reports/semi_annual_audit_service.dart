@@ -1,17 +1,15 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/logger.dart';
-import '../services/user_service.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
 import 'base_pdf_report_service.dart';
 import 'audit_field_map.dart';
+import '../services/audit_firestore_data_service.dart';
 
 class SemiAnnualAuditService extends BasePdfReportService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
-  final UserService _userService = UserService();
+  final AuditFirestoreDataService _firestoreService = AuditFirestoreDataService();
   static const String _auditReportTemplate = 'audit2_1295_p.pdf';
-  static const String _fillAuditReportUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/fillAuditReport';
+  static const String _fillAuditReportUrl = 'https://us-central1-council-finance.cloudfunctions.net/fillAuditReport';
 
   @override
   String get templatePath => _auditReportTemplate;
@@ -20,16 +18,139 @@ class SemiAnnualAuditService extends BasePdfReportService {
     try {
       AppLogger.info('Generating semi-annual audit report for $period $year');
 
-      // 1. Get report data
-      final data = await _getAuditData(period, year);
+      // 1. Get report data (Firestore + manual + calculations)
+      final data = await _getAuditData(period, year, manualValues);
       AppLogger.debug('Got audit data: $data');
 
-      // 2. Add manual values to data
-      if (manualValues != null) {
-        data.addAll(manualValues);
+      // List of fields that should never be auto-filled (hand entry only)
+      const handEntryOnlyFields = [
+        'Text95','Text97','Text99','Text101','Text104','Text105','Text106','Text107','Text108','Text109','Text110'
+      ];
+      for (final key in handEntryOnlyFields) {
+        data.remove(key);
       }
 
-      // 3. Call Firebase Function to fill the PDF
+      // Print all calculated fields for debug
+      for (final key in AuditFieldMap.autoCalculatedFields) {
+        print('DEBUG: $key = ${data[key]}');
+      }
+
+      // Add debug output for all key calculated fields before sending to backend
+      final debugFields = [
+        'Text73','Text74','Text75','Text76','Text77','Text78','Text79','Text80','Text83','Text88',
+        'Text69','Text70','manual_expense_1','manual_expense_2','total_disbursements_sum',
+        'total_current_liabilities','net_current_assets','total_assets'
+      ];
+      for (final key in debugFields) {
+        print('DEBUG FIELD $key: \'${data[key]}\'');
+      }
+
+      // DEBUG: Print the data being sent to the backend
+      print('AUDIT PDF DATA SENT TO BACKEND:');
+      print(json.encode({
+        ...data,
+        'period': period,
+        'year': year,
+      }));
+
+      // === EXPLICITLY ASSIGN AND DEBUG ALL FIELDS ===
+      // Manual fields (ensure correct mapping)
+      data['Text50'] = data['Text50'] ?? data['manual_income_1'] ?? '0.00';
+      data['Text59'] = data['Text59'] ?? '0.00';
+      data['Text68'] = data['Text68'] ?? data['manual_expense_1'] ?? '0.00'; // General council expenses
+      data['Text70'] = data['Text70'] ?? data['manual_expense_2'] ?? '0.00'; // Transfers to sav./other accts.
+      data['Text74'] = data['Text74'] ?? data['manual_membership_1'] ?? '0.00';
+      data['Text75'] = data['Text75'] ?? data['manual_membership_2'] ?? '0.00';
+      data['Text76'] = data['Text76'] ?? data['manual_membership_3'] ?? '0.00';
+      data['Text77'] = data['Text77'] ?? data['membership_count'] ?? '0.00';
+      data['Text78'] = data['Text78'] ?? data['membership_dues_total'] ?? '0.00';
+      data['Text84'] = data['Text84'] ?? data['manual_disbursement_1'] ?? '0.00';
+      data['Text85'] = data['Text85'] ?? data['manual_disbursement_2'] ?? '0.00';
+      data['Text86'] = data['Text86'] ?? data['manual_disbursement_3'] ?? '0.00';
+      data['Text87'] = data['Text87'] ?? data['manual_disbursement_4'] ?? '0.00';
+      data['Text89'] = data['Text89'] ?? data['manual_field_1'] ?? '0.00';
+      data['Text90'] = data['Text90'] ?? data['manual_field_2'] ?? '0.00';
+      data['Text91'] = data['Text91'] ?? data['manual_field_3'] ?? '0.00';
+      data['Text92'] = data['Text92'] ?? data['manual_field_4'] ?? '0.00';
+      data['Text93'] = data['Text93'] ?? data['manual_field_5'] ?? '0.00';
+      data['Text95'] = data['Text95'] ?? data['manual_field_6'] ?? '0.00';
+      data['Text96'] = data['Text96'] ?? data['manual_field_7'] ?? '0.00';
+      data['Text97'] = data['Text97'] ?? data['manual_field_8'] ?? '0.00';
+      data['Text98'] = data['Text98'] ?? data['manual_field_9'] ?? '0.00';
+      data['Text99'] = data['Text99'] ?? data['manual_field_10'] ?? '0.00';
+      data['Text100'] = data['Text100'] ?? data['manual_field_11'] ?? '0.00';
+      data['Text101'] = data['Text101'] ?? data['manual_field_12'] ?? '0.00';
+      data['Text102'] = data['Text102'] ?? data['manual_field_13'] ?? '0.00';
+      // Calculated fields (ensure all are set)
+      data['Text51'] = data['Text51'] ?? data['membership_dues'] ?? '0.00';
+      data['Text58'] = data['Text58'] ?? '0.00';
+      data['Text60'] = data['Text60'] ?? '0.00';
+      data['Text64'] = data['Text64'] ?? data['interest_earned'] ?? '0.00';
+      data['Text65'] = data['Text65'] ?? '0.00';
+      data['Text66'] = data['Text66'] ?? data['supreme_per_capita'] ?? '0.00';
+      data['Text67'] = data['Text67'] ?? data['state_per_capita'] ?? '0.00';
+      data['Text69'] = data['Text69'] ?? '0.00'; // Not for council expenses
+      data['Text71'] = data['Text71'] ?? '0.00';
+      data['Text72'] = data['Text72'] ?? '0.00';
+      data['Text73'] = data['Text73'] ?? '0.00';
+      data['Text79'] = data['Text79'] ?? '0.00';
+      data['Text80'] = data['Text80'] ?? '0.00';
+      data['Text83'] = data['Text83'] ?? '0.00';
+      data['Text88'] = data['Text88'] ?? '0.00';
+      data['Text103'] = data['Text103'] ?? data['total_disbursements_sum'] ?? '0.00';
+      // Debug print every field
+      for (final key in data.keys) {
+        print('DEBUG FINAL FIELD $key: ${data[key]}');
+      }
+
+      // === CALCULATE AND ASSIGN ALL FIELDS ===
+      // Text73: Net council verify (should equal Text72)
+      data['Text73'] = data['Text72'] ?? '0.00';
+      print('DEBUG CALC Text73: ${data['Text73']}');
+
+      // Text79: Total current assets = Text73 + Text74 + Text75 + Text76 + Text77 + Text78
+      final text73 = _parseCurrency(data['Text73']);
+      final text74 = _parseCurrency(data['Text74']);
+      final text75 = _parseCurrency(data['Text75']);
+      final text76 = _parseCurrency(data['Text76']);
+      final text77 = _parseCurrency(data['Text77']);
+      final text78 = _parseCurrency(data['Text78']);
+      data['Text79'] = AuditFieldMap.formatCurrency(text73 + text74 + text75 + text76 + text77 + text78);
+      print('DEBUG CALC Text79: ${data['Text79']}');
+
+      // Text80: Total current liabilities = sum of Text89, Text90, Text91, Text92, Text93, Text96, Text98, Text100, Text102
+      final text89 = _parseCurrency(data['Text89']);
+      final text90 = _parseCurrency(data['Text90']);
+      final text91 = _parseCurrency(data['Text91']);
+      final text92 = _parseCurrency(data['Text92']);
+      final text93 = _parseCurrency(data['Text93']);
+      final text96 = _parseCurrency(data['Text96']);
+      final text98 = _parseCurrency(data['Text98']);
+      final text100 = _parseCurrency(data['Text100']);
+      final text102 = _parseCurrency(data['Text102']);
+      final totalCurrentLiabilities = text89 + text90 + text91 + text92 + text93 + text96 + text98 + text100 + text102;
+      data['Text80'] = AuditFieldMap.formatCurrency(totalCurrentLiabilities);
+      data['total_current_liabilities'] = data['Text80'];
+      print('DEBUG CALC Text80: ${data['Text80']}');
+
+      // Text83: Net current assets = Text79 - Text80
+      final text79 = _parseCurrency(data['Text79']);
+      final text80 = _parseCurrency(data['Text80']);
+      data['Text83'] = AuditFieldMap.formatCurrency(text79 - text80);
+      data['net_current_assets'] = data['Text83'];
+      print('DEBUG CALC Text83: ${data['Text83']}');
+
+      // Text88: Total assets = Text83 (if no other assets)
+      data['Text88'] = data['Text83'];
+      data['total_assets'] = data['Text88'];
+      print('DEBUG CALC Text88: ${data['Text88']}');
+
+      // total_disbursements_sum (Text103): sum of Text89, Text90, Text91, Text92, Text93, Text96, Text98, Text100, Text102
+      data['total_disbursements_sum'] = AuditFieldMap.formatCurrency(totalCurrentLiabilities);
+      data['Text103'] = data['total_disbursements_sum'];
+      print('DEBUG CALC total_disbursements_sum/Text103: ${data['Text103']}');
+
+      // 2. Call Firebase Function to fill the PDF
       final response = await http.post(
         Uri.parse(_fillAuditReportUrl),
         headers: {'Content-Type': 'application/json'},
@@ -44,7 +165,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
         throw Exception('Failed to generate PDF: ${response.body}');
       }
 
-      // 4. Save or share the PDF
+      // 3. Save or share the PDF
       final fileName = 'semi_annual_audit_${period.toLowerCase()}_$year.pdf';
       await saveOrShareFile(
         response.bodyBytes,
@@ -59,82 +180,34 @@ class SemiAnnualAuditService extends BasePdfReportService {
     }
   }
 
-  Future<Map<String, dynamic>> _getAuditData(String period, int year) async {
+  Future<Map<String, dynamic>> _getAuditData(String period, int year, [Map<String, String>? manualValues]) async {
     try {
-      // Get user profile for organization info
-      final userProfile = await _userService.getUserProfile();
-      if (userProfile == null) {
-        throw Exception('User profile not found');
-      }
+      AppLogger.info('=== STARTING AUDIT DATA GENERATION ===');
+      AppLogger.info('Period: $period, Year: $year');
 
-      // Get date range for the period
-      final dateRange = AuditFieldMap.getDateRangeForPeriod(period, year);
+      // STEP 1: Get all Firestore data and calculations (Field B)
+      AppLogger.info('Step 1: Fetching Firestore data...');
+      final firestoreData = await _firestoreService.getAuditFirestoreData(period, year);
+      AppLogger.info('Step 1 COMPLETE: Firestore data fetched and calculated');
 
-      // Get organization ID (council only for now)
-      final organizationId = userProfile.getOrganizationId(false);
-
-      // Initialize data map with basic info
-      final Map<String, dynamic> data = {
-        'council_number': userProfile.councilNumber.toString().padLeft(6, '0'),
-        'organization_name': 'Council ${userProfile.councilNumber}',
-        'year': AuditFieldMap.getYearSuffix(year),
-        // Manual entry fields will be handled by the UI
-      };
-
-      // Get transactions for the period
-      final transactions = await _getTransactionsForPeriod(
-        organizationId,
-        dateRange.start,
-        dateRange.end,
-      );
-
-      // Calculate program totals
-      final programTotals = _calculateProgramTotals(transactions);
+      // STEP 2: Merge manual user data (Field A)
+      AppLogger.info('Step 2: Merging manual user data...');
+      final Map<String, dynamic> data = Map.from(firestoreData);
       
-      // Calculate membership dues
-      final membershipDues = _calculateMembershipDues(transactions);
-      data['membership_dues'] = AuditFieldMap.formatCurrency(membershipDues);
-
-      // Get top programs
-      final topPrograms = _getTopPrograms(programTotals);
-      if (topPrograms.isNotEmpty) {
-        data['top_program_1_name'] = topPrograms[0].name;
-        data['top_program_1_amount'] = AuditFieldMap.formatCurrency(topPrograms[0].amount);
-        if (topPrograms.length > 1) {
-          data['top_program_2_name'] = topPrograms[1].name;
-          data['top_program_2_amount'] = AuditFieldMap.formatCurrency(topPrograms[1].amount);
+      if (manualValues != null) {
+        for (final entry in manualValues.entries) {
+          data[entry.key] = entry.value;
+          AppLogger.info('Manual data added: ${entry.key} = ${entry.value}');
         }
       }
+      AppLogger.info('Step 2 COMPLETE: Manual data merged');
 
-      // Calculate other programs total
-      final otherProgramsTotal = _calculateOtherProgramsTotal(programTotals, topPrograms);
-      data['other_programs_name'] = 'Other';
-      data['other_programs_amount'] = AuditFieldMap.formatCurrency(otherProgramsTotal);
+      // STEP 3: Calculate all totals and dependent fields (Field C)
+      AppLogger.info('Step 3: Calculating totals and dependent fields...');
+      _calculateAllTotals(data);
+      AppLogger.info('Step 3 COMPLETE: All calculations finished');
 
-      // Calculate interest earned
-      final interestEarned = _calculateInterestEarned(transactions);
-      data['interest_earned'] = AuditFieldMap.formatCurrency(interestEarned);
-
-      // Calculate per capita amounts
-      final perCapita = _calculatePerCapitaAmounts(transactions);
-      data['supreme_per_capita'] = AuditFieldMap.formatCurrency(perCapita.supreme);
-      data['state_per_capita'] = AuditFieldMap.formatCurrency(perCapita.state);
-
-      // Calculate other council programs
-      final otherCouncilPrograms = _calculateOtherCouncilPrograms(transactions);
-      data['other_council_programs'] = AuditFieldMap.formatCurrency(otherCouncilPrograms);
-
-      // Calculate totals
-      data['total_income'] = _calculateTotalIncome(data);
-      data['net_income'] = _calculateNetIncome(data);
-      data['total_interest'] = _calculateTotalInterest(data);
-      data['total_expenses'] = _calculateTotalExpenses(data);
-      data['net_council'] = _calculateNetCouncil(data);
-      data['net_council_verify'] = data['net_council'];
-      data['total_membership'] = _calculateTotalMembership(data);
-      data['net_membership'] = _calculateNetMembership(data);
-      data['total_disbursements_verify'] = _calculateTotalDisbursementsVerify(data);
-
+      AppLogger.info('=== AUDIT DATA GENERATION COMPLETE ===');
       return data;
     } catch (e, stackTrace) {
       AppLogger.error('Error getting audit data', e, stackTrace);
@@ -142,229 +215,81 @@ class SemiAnnualAuditService extends BasePdfReportService {
     }
   }
 
-  Future<List<Map<String, dynamic>>> _getTransactionsForPeriod(
-    String organizationId,
-    DateTime startDate,
-    DateTime endDate,
-  ) async {
-    final List<Map<String, dynamic>> allTransactions = [];
-    final years = <int>{startDate.year, endDate.year};
+  void _calculateAllTotals(Map<String, dynamic> data) {
+    // Calculate all totals using complete data (manual + firestore)
     
-    for (final year in years) {
-      try {
-        // Fetch income
-        final incomeSnapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('income')
-            .doc(year.toString())
-            .collection('entries')
-            .where('date', isGreaterThanOrEqualTo: startDate)
-            .where('date', isLessThanOrEqualTo: endDate)
-            .get();
-            
-        for (final doc in incomeSnapshot.docs) {
-          final data = doc.data();
-          final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
-          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          final date = _parseDate(data['date']);
-          
-          if (date != null) {
-            allTransactions.add({
-              'program': program,
-              'amount': amount,
-              'date': date,
-              'type': 'income',
-            });
-          }
-        }
-
-        // Fetch expenses
-        final expenseSnapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('expenses')
-            .doc(year.toString())
-            .collection('entries')
-            .where('date', isGreaterThanOrEqualTo: startDate)
-            .where('date', isLessThanOrEqualTo: endDate)
-            .get();
-            
-        for (final doc in expenseSnapshot.docs) {
-          final data = doc.data();
-          final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
-          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          final date = _parseDate(data['date']);
-          
-          if (date != null) {
-            allTransactions.add({
-              'program': program,
-              'amount': amount,
-              'date': date,
-              'type': 'expense',
-            });
-          }
-        }
-      } catch (e, stackTrace) {
-        AppLogger.error('Error fetching transactions for year $year', e, stackTrace);
-        // Continue with other years even if one fails
-        continue;
-      }
-    }
-    return allTransactions;
-  }
-
-  DateTime? _parseDate(dynamic dateValue) {
-    if (dateValue is Timestamp) {
-      return dateValue.toDate();
-    } else if (dateValue is DateTime) {
-      return dateValue;
-    }
-    return null;
-  }
-
-  Map<String, double> _calculateProgramTotals(List<Map<String, dynamic>> transactions) {
-    final Map<String, double> totals = {};
+    // Text51: Membership dues (from Firestore)
+    data['Text51'] = data['membership_dues'] ?? '0.00';
     
-    for (final transaction in transactions) {
-      final program = transaction['program'] as String;
-      final amount = (transaction['amount'] as num).toDouble();
-      
-      totals[program] = (totals[program] ?? 0) + amount;
-    }
+    // Text64: Interest earned (from Firestore)
+    data['Text64'] = data['interest_earned'] ?? '0.00';
     
-    return totals;
-  }
-
-  double _calculateMembershipDues(List<Map<String, dynamic>> transactions) {
-    return transactions
-        .where((t) => t['program'] == 'Membership Dues')
-        .fold(0.0, (acc, t) => acc + (t['amount'] as num).toDouble());
-  }
-
-  List<ProgramTotal> _getTopPrograms(Map<String, double> programTotals) {
-    final programs = programTotals.entries
-        .where((e) => e.key != 'Membership Dues')
-        .map((e) => ProgramTotal(e.key, e.value))
-        .toList();
+    // Text66: Supreme per capita (from Firestore)
+    data['Text66'] = data['supreme_per_capita'] ?? '0.00';
     
-    programs.sort((a, b) => b.amount.compareTo(a.amount));
-    return programs.take(2).toList();
-  }
-
-  double _calculateOtherProgramsTotal(
-    Map<String, double> programTotals,
-    List<ProgramTotal> topPrograms,
-  ) {
-    final topProgramNames = topPrograms.map((p) => p.name).toSet();
-    return programTotals.entries
-        .where((e) => e.key != 'Membership Dues' && !topProgramNames.contains(e.key))
-        .fold(0.0, (acc, e) => acc + e.value);
-  }
-
-  double _calculateInterestEarned(List<Map<String, dynamic>> transactions) {
-    return transactions
-        .where((t) => t['program'] == 'Interest Earned')
-        .fold(0.0, (acc, t) => acc + (t['amount'] as num).toDouble());
-  }
-
-  PerCapitaAmounts _calculatePerCapitaAmounts(List<Map<String, dynamic>> transactions) {
-    double supreme = 0.0;
-    double state = 0.0;
-
-    for (final transaction in transactions) {
-      final program = transaction['program'] as String;
-      final amount = (transaction['amount'] as num).toDouble();
-
-      if (program == 'Supreme Per Capita') {
-        supreme += amount;
-      } else if (program == 'State Per Capita') {
-        state += amount;
-      }
-    }
-
-    return PerCapitaAmounts(supreme, state);
-  }
-
-  double _calculateOtherCouncilPrograms(List<Map<String, dynamic>> transactions) {
-    final councilPrograms = AuditFieldMap.defaultCouncilPrograms.toSet();
-    return transactions
-        .where((t) => councilPrograms.contains(t['program']))
-        .fold(0.0, (acc, t) => acc + (t['amount'] as num).toDouble());
-  }
-
-  String _calculateTotalIncome(Map<String, dynamic> data) {
-    final manualIncome1 = _parseCurrency(data['manual_income_1']);
-    final membershipDues = _parseCurrency(data['membership_dues']);
-    final topProgram1Amount = _parseCurrency(data['top_program_1_amount']);
-    final topProgram2Amount = _parseCurrency(data['top_program_2_amount']);
-    final otherProgramsAmount = _parseCurrency(data['other_programs_amount']);
-
-    final total = manualIncome1 + membershipDues + topProgram1Amount + topProgram2Amount + otherProgramsAmount;
-    return AuditFieldMap.formatCurrency(total);
-  }
-
-  String _calculateNetIncome(Map<String, dynamic> data) {
-    final totalIncome = _parseCurrency(data['total_income']);
-    final manualIncome2 = _parseCurrency(data['manual_income_2']);
-
-    return AuditFieldMap.formatCurrency(totalIncome - manualIncome2);
-  }
-
-  String _calculateTotalInterest(Map<String, dynamic> data) {
-    final interestEarned = _parseCurrency(data['interest_earned']);
-    return AuditFieldMap.formatCurrency(interestEarned);
-  }
-
-  String _calculateTotalExpenses(Map<String, dynamic> data) {
-    final otherCouncilPrograms = _parseCurrency(data['other_council_programs']);
-    final manualExpense1 = _parseCurrency(data['manual_expense_1']);
-    final manualExpense2 = _parseCurrency(data['manual_expense_2']);
-
-    return AuditFieldMap.formatCurrency(otherCouncilPrograms + manualExpense1 + manualExpense2);
-  }
-
-  String _calculateNetCouncil(Map<String, dynamic> data) {
-    final totalInterest = _parseCurrency(data['total_interest']);
-    final totalExpenses = _parseCurrency(data['total_expenses']);
-
-    return AuditFieldMap.formatCurrency(totalInterest - totalExpenses);
-  }
-
-  String _calculateTotalMembership(Map<String, dynamic> data) {
-    final netCouncil = _parseCurrency(data['net_council']);
-    final manualMembership1 = _parseCurrency(data['manual_membership_1']);
-    final manualMembership2 = _parseCurrency(data['manual_membership_2']);
-    final manualMembership3 = _parseCurrency(data['manual_membership_3']);
-    final membershipDuesTotal = _parseCurrency(data['membership_dues_total']);
-
-    final total = netCouncil + manualMembership1 + manualMembership2 + manualMembership3 + membershipDuesTotal;
-    return AuditFieldMap.formatCurrency(total);
-  }
-
-  String _calculateNetMembership(Map<String, dynamic> data) {
-    final totalMembership = _parseCurrency(data['total_membership']);
-    final totalDisbursements = _parseCurrency(data['total_disbursements']);
-
-    return AuditFieldMap.formatCurrency(totalMembership - totalDisbursements);
-  }
-
-  String _calculateTotalDisbursementsVerify(Map<String, dynamic> data) {
-    final netMembership = _parseCurrency(data['net_membership']);
-    final manualDisbursement1 = _parseCurrency(data['manual_disbursement_1']);
-    final manualDisbursement2 = _parseCurrency(data['manual_disbursement_2']);
-    final manualDisbursement3 = _parseCurrency(data['manual_disbursement_3']);
-    final manualDisbursement4 = _parseCurrency(data['manual_disbursement_4']);
-
-    // Verify that total disbursements match the sum of individual disbursements
-    final calculatedTotal = manualDisbursement1 + manualDisbursement2 + manualDisbursement3 + manualDisbursement4;
-    final reportedTotal = _parseCurrency(data['total_disbursements']);
+    // Text67: State per capita (from Firestore)
+    data['Text67'] = data['state_per_capita'] ?? '0.00';
     
-    if ((calculatedTotal - reportedTotal).abs() > 0.01) {
-      AppLogger.warning('Disbursement verification failed: calculated $calculatedTotal vs reported $reportedTotal');
-    }
+    // Text72: Net council verify (calculated)
+    final text64 = _parseCurrency(data['Text64']);
+    final text65 = _parseCurrency(data['Text65'] ?? '0.00');
+    final text66 = _parseCurrency(data['Text66']);
+    final text67 = _parseCurrency(data['Text67']);
+    final text68 = _parseCurrency(data['Text68'] ?? '0.00');
+    final text69 = _parseCurrency(data['Text69'] ?? '0.00');
+    final text70 = _parseCurrency(data['Text70'] ?? '0.00');
+    final text71 = _parseCurrency(data['Text71'] ?? '0.00');
     
-    return AuditFieldMap.formatCurrency(calculatedTotal);
+    final netCouncil = text64 + text65 + text66 + text67 - text68 - text69 - text70 - text71;
+    data['Text72'] = AuditFieldMap.formatCurrency(netCouncil);
+    
+    // Text73: Net council verify (should equal Text72)
+    data['Text73'] = data['Text72'];
+    
+    // Text79: Total current assets
+    final text73 = _parseCurrency(data['Text73']);
+    final text74 = _parseCurrency(data['Text74'] ?? '0.00');
+    final text75 = _parseCurrency(data['Text75'] ?? '0.00');
+    final text76 = _parseCurrency(data['Text76'] ?? '0.00');
+    final text77 = _parseCurrency(data['Text77'] ?? '0.00');
+    final text78 = _parseCurrency(data['Text78'] ?? '0.00');
+    data['Text79'] = AuditFieldMap.formatCurrency(text73 + text74 + text75 + text76 + text77 + text78);
+    
+    // Text80: Total current liabilities
+    final text89 = _parseCurrency(data['Text89'] ?? '0.00');
+    final text90 = _parseCurrency(data['Text90'] ?? '0.00');
+    final text91 = _parseCurrency(data['Text91'] ?? '0.00');
+    final text92 = _parseCurrency(data['Text92'] ?? '0.00');
+    final text93 = _parseCurrency(data['Text93'] ?? '0.00');
+    final text96 = _parseCurrency(data['Text96'] ?? '0.00');
+    final text98 = _parseCurrency(data['Text98'] ?? '0.00');
+    final text100 = _parseCurrency(data['Text100'] ?? '0.00');
+    final text102 = _parseCurrency(data['Text102'] ?? '0.00');
+    final totalCurrentLiabilities = text89 + text90 + text91 + text92 + text93 + text96 + text98 + text100 + text102;
+    data['Text80'] = AuditFieldMap.formatCurrency(totalCurrentLiabilities);
+    data['total_current_liabilities'] = data['Text80'];
+    
+    // Text83: Net current assets
+    final text79 = _parseCurrency(data['Text79']);
+    final text80 = _parseCurrency(data['Text80']);
+    data['Text83'] = AuditFieldMap.formatCurrency(text79 - text80);
+    data['net_current_assets'] = data['Text83'];
+    
+    // Text88: Total assets
+    data['Text88'] = data['Text83'];
+    data['total_assets'] = data['Text88'];
+    
+    // total_disbursements_sum
+    data['total_disbursements_sum'] = data['Text80'];
+    data['Text103'] = data['total_disbursements_sum'];
+    
+    print('DEBUG CALCULATED TOTALS:');
+    print('Text72 (Net council): ${data['Text72']}');
+    print('Text79 (Total current assets): ${data['Text79']}');
+    print('Text80 (Total current liabilities): ${data['Text80']}');
+    print('Text83 (Net current assets): ${data['Text83']}');
+    print('Text88 (Total assets): ${data['Text88']}');
+    print('Text103 (Total disbursements): ${data['Text103']}');
   }
 
   double _parseCurrency(String? value) {
@@ -373,18 +298,19 @@ class SemiAnnualAuditService extends BasePdfReportService {
     final cleanValue = value.replaceAll(RegExp(r'[^\d.-]'), '');
     return double.tryParse(cleanValue) ?? 0.0;
   }
-}
 
-class ProgramTotal {
-  final String name;
-  final double amount;
+  /// Save the current audit form data as a draft in Firestore
+  Future<void> saveDraft(String period, int year, Map<String, String> formData) async {
+    // This method would need to be updated to use the new service structure
+    // For now, we'll leave it as a placeholder
+    AppLogger.info('Draft saving not yet implemented with new service structure');
+  }
 
-  ProgramTotal(this.name, this.amount);
-}
-
-class PerCapitaAmounts {
-  final double supreme;
-  final double state;
-
-  PerCapitaAmounts(this.supreme, this.state);
+  /// Load a saved audit draft from Firestore, if it exists
+  Future<Map<String, String>?> loadDraft(String period, int year) async {
+    // This method would need to be updated to use the new service structure
+    // For now, we'll leave it as a placeholder
+    AppLogger.info('Draft loading not yet implemented with new service structure');
+    return null;
+  }
 } 

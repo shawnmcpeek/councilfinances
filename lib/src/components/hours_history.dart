@@ -91,6 +91,10 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
     }
   }
 
+  Future<void> _refreshEntries() async {
+    _subscribeToEntries();
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -102,6 +106,7 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
       emptyMessage: 'No hours entries found',
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
+      onRefresh: _refreshEntries,
       onEdit: (adapter) async {
         await showDialog(
           context: context,

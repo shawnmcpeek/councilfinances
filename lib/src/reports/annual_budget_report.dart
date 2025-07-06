@@ -38,24 +38,6 @@ class AnnualBudgetReport extends StatelessWidget {
               ),
             ),
             const SizedBox(height: AppTheme.spacing),
-            DropdownButtonFormField<String>(
-              decoration: AppTheme.formFieldDecoration.copyWith(
-                labelText: 'Report Year',
-              ),
-              value: selectedYear,
-              items: List.generate(6, (index) => (DateTime.now().year + index).toString())
-                  .map((year) => DropdownMenuItem(
-                        value: year,
-                        child: Text(year),
-                      ))
-                  .toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  onYearChange(value);
-                }
-              },
-            ),
-            const SizedBox(height: AppTheme.spacing),
             FilledButton.icon(
               onPressed: isGenerating ? null : () {
                 final route = MaterialPageRoute<void>(
