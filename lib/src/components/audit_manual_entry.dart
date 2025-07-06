@@ -38,7 +38,15 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
         final newValue = _controllers[field]!.text;
         if (_currentValues[field] != newValue) {
           _currentValues[field] = newValue;
-          widget.onValuesChanged(_currentValues);
+          // Map Text69 and Text70 to manual_expense_1 and manual_expense_2 for backend
+          final mappedValues = Map<String, String>.from(_currentValues);
+          if (mappedValues.containsKey('Text69')) {
+            mappedValues['manual_expense_1'] = mappedValues['Text69'] ?? '';
+          }
+          if (mappedValues.containsKey('Text70')) {
+            mappedValues['manual_expense_2'] = mappedValues['Text70'] ?? '';
+          }
+          widget.onValuesChanged(mappedValues);
         }
       });
     }
@@ -61,51 +69,83 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Manual Entry Fields',
+              'Audit Report Data Entry',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: AppTheme.smallSpacing),
             Text(
-              'Enter values for fields that require manual input',
+              'Enter values for the semi-annual audit report. Fields marked with * are required.',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                 color: Colors.grey[600],
               ),
             ),
             const SizedBox(height: AppTheme.spacing),
             _buildSection(
-              'Income',
+              'Schedule B — Cash Transactions (Financial Secretary)',
               ['Text50', 'Text59'],
-              'Enter income values',
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            _buildSection(
-              'Expenses',
-              ['Text69', 'Text70'],
-              'Enter expense values',
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            _buildSection(
-              'Membership',
-              ['Text74', 'Text75', 'Text76', 'Text77', 'Text78'],
-              'Enter membership values',
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            _buildSection(
-              'Disbursements',
-              ['Text84', 'Text85', 'Text86', 'Text87'],
-              'Enter disbursement values',
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            _buildSection(
-              'Additional Fields',
+              'Enter cash transaction values for the Financial Secretary',
               [
-                'Text89', 'Text90', 'Text91', 'Text92', 'Text93',
-                'Text95', 'Text96', 'Text97', 'Text98', 'Text99',
-                'Text100', 'Text101', 'Text102',
-                'Text104', 'Text105', 'Text106', 'Text107', 'Text108',
-                'Text109', 'Text110'
+                'Cash on hand beginning of period*',
+                'Transferred to treasurer*',
               ],
-              'Enter additional field values',
+            ),
+            const SizedBox(height: AppTheme.spacing),
+            _buildSection(
+              'Schedule B — Cash Transactions (Treasurer Disbursements)',
+              ['Text69', 'Text70'],
+              'Enter disbursement values for the Treasurer',
+              [
+                'General council expenses*',
+                'Transfers to sav./other accts.*',
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing),
+            _buildSection(
+              'Schedule C — Assets',
+              [
+                'Text73', 'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
+                'Text84', 'Text85', 'Text86', 'Text87', 'Text100', 'Text101'
+              ],
+              'Enter asset values',
+              [
+                'Undeposited funds*',
+                'Bank — Checking acct.*',
+                'Bank — Savings acct.*',
+                'Bank — Money market accts.*',
+                'How many members have outstanding dues',
+                'Total amount of outstanding dues (USD)',
+                'Other asset*',
+                'Short term CD*',
+                'Money Market Mutual Funds*',
+                'Misc. Asset 1 Name',
+                'Misc. Asset 1 Amount (USD)',
+                'Misc. Asset 2 Name',
+                'Misc. Asset 2 Amount (USD)',
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing),
+            _buildSection(
+              'Schedule C — Liabilities',
+              [
+                'Text89', 'Text90', 'Text91', 'Text92', 'Text93', 'Text95', 'Text96',
+                'Text97', 'Text98', 'Text99', 'Text102', 'Text104', 'Text105'
+              ],
+              'Enter liability values',
+              [
+                'Due Supreme Council: Per capita*',
+                'Due Supreme Council: Supplies*',
+                'Due Supreme Council: Catholic advertising*',
+                'Due Supreme Council: Other*',
+                'Due State Council*',
+                'Advance payments by members (number)*',
+                'Advance payments by members (amount)*',
+                'Misc. Liability 1 Name',
+                'Misc. Liability 1 Amount (USD)',
+                'Misc. Liability 2 Name',
+                'Misc. Liability 2 Amount (USD)',
+                'Misc. Liability 3 Name',
+                'Misc. Liability 3 Amount (USD)',
+              ],
             ),
           ],
         ),
@@ -113,7 +153,7 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
     );
   }
 
-  Widget _buildSection(String title, List<String> fields, String subtitle) {
+  Widget _buildSection(String title, List<String> fields, String subtitle, List<String> labels) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -126,70 +166,46 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
           ),
         ),
         const SizedBox(height: AppTheme.smallSpacing),
-        ...fields.map((field) => Padding(
-          padding: const EdgeInsets.only(bottom: AppTheme.smallSpacing),
-          child: TextFormField(
-            controller: _controllers[field],
-            decoration: AppTheme.formFieldDecoration.copyWith(
-              labelText: _getFieldLabel(field),
-              hintText: 'Enter value',
+        ...fields.asMap().entries.map((entry) {
+          final field = entry.key;
+          final label = labels[field];
+          final isRequired = label.endsWith('*');
+          final displayLabel = isRequired ? label.substring(0, label.length - 1) : label;
+          final isNameField = label.toLowerCase().contains('name');
+          final isAmountField = label.toLowerCase().contains('amount');
+          return Padding(
+            padding: const EdgeInsets.only(bottom: AppTheme.smallSpacing),
+            child: TextFormField(
+              controller: _controllers[fields[field]],
+              decoration: AppTheme.formFieldDecoration.copyWith(
+                labelText: displayLabel,
+                hintText: isNameField ? 'Enter name/description' : 'Enter amount',
+                suffixText: isAmountField ? 'USD' : null,
+                helperText: isRequired ? 'Required field' : null,
+              ),
+              keyboardType: isNameField ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: isNameField
+                ? []
+                : [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d{0,2}'))],
+              validator: (value) {
+                if (isRequired && (value == null || value.isEmpty)) {
+                  return 'This field is required';
+                }
+                if (!isNameField && value != null && value.isNotEmpty) {
+                  final number = double.tryParse(value);
+                  if (number == null) {
+                    return 'Please enter a valid number';
+                  }
+                  if (number < 0) {
+                    return 'Amount cannot be negative';
+                  }
+                }
+                return null;
+              },
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [
-              FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
-            ],
-            validator: (value) {
-              if (value == null || value.isEmpty) {
-                return 'This field is required';
-              }
-              if (double.tryParse(value) == null) {
-                return 'Please enter a valid number';
-              }
-              return null;
-            },
-          ),
-        )),
+          );
+        }),
       ],
     );
-  }
-
-  String _getFieldLabel(String field) {
-    // Map field IDs to human-readable labels
-    final Map<String, String> labels = {
-      'Text50': 'Manual Income 1',
-      'Text59': 'Manual Income 2',
-      'Text69': 'Manual Expense 1',
-      'Text70': 'Manual Expense 2',
-      'Text74': 'Manual Membership 1',
-      'Text75': 'Manual Membership 2',
-      'Text76': 'Manual Membership 3',
-      'Text77': 'Membership Count',
-      'Text78': 'Membership Dues Total',
-      'Text84': 'Manual Disbursement 1',
-      'Text85': 'Manual Disbursement 2',
-      'Text86': 'Manual Disbursement 3',
-      'Text87': 'Manual Disbursement 4',
-      'Text89': 'Additional Field 1',
-      'Text90': 'Additional Field 2',
-      'Text91': 'Additional Field 3',
-      'Text92': 'Additional Field 4',
-      'Text93': 'Additional Field 5',
-      'Text95': 'Additional Field 6',
-      'Text96': 'Additional Field 7',
-      'Text97': 'Additional Field 8',
-      'Text98': 'Additional Field 9',
-      'Text99': 'Additional Field 10',
-      'Text100': 'Additional Field 11',
-      'Text101': 'Additional Field 12',
-      'Text102': 'Additional Field 13',
-      'Text104': 'Additional Field 14',
-      'Text105': 'Additional Field 15',
-      'Text106': 'Additional Field 16',
-      'Text107': 'Additional Field 17',
-      'Text108': 'Additional Field 18',
-      'Text109': 'Additional Field 19',
-      'Text110': 'Additional Field 20',
-    };
-    return labels[field] ?? field;
   }
 } 

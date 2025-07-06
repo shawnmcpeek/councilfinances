@@ -1,0 +1,2 @@
+C:/Users/shawn/Documents/github/kcmanagement/android/app/.cxx/RelWithDebInfo/31455k4k/x86_64/CMakeFiles/edit_cache.dir
+C:/Users/shawn/Documents/github/kcmanagement/android/app/.cxx/RelWithDebInfo/31455k4k/x86_64/CMakeFiles/rebuild_cache.dir

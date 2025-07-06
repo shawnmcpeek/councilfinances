@@ -23,6 +23,7 @@ import 'src/reports/volunteer_hours_report_service.dart';
 import 'src/reports/pdf_template_manager.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show Platform;
+import 'src/providers/program_provider.dart';
 
 void main() async {
   try {
@@ -66,6 +67,7 @@ void main() async {
         providers: [
           Provider<AuthService>(create: (_) => AuthService()),
           ChangeNotifierProvider(create: (_) => OrganizationProvider()),
+          ChangeNotifierProvider(create: (_) => ProgramProvider()),
           Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
           Provider<VolunteerHoursReportService>(
             create: (_) => VolunteerHoursReportService(userService, firestore),

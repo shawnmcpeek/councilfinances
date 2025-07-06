@@ -112,12 +112,9 @@ class AuditFieldMap {
 
   // Helper method to get the date range for a period
   static DateTimeRange getDateRangeForPeriod(String period, int year) {
-    final startDate = period == 'June' 
-        ? DateTime(year, 1, 1) 
-        : DateTime(year, 7, 1);
-    final endDate = period == 'June'
-        ? DateTime(year, 6, 30)
-        : DateTime(year, 12, 31);
+    final isJune = period.trim().toLowerCase() == 'june';
+    final startDate = isJune ? DateTime(year, 1, 1) : DateTime(year, 7, 1);
+    final endDate = isJune ? DateTime(year, 6, 30) : DateTime(year, 12, 31);
     return DateTimeRange(start: startDate, end: endDate);
   }
 

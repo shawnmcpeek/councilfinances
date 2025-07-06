@@ -236,4 +236,82 @@ class ProgramEntryService {
       rethrow;
     }
   }
+
+  Future<void> updateProgramEntry({
+    required String organizationId,
+    required String entryId,
+    required Form1728PCategory category,
+    required Form1728PProgram program,
+    required int hours,
+    required double disbursement,
+    required String description,
+    required DateTime date,
+  }) async {
+    try {
+      // Ensure organization ID is properly formatted
+      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
+        throw Exception('Invalid organization ID format: $organizationId');
+      }
+
+      final year = date.year.toString();
+      
+      // Reference to the program's document in the year subcollection
+      final programRef = _firestore
+          .collection('organizations')
+          .doc(organizationId)
+          .collection('program_entries')
+          .doc(year)
+          .collection(category.name)
+          .doc(program.id);
+
+      // Get the existing entry
+      final doc = await programRef.get();
+      if (!doc.exists) {
+        throw Exception('Program entry not found');
+      }
+
+      final existingData = doc.data() as Map<String, dynamic>;
+      final entries = List<Map<String, dynamic>>.from(existingData['entries'] ?? []);
+      
+      // Find and update the specific entry
+      final entryIndex = entries.indexWhere((e) => e['id'] == entryId);
+      if (entryIndex == -1) {
+        throw Exception('Entry not found');
+      }
+
+      // Calculate the difference in hours and disbursement
+      final oldEntry = entries[entryIndex];
+      final oldHours = oldEntry['hours'] as int;
+      final oldDisbursement = oldEntry['disbursement'] as double;
+      final hoursDiff = hours - oldHours;
+      final disbursementDiff = disbursement - oldDisbursement;
+
+      // Update the entry
+      entries[entryIndex] = {
+        'id': entryId,
+        'hours': hours,
+        'disbursement': disbursement,
+        'description': description,
+        'date': date.toIso8601String(),
+        'timestamp': Timestamp.now(),
+      };
+
+      // Update the document with new totals and entry
+      await programRef.update({
+        'hours': FieldValue.increment(hoursDiff),
+        'disbursement': FieldValue.increment(disbursementDiff),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'entries': entries,
+      });
+
+      AppLogger.debug(
+        'Updated program entry: ${program.name}, '
+        'Hours: $hours, '
+        'Disbursement: $disbursement'
+      );
+    } catch (e, stackTrace) {
+      AppLogger.error('Error updating program entry', e, stackTrace);
+      rethrow;
+    }
+  }
 } 

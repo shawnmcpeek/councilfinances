@@ -5,13 +5,14 @@ enum HoursCategory {
   family,
   community,
   life,
-  patriotic;
+  patriotic,
+  assembly;
 
   String get displayName {
     return name[0].toUpperCase() + name.substring(1);
   }
 
-  bool get isAssemblyOnly => this == HoursCategory.patriotic;
+  bool get isAssemblyOnly => this == HoursCategory.patriotic || this == HoursCategory.assembly;
 }
 
 class HoursEntry {

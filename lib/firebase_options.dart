@@ -86,5 +86,6 @@ class DefaultFirebaseOptions {
     authDomain: 'council-finance.firebaseapp.com',
     storageBucket: 'council-finance.firebasestorage.app',
     measurementId: 'G-SW925HCEQZ',
+    databaseURL: 'https://council-finance.firebaseio.com',
   );
 }

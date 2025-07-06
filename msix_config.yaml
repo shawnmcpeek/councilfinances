@@ -1,0 +1,9 @@
+display_name: Knights Management
+publisher_display_name: Knights of Columbus Council 15857
+identity_name: com.knights15857.management
+msix_version: 1.0.0.0
+logo_path: assets/knights1.png
+capabilities: internetClient
+executable_name: kcmanagement
+start_menu_icon_path: assets/knights1.png
+start_menu_icon_background_color: "#FFFFFF" 

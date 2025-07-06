@@ -11,8 +11,10 @@ import '../utils/logger.dart';
 import '../theme/app_theme.dart';
 import '../components/organization_toggle.dart';
 import '../components/log_display.dart';
+import '../components/program_entry_edit_dialog.dart';
 import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
+import '../providers/program_provider.dart';
 
 class ProgramsCollectScreen extends StatefulWidget {
   const ProgramsCollectScreen({super.key});
@@ -277,6 +279,8 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
           _descriptionController.clear();
           _selectedDate = DateTime.now();
         });
+
+        Provider.of<ProgramProvider>(context, listen: false).reload();
       }
     } catch (e) {
       AppLogger.error('Error saving program entry', e);
@@ -289,6 +293,27 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
       if (mounted) {
         setState(() => _isSaving = false);
       }
+    }
+  }
+
+  void _onEdit(ProgramEntryAdapter adapter) {
+    showDialog(
+      context: context,
+      builder: (context) => ProgramEntryEditDialog(
+        entry: adapter.entry,
+        organizationId: _getFormattedOrganizationId(),
+        isAssembly: Provider.of<OrganizationProvider>(context, listen: false).isAssembly,
+        onSuccess: () {
+          // The dialog will handle closing itself and showing success message
+        },
+      ),
+    );
+  }
+
+  Future<void> _refreshEntries() async {
+    final organizationId = _getFormattedOrganizationId();
+    if (organizationId.isNotEmpty) {
+      _subscribeToEntries(organizationId);
     }
   }
 
@@ -398,16 +423,8 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                     emptyMessage: 'No program entries found',
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
-                    onEdit: (adapter) async {
-                      await showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Edit'),
-                          content: const Text('Edit not implemented yet.'),
-                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
-                        ),
-                      );
-                    },
+                    onRefresh: _refreshEntries,
+                    onEdit: _onEdit,
                     onDelete: (adapter) async {
                       final confirm = await showDialog<bool>(
                         context: context,

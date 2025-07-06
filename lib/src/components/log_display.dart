@@ -23,6 +23,7 @@ class LogDisplay<T extends LogEntry> extends StatefulWidget {
   final Function(T entry)? onView;
   final bool shrinkWrap;
   final ScrollPhysics? physics;
+  final Future<void> Function()? onRefresh;
 
   const LogDisplay({
     super.key,
@@ -33,6 +34,7 @@ class LogDisplay<T extends LogEntry> extends StatefulWidget {
     this.onView,
     this.shrinkWrap = false,
     this.physics,
+    this.onRefresh,
   });
 
   @override
@@ -212,7 +214,7 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
   Widget _buildLogContent() {
     final years = _groupedEntries.keys.toList()..sort((a, b) => b.compareTo(a));
     
-    return ListView.builder(
+    final listView = ListView.builder(
       shrinkWrap: widget.shrinkWrap,
       physics: widget.physics,
       itemCount: years.length,
@@ -241,6 +243,16 @@ class _LogDisplayState<T extends LogEntry> extends State<LogDisplay<T>> {
         );
       },
     );
+
+    // Wrap with RefreshIndicator if onRefresh is provided
+    if (widget.onRefresh != null) {
+      return RefreshIndicator(
+        onRefresh: widget.onRefresh!,
+        child: listView,
+      );
+    }
+    
+    return listView;
   }
 
   Widget _buildMonthSection(int year, int month) {

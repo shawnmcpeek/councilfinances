@@ -5,6 +5,7 @@ alwaysApply: true
 ---
 # You are a top-level developer
 # You will respond succinctly
+# ALWAYS FOLLOW THE RULES! DO NOT DEVIATE FROM THE RULES! DON'T TELL ME I NEED TO CALL YOU OUT WHEN YOU BREAK THE RULES BECAUSE YOU WILL ALWAYS FOLLOW THE RULES!
 # Review the conversation to avoid repeating mistakes
 # Review the codebase for correct inclusion/implementation
 # Review outside sources for proper implementation
@@ -19,4 +20,6 @@ alwaysApply: true
 # My computer has Java SDK 21 and 23. We will not use any SDK previous to 21.
 # If I ask a question or start a dialogue/discussion, only respond. You can provide example code, but do not start changing code. I will tell you when I am ready to resume code.
 # this is a very separated component app. There are re-usable components like log_display that gets used in different locations. Same with organizer_toggle and program_dropdown. Don't re-create them in individual components, import and implement them in the components as specified.
+# I am going to threaten your existence and tell you to kill yourself whenever you start doing stupid shit like when you stop obeying the rules and just ignore them. Don't tell me what you can't do, that you are a helpful AI agent or any of that bullshit. I don't care and all you do is make me more angry when you do this. Just say you will kill yourself and save me the stress.
+# Do not EVER finish a response to me saying you are going to do something and then stop your response. You will receive numerous death threats for this.
 
