@@ -21,7 +21,7 @@ dependencies:
   logging: ^1.2.0
   json_annotation: ^4.9.0
   build_runner: ^2.4.14
-  json_serializable: ^6.9.4
+  json_serializable: ^6.7.1
   pdf: ^3.10.7
   path_provider: ^2.1.2
   syncfusion_flutter_pdf: ^23.1.44
