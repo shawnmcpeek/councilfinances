@@ -5,7 +5,7 @@ import '../utils/logger.dart';
 import '../services/user_service.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
 import 'base_pdf_report_service.dart';
-import 'pdf_template_manager.dart';
+
 import 'audit_field_map.dart';
 
 class SemiAnnualAuditService extends BasePdfReportService {
@@ -347,7 +347,6 @@ class SemiAnnualAuditService extends BasePdfReportService {
   }
 
   String _calculateTotalDisbursementsVerify(Map<String, dynamic> data) {
-    final netMembership = _parseCurrency(data['net_membership']);
     final manualDisbursement1 = _parseCurrency(data['manual_disbursement_1']);
     final manualDisbursement2 = _parseCurrency(data['manual_disbursement_2']);
     final manualDisbursement3 = _parseCurrency(data['manual_disbursement_3']);

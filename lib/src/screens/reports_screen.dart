@@ -8,13 +8,13 @@ import '../components/program_budget.dart';
 import '../reports/form1728_report.dart';
 import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
-import '../reports/semi_annual_audit_service.dart';
+
 import '../models/member_roles.dart';
-import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart';
-import 'package:syncfusion_flutter_pdf/pdf.dart';
-import '../services/report_file_saver.dart';
-import '../components/semi_annual_audit_selector.dart';
+
+
+
+
+
 import '../screens/semi_annual_audit_entry_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -72,28 +72,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
            (_userProfile?.assemblyRoles.isNotEmpty ?? false);
   }
 
-  Future<void> _onGeneratePeriodReport(String period, int year) async {
-    setState(() => isGeneratingPeriodReport = true);
-    try {
-      final service = SemiAnnualAuditService();
-      await service.generateAuditReport(period, year, {});
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Report generated successfully')),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error generating report: ${e.toString()}')),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => isGeneratingPeriodReport = false);
-      }
-    }
-  }
+
 
   @override
   Widget build(BuildContext context) {

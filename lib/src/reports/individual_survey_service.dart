@@ -3,7 +3,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/hours_entry.dart';
 import '../services/user_service.dart';
-import '../models/user_profile.dart';
+
 import '../utils/logger.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
 
@@ -36,7 +36,7 @@ class IndividualSurveyService {
       double assemblyTotal = 0;
 
       // Get council hours
-      if (userProfile.councilNumber != null) {
+      if (userProfile.councilNumber > 0) {
         final councilHours = await _getHoursForOrganization(
           'C${userProfile.councilNumber.toString().padLeft(6, '0')}',
           userId,
@@ -48,9 +48,9 @@ class IndividualSurveyService {
       }
 
       // Get assembly hours
-      if (userProfile.assemblyNumber != null) {
+      if (userProfile.assemblyNumber != null && userProfile.assemblyNumber! > 0) {
         final assemblyHours = await _getHoursForOrganization(
-          'A${userProfile.assemblyNumber.toString().padLeft(6, '0')}',
+          'A${userProfile.assemblyNumber!.toString().padLeft(6, '0')}',
           userId,
           startDate,
           endDate,
@@ -100,7 +100,7 @@ class IndividualSurveyService {
     for (final entry in entries) {
       // Validate program ID format (CP001 or AP001)
       if (!entry.programId.startsWith(expectedPrefix)) {
-        AppLogger.warning('Invalid program ID format for ${isAssembly ? "assembly" : "council"}: ${entry.programId}');
+        AppLogger.warning('Invalid program ID format for ${isAssembly ? "assembly" : "council"}: $entry.programId');
         continue;
       }
 
@@ -112,11 +112,11 @@ class IndividualSurveyService {
       }
 
       // Add hours to the appropriate activity field
-      final activityKey = '${activityPrefix}${programNumber}';
+      final activityKey = '$activityPrefix$programNumber';
       totals[activityKey] = (totals[activityKey] ?? 0) + entry.totalHours;
       total += entry.totalHours;
 
-      AppLogger.debug('Mapped ${entry.programId} hours to $activityKey: ${entry.totalHours}');
+      AppLogger.debug('Mapped $entry.programId hours to $activityKey: $entry.totalHours');
     }
 
     return total;
@@ -153,4 +153,4 @@ class IndividualSurveyService {
       rethrow;
     }
   }
-} 
+}

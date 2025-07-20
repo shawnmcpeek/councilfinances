@@ -8,7 +8,7 @@ import '../models/program.dart';
 import '../models/hours_entry.dart';
 import '../models/user_profile.dart';
 import '../utils/logger.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'program_dropdown.dart';
 
 class HoursEntryForm extends StatefulWidget {

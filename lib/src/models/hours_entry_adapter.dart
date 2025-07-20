@@ -17,7 +17,7 @@ class HoursEntryAdapter implements LogEntry {
   String get id => entry.id;
 
   @override
-  DateTime get date => entry.startTime.toDate();
+  DateTime get date => entry.startTime;
 
   @override
   String get title => entry.programName;
@@ -25,14 +25,14 @@ class HoursEntryAdapter implements LogEntry {
   @override
   String get subtitle => [
     '${entry.totalHours} hours',
-    if (entry.disbursement != null) '${formatCurrency(entry.disbursement!)}',
+    if (entry.disbursement != null) formatCurrency(entry.disbursement!),
   ].join(', ');
 
   @override
   Map<String, String> get details => {
     'Category': entry.category.displayName,
-    'Start Time': formatTime(entry.startTime.toDate()),
-    'End Time': formatTime(entry.endTime.toDate()),
+    'Start Time': formatTime(entry.startTime),
+    'End Time': formatTime(entry.endTime),
     'Total Hours': entry.totalHours.toString(),
     if (entry.disbursement != null)
       'Disbursement': formatCurrency(entry.disbursement!),

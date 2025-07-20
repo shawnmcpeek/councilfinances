@@ -60,7 +60,7 @@ void main() async {
           Provider<AccessControlService>(create: (_) => AccessControlService()),
           Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
           Provider<VolunteerHoursReportService>(
-            create: (_) => VolunteerHoursReportService(userService, null),
+            create: (_) => VolunteerHoursReportService(userService, Supabase.instance.client),
           ),
         ],
         child: const MyApp(),

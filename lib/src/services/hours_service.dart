@@ -41,10 +41,10 @@ class HoursService {
 
       // Add optional fields only if they have values
       if (entry.disbursement != null) {
-        data['disbursement'] = entry.disbursement;
+        data['disbursement'] = entry.disbursement as Object;
       }
       if (entry.description?.isNotEmpty == true) {
-        data['description'] = entry.description;
+        data['description'] = entry.description as Object;
       }
 
       AppLogger.debug('Adding hours entry: $data');
@@ -77,10 +77,10 @@ class HoursService {
 
       // Add optional fields only if they have values
       if (entry.disbursement != null) {
-        data['disbursement'] = entry.disbursement;
+        data['disbursement'] = entry.disbursement as Object;
       }
       if (entry.description?.isNotEmpty == true) {
-        data['description'] = entry.description;
+        data['description'] = entry.description as Object;
       }
 
       AppLogger.debug('Updating hours entry: $data');
@@ -99,7 +99,6 @@ class HoursService {
       final user = _authService.currentUser;
       if (user == null) throw Exception('No authenticated user found');
 
-      final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
       AppLogger.debug('Deleting hours entry: $entryId');
       await _supabase
           .from('hours')
@@ -116,14 +115,11 @@ class HoursService {
       final user = _authService.currentUser;
       if (user == null) throw Exception('No authenticated user found');
 
-      final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
-      AppLogger.debug('Getting hours entries for organization: $formattedOrgId and user: ${user.id}');
+      AppLogger.debug('Getting hours entries for organization: $organizationId and user: ${user.id}');
       
       return _supabase
           .from('hours')
           .stream(primaryKey: ['id'])
-          .eq('organizationId', formattedOrgId)
-          .eq('userId', user.id)
           .order('startTime', ascending: false)
           .limit(20)
           .map((response) {

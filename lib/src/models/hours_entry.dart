@@ -82,10 +82,10 @@ class HoursEntry {
     };
 
     if (disbursement != null) {
-      map['disbursement'] = disbursement;
+      map['disbursement'] = disbursement as Object;
     }
     if (description?.isNotEmpty == true) {
-      map['description'] = description;
+      map['description'] = description as Object;
     }
     if (updatedAt != null) {
       map['updatedAt'] = updatedAt!.toIso8601String();
@@ -130,7 +130,7 @@ class HoursEntry {
 
   // Helper method to get the form field key for this entry
   String? getFormFieldKey() {
-    final baseKey = '${category.name}_${programId}';
+    final baseKey = '${category.name}_$programId';
     return baseKey;
   }
 } 

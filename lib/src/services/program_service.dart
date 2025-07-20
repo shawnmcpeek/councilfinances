@@ -51,8 +51,6 @@ class ProgramService {
           .eq('organizationId', organizationId)
           .single();
 
-      AppLogger.debug('Program states document exists: ${response != null}');
-
       // Reset all programs to enabled by default
       final programs = isAssembly ? programsData.assemblyPrograms : programsData.councilPrograms;
       for (var categoryPrograms in programs.values) {
@@ -62,49 +60,52 @@ class ProgramService {
         }
       }
 
-      // Apply stored states if the document exists
-      if (response != null) {
-        // Handle program states
-        final states = response['states'] as Map<String, dynamic>?;
-        if (states != null) {
-          for (var entry in states.entries) {
-            final programId = entry.key;
-            final isEnabled = entry.value as bool;
+      // Apply stored states since we have a response from .single()
+      // Handle program states
+      final states = response['states'] as Map<String, dynamic>?;
+      if (states != null) {
+        for (var entry in states.entries) {
+          final programId = entry.key;
+          final isEnabled = entry.value as bool;
 
-            for (var categoryPrograms in programs.values) {
-              for (var program in categoryPrograms) {
-                if (program.id == programId) {
-                  program.isEnabled = isEnabled;
-                  break;
-                }
+          for (var categoryPrograms in programs.values) {
+            for (var program in categoryPrograms) {
+              if (program.id == programId) {
+                program.isEnabled = isEnabled;
+                break;
               }
             }
           }
         }
+      }
 
-        // Handle financial types
-        final financialTypes = response['financialTypes'] as Map<String, dynamic>?;
-        if (financialTypes != null) {
-          for (var entry in financialTypes.entries) {
-            final programId = entry.key;
-            final typeStr = entry.value as String;
+      // Handle financial types
+      final financialTypes = response['financialTypes'] as Map<String, dynamic>?;
+      if (financialTypes != null) {
+        for (var entry in financialTypes.entries) {
+          final programId = entry.key;
+          final typeStr = entry.value as String;
 
-            for (var categoryPrograms in programs.values) {
-              for (var program in categoryPrograms) {
-                if (program.id == programId) {
-                  program.financialType = FinancialType.values.firstWhere(
-                    (type) => type.name == typeStr,
-                    orElse: () => FinancialType.both
-                  );
-                  break;
-                }
+          for (var categoryPrograms in programs.values) {
+            for (var program in categoryPrograms) {
+              if (program.id == programId) {
+                program.financialType = FinancialType.values.firstWhere(
+                  (type) => type.name == typeStr,
+                  orElse: () => FinancialType.both
+                );
+                break;
               }
             }
           }
         }
-      } else {
-        AppLogger.debug('No program states found, using defaults');
-        // Create default states document
+      }
+    } catch (e, stackTrace) {
+      AppLogger.error('Error loading program states', e, stackTrace);
+      // Don't rethrow, just log the error and continue with default states
+      AppLogger.info('Continuing with default program states - creating default states document');
+      
+      try {
+        // Create default states document when no existing document is found
         await _supabase
           .from('program_states')
           .insert({
@@ -113,11 +114,9 @@ class ProgramService {
             'financialTypes': {},
             'createdAt': DateTime.now().toIso8601String(),
           });
+      } catch (insertError) {
+        AppLogger.error('Error creating default program states document', insertError);
       }
-    } catch (e, stackTrace) {
-      AppLogger.error('Error loading program states', e, stackTrace);
-      // Don't rethrow, just log the error and continue with default states
-      AppLogger.info('Continuing with default program states');
     }
   }
 
@@ -249,4 +248,4 @@ class ProgramService {
       rethrow;
     }
   }
-} 
+}

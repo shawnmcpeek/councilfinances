@@ -103,7 +103,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
 
       final profile = UserProfile(
-        uid: currentUser.uid,
+        uid: currentUser.id,
         firstName: _firstNameController.text.trim(),
         lastName: _lastNameController.text.trim(),
         membershipNumber: UserProfile.parseMembershipNumber(_membershipNumberController.text),

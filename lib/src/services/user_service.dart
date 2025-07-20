@@ -17,11 +17,6 @@ class UserService {
           .select()
           .eq('id', user.id)
           .single();
-      
-      if (response == null) {
-        AppLogger.info('No profile document exists for user ${user.id}');
-        return null;
-      }
 
       return UserProfile.fromMap({
         ...response,
@@ -48,11 +43,6 @@ class UserService {
           .select()
           .eq('id', userId)
           .single();
-      
-      if (response == null) {
-        AppLogger.info('No profile document exists for user $userId');
-        return null;
-      }
 
       return UserProfile.fromMap({
         ...response,
@@ -102,12 +92,10 @@ class UserService {
           .eq('id', user.id)
           .single();
 
-      if (response == null) return null;
-
       return UserProfile.fromMap(response);
     } catch (e, stackTrace) {
       AppLogger.error('Error getting current user profile', e, stackTrace);
       return null;
     }
   }
-} 
+}

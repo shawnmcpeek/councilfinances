@@ -1,5 +1,5 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:rxdart/rxdart.dart';
+
 import '../models/form1728p_program.dart';
 import '../models/program_entry_adapter.dart';
 import '../utils/logger.dart';
@@ -32,7 +32,7 @@ class ProgramEntryService {
           .eq('year', currentYear)
           .eq('category', category.name)
           .eq('programId', program.id)
-          .single();
+          .maybeSingle();
 
       if (existingResponse != null) {
         // Update existing entry by adding to the current values
@@ -187,18 +187,11 @@ class ProgramEntryService {
           .eq('year', yearStr)
           .eq('category', category.name)
           .eq('programId', programId)
-          .single();
-
-      if (response == null) {
-        return {
-          'hours': 0,
-          'disbursement': 0.0,
-        };
-      }
+          .maybeSingle();
 
       return {
-        'hours': response['hours'] as int? ?? 0,
-        'disbursement': response['disbursement'] as double? ?? 0.0,
+        'hours': response?['hours'] as int? ?? 0,
+        'disbursement': response?['disbursement'] as double? ?? 0.0,
       };
     } catch (e, stackTrace) {
       AppLogger.error('Error getting program entry', e, stackTrace);
@@ -227,4 +220,4 @@ class ProgramEntryService {
       rethrow;
     }
   }
-} 
+}

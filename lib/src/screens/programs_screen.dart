@@ -104,7 +104,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       if (!isAssembly && orgId.startsWith('A')) {
         // If in council mode but orgId is assembly, switch to council orgId
         if (_userProfile?.councilNumber != null) {
-          customOrgId = 'C' + _userProfile!.councilNumber.toString().padLeft(6, '0');
+          customOrgId = 'C${_userProfile!.councilNumber.toString().padLeft(6, '0')}';
           customIsAssembly = false;
         }
       }

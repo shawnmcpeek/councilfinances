@@ -2,7 +2,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/finance_entry.dart';
 import '../utils/logger.dart';
 import '../models/payment_method.dart';
-import '../models/program.dart';
+
 import '../services/auth_service.dart';
 
 class FinanceService {
