@@ -1,8 +1,8 @@
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/logger.dart';
 
 class AuthService {
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   
   // Singleton pattern
   static final AuthService _instance = AuthService._internal();
@@ -10,12 +10,12 @@ class AuthService {
   AuthService._internal();
 
   // Auth state changes stream
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  Stream<AuthState> get authStateChanges => _supabase.auth.onAuthStateChange;
 
   // Sign in with email and password
-  Future<UserCredential> signInWithEmailAndPassword(String email, String password) async {
+  Future<AuthResponse> signInWithEmailAndPassword(String email, String password) async {
     try {
-      return await _auth.signInWithEmailAndPassword(
+      return await _supabase.auth.signInWithPassword(
         email: email,
         password: password,
       );
@@ -26,9 +26,9 @@ class AuthService {
   }
 
   // Sign up with email and password
-  Future<UserCredential> signUpWithEmailAndPassword(String email, String password) async {
+  Future<AuthResponse> signUpWithEmailAndPassword(String email, String password) async {
     try {
-      return await _auth.createUserWithEmailAndPassword(
+      return await _supabase.auth.signUp(
         email: email,
         password: password,
       );
@@ -41,7 +41,7 @@ class AuthService {
   // Sign out
   Future<void> signOut() async {
     try {
-      await _auth.signOut();
+      await _supabase.auth.signOut();
     } catch (e) {
       AppLogger.error('Error signing out', e);
       rethrow;
@@ -49,5 +49,5 @@ class AuthService {
   }
 
   // Get current user
-  User? get currentUser => _auth.currentUser;
+  User? get currentUser => _supabase.auth.currentUser;
 }

@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 enum HoursCategory {
   faith,
   family,
@@ -22,8 +20,8 @@ class HoursEntry {
   final String programId;
   final String programName;
   final HoursCategory category;
-  final Timestamp startTime;
-  final Timestamp endTime;
+  final DateTime startTime;
+  final DateTime endTime;
   final double totalHours;
   final double? disbursement;  // Optional disbursement amount
   final String? description;   // Optional description
@@ -47,10 +45,9 @@ class HoursEntry {
     this.updatedAt,
   });
 
-  factory HoursEntry.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory HoursEntry.fromMap(Map<String, dynamic> data) {
     return HoursEntry(
-      id: doc.id,
+      id: data['id'] as String,
       userId: data['userId'] as String,
       organizationId: data['organizationId'] as String,
       isAssembly: data['isAssembly'] as bool? ?? false,
@@ -60,13 +57,13 @@ class HoursEntry {
         (e) => e.name == (data['category'] as String? ?? 'faith'),
         orElse: () => HoursCategory.faith,
       ),
-      startTime: data['startTime'] as Timestamp,
-      endTime: data['endTime'] as Timestamp,
+      startTime: DateTime.parse(data['startTime'] as String),
+      endTime: DateTime.parse(data['endTime'] as String),
       totalHours: (data['totalHours'] as num).toDouble(),
       disbursement: (data['disbursement'] as num?)?.toDouble(),
       description: data['description'] as String?,
-      createdAt: (data['createdAt'] as Timestamp).toDate(),
-      updatedAt: (data['updatedAt'] as Timestamp?)?.toDate(),
+      createdAt: DateTime.parse(data['createdAt'] as String),
+      updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'] as String) : null,
     );
   }
 
@@ -78,20 +75,20 @@ class HoursEntry {
       'programId': programId,
       'programName': programName,
       'category': category.name,
-      'startTime': startTime,
-      'endTime': endTime,
+      'startTime': startTime.toIso8601String(),
+      'endTime': endTime.toIso8601String(),
       'totalHours': totalHours,
-      'createdAt': Timestamp.fromDate(createdAt),
+      'createdAt': createdAt.toIso8601String(),
     };
 
     if (disbursement != null) {
-      map['disbursement'] = disbursement as Object;
+      map['disbursement'] = disbursement;
     }
     if (description?.isNotEmpty == true) {
-      map['description'] = description as Object;
+      map['description'] = description;
     }
     if (updatedAt != null) {
-      map['updatedAt'] = Timestamp.fromDate(updatedAt!);
+      map['updatedAt'] = updatedAt!.toIso8601String();
     }
 
     return map;
@@ -105,8 +102,8 @@ class HoursEntry {
     String? programId,
     String? programName,
     HoursCategory? category,
-    Timestamp? startTime,
-    Timestamp? endTime,
+    DateTime? startTime,
+    DateTime? endTime,
     double? totalHours,
     double? disbursement,
     String? description,

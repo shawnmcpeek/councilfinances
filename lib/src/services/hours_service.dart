@@ -1,10 +1,10 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/logger.dart';
 import '../models/hours_entry.dart';
 import 'auth_service.dart';
 
 class HoursService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final AuthService _authService = AuthService();
 
   // Singleton pattern
@@ -26,35 +26,31 @@ class HoursService {
       if (user == null) throw Exception('No authenticated user found');
 
       final formattedOrgId = _formatOrganizationId(entry.organizationId, isAssembly);
-      final docRef = _firestore.collection('organizations')
-          .doc(formattedOrgId)
-          .collection('hours')
-          .doc();
-
       final data = {
-        'id': docRef.id,
-        'userId': user.uid,
+        'userId': user.id,
         'organizationId': formattedOrgId,
         'isAssembly': isAssembly,
         'programId': entry.programId,
         'programName': entry.programName,
         'category': entry.category.name,
-        'startTime': entry.startTime,
-        'endTime': entry.endTime,
+        'startTime': entry.startTime.toIso8601String(),
+        'endTime': entry.endTime.toIso8601String(),
         'totalHours': entry.totalHours,
-        'createdAt': FieldValue.serverTimestamp(),
+        'createdAt': DateTime.now().toIso8601String(),
       };
 
       // Add optional fields only if they have values
       if (entry.disbursement != null) {
-        data['disbursement'] = entry.disbursement as Object;
+        data['disbursement'] = entry.disbursement;
       }
       if (entry.description?.isNotEmpty == true) {
-        data['description'] = entry.description as Object;
+        data['description'] = entry.description;
       }
 
       AppLogger.debug('Adding hours entry: $data');
-      await docRef.set(data);
+      await _supabase
+          .from('hours')
+          .insert(data);
     } catch (e) {
       AppLogger.error('Error adding hours entry', e);
       rethrow;
@@ -73,30 +69,25 @@ class HoursService {
         'programId': entry.programId,
         'programName': entry.programName,
         'category': entry.category.name,
-        'startTime': entry.startTime,
-        'endTime': entry.endTime,
+        'startTime': entry.startTime.toIso8601String(),
+        'endTime': entry.endTime.toIso8601String(),
         'totalHours': entry.totalHours,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
       // Add optional fields only if they have values
       if (entry.disbursement != null) {
-        data['disbursement'] = entry.disbursement as Object;
-      } else {
-        data['disbursement'] = FieldValue.delete();
+        data['disbursement'] = entry.disbursement;
       }
       if (entry.description?.isNotEmpty == true) {
-        data['description'] = entry.description as Object;
-      } else {
-        data['description'] = FieldValue.delete();
+        data['description'] = entry.description;
       }
 
       AppLogger.debug('Updating hours entry: $data');
-      await _firestore.collection('organizations')
-          .doc(formattedOrgId)
-          .collection('hours')
-          .doc(entry.id)
-          .update(data);
+      await _supabase
+          .from('hours')
+          .update(data)
+          .eq('id', entry.id);
     } catch (e) {
       AppLogger.error('Error updating hours entry', e);
       rethrow;
@@ -110,11 +101,10 @@ class HoursService {
 
       final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
       AppLogger.debug('Deleting hours entry: $entryId');
-      await _firestore.collection('organizations')
-          .doc(formattedOrgId)
-          .collection('hours')
-          .doc(entryId)
-          .delete();
+      await _supabase
+          .from('hours')
+          .delete()
+          .eq('id', entryId);
     } catch (e) {
       AppLogger.error('Error deleting hours entry', e);
       rethrow;
@@ -127,19 +117,19 @@ class HoursService {
       if (user == null) throw Exception('No authenticated user found');
 
       final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
-      AppLogger.debug('Getting hours entries for organization: $formattedOrgId and user: ${user.uid}');
+      AppLogger.debug('Getting hours entries for organization: $formattedOrgId and user: ${user.id}');
       
-      return _firestore.collection('organizations')
-          .doc(formattedOrgId)
-          .collection('hours')
-          .where('userId', isEqualTo: user.uid)
-          .orderBy('startTime', descending: true)
+      return _supabase
+          .from('hours')
+          .stream(primaryKey: ['id'])
+          .eq('organizationId', formattedOrgId)
+          .eq('userId', user.id)
+          .order('startTime', ascending: false)
           .limit(20)
-          .snapshots()
-          .map((snapshot) {
-            AppLogger.debug('Received ${snapshot.docs.length} hours entries from Firestore');
-            return snapshot.docs
-                .map((doc) => HoursEntry.fromFirestore(doc))
+          .map((response) {
+            AppLogger.debug('Received ${response.length} hours entries from Supabase');
+            return response
+                .map((data) => HoursEntry.fromMap(data))
                 .toList();
           });
     } catch (e) {
@@ -158,20 +148,20 @@ class HoursService {
       if (user == null) throw Exception('No authenticated user found');
 
       final formattedOrgId = _formatOrganizationId(organizationId, isAssembly);
-      final startOfYear = DateTime(year);
-      final endOfYear = DateTime(year + 1);
+      final startOfYear = DateTime(year).toIso8601String();
+      final endOfYear = DateTime(year + 1).toIso8601String();
 
-      final snapshot = await _firestore.collection('organizations')
-          .doc(formattedOrgId)
-          .collection('hours')
-          .where('userId', isEqualTo: user.uid)
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfYear))
-          .where('startTime', isLessThan: Timestamp.fromDate(endOfYear))
-          .orderBy('startTime', descending: true)
-          .get();
+      final response = await _supabase
+          .from('hours')
+          .select()
+          .eq('organizationId', formattedOrgId)
+          .eq('userId', user.id)
+          .gte('startTime', startOfYear)
+          .lt('startTime', endOfYear)
+          .order('startTime', ascending: false);
 
-      return snapshot.docs
-          .map((doc) => HoursEntry.fromFirestore(doc))
+      return response
+          .map((data) => HoursEntry.fromMap(data))
           .toList();
     } catch (e) {
       AppLogger.error('Error getting hours entries for year $year', e);

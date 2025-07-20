@@ -1,41 +1,37 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/user_profile.dart';
 import '../utils/logger.dart';
 import 'dart:async';
 
 class UserService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   // Get current user profile
   Future<UserProfile?> getUserProfile() async {
     try {
-      final user = _auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) return null;
 
-      final doc = await _firestore.collection('users').doc(user.uid).get();
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
       
-      if (!doc.exists) {
-        AppLogger.info('No profile document exists for user ${user.uid}');
-        return null;
-      }
-
-      final data = doc.data();
-      if (data == null) {
-        AppLogger.warning('Document exists but data is null for user ${user.uid}');
+      if (response == null) {
+        AppLogger.info('No profile document exists for user ${user.id}');
         return null;
       }
 
       return UserProfile.fromMap({
-        ...data,
-        'uid': doc.id,
-        'firstName': data['firstName'] ?? '',
-        'lastName': data['lastName'] ?? '',
-        'membershipNumber': data['membershipNumber'] ?? 0,
-        'councilNumber': data['councilNumber'] ?? 0,
-        'councilRoles': data['councilRoles'] ?? [],
-        'assemblyRoles': data['assemblyRoles'] ?? [],
+        ...response,
+        'uid': response['id'],
+        'firstName': response['firstName'] ?? '',
+        'lastName': response['lastName'] ?? '',
+        'membershipNumber': response['membershipNumber'] ?? 0,
+        'councilNumber': response['councilNumber'] ?? 0,
+        'councilRoles': response['councilRoles'] ?? [],
+        'assemblyRoles': response['assemblyRoles'] ?? [],
       });
     } catch (e) {
       AppLogger.error('Error fetching user profile', e);
@@ -47,28 +43,26 @@ class UserService {
   Future<UserProfile?> getUserProfileById(String userId) async {
     try {
       AppLogger.info('Fetching user profile for ID: $userId');
-      final doc = await _firestore.collection('users').doc(userId).get();
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', userId)
+          .single();
       
-      if (!doc.exists) {
+      if (response == null) {
         AppLogger.info('No profile document exists for user $userId');
         return null;
       }
 
-      final data = doc.data();
-      if (data == null) {
-        AppLogger.warning('Document exists but data is null for user $userId');
-        return null;
-      }
-
       return UserProfile.fromMap({
-        ...data,
-        'uid': doc.id,
-        'firstName': data['firstName'] ?? '',
-        'lastName': data['lastName'] ?? '',
-        'membershipNumber': data['membershipNumber'] ?? 0,
-        'councilNumber': data['councilNumber'] ?? 0,
-        'councilRoles': data['councilRoles'] ?? [],
-        'assemblyRoles': data['assemblyRoles'] ?? [],
+        ...response,
+        'uid': response['id'],
+        'firstName': response['firstName'] ?? '',
+        'lastName': response['lastName'] ?? '',
+        'membershipNumber': response['membershipNumber'] ?? 0,
+        'councilNumber': response['councilNumber'] ?? 0,
+        'councilRoles': response['councilRoles'] ?? [],
+        'assemblyRoles': response['assemblyRoles'] ?? [],
       });
     } catch (e, stackTrace) {
       AppLogger.error('Error fetching user profile by ID', e, stackTrace);
@@ -79,7 +73,7 @@ class UserService {
   // Update user profile
   Future<void> updateUserProfile(UserProfile profile) async {
     try {
-      final user = _auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('No authenticated user found');
 
       final profileData = profile.toMap()
@@ -87,10 +81,10 @@ class UserService {
 
       AppLogger.debug('Updating profile with data: $profileData');
 
-      await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .set(profileData, SetOptions(merge: true));
+      await _supabase
+          .from('users')
+          .upsert(profileData)
+          .eq('id', user.id);
     } catch (e) {
       AppLogger.error('Error updating user profile', e);
       throw Exception('Failed to update profile: ${e.toString()}');
@@ -99,17 +93,18 @@ class UserService {
 
   Future<UserProfile?> getCurrentUserProfile() async {
     try {
-      final user = _auth.currentUser;
+      final user = _supabase.auth.currentUser;
       if (user == null) return null;
 
-      final doc = await _firestore
-          .collection('users')
-          .doc(user.uid)
-          .get();
+      final response = await _supabase
+          .from('users')
+          .select()
+          .eq('id', user.id)
+          .single();
 
-      if (!doc.exists) return null;
+      if (response == null) return null;
 
-      return UserProfile.fromMap(doc.data()!);
+      return UserProfile.fromMap(response);
     } catch (e, stackTrace) {
       AppLogger.error('Error getting current user profile', e, stackTrace);
       return null;
