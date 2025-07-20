@@ -12,6 +12,7 @@
 .swiftpm/
 migrate_working_dir/
 council-finance-firebase-adminsdk-e5auu-46ccb83881.json
+.env
 
 # IntelliJ related
 *.iml
