@@ -1,6 +1,5 @@
-import 'package:firebase_core/firebase_core.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/material.dart';
-import 'package:knights_management/firebase_options.dart';
 import 'package:knights_management/src/screens/login_screen.dart';
 import 'package:knights_management/src/screens/profile_screen.dart';
 import 'package:knights_management/src/screens/home_screen.dart';
@@ -12,7 +11,6 @@ import 'package:knights_management/src/screens/reports_screen.dart';
 import 'package:knights_management/src/screens/periodic_report_data.dart';
 import 'package:knights_management/src/services/auth_service.dart';
 import 'package:knights_management/src/services/user_service.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:knights_management/src/utils/logger.dart';
 import 'package:knights_management/src/theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
@@ -27,16 +25,12 @@ import 'dart:io' show Platform;
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
-    
-    // Initialize logger
     AppLogger.init();
-    
-    // Initialize Firebase
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
+    await Supabase.initialize(
+      url: 'https://fwcqtjsqetqavdhkahzy.supabase.co',
+      anonKey: 'sb_publishable_H6iglIKUpKGjz-sA6W2PGA_3p7vqL7G',
     );
-
-    // Initialize path_provider only on supported platforms
+    
     if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux || Platform.isAndroid || Platform.isIOS)) {
       await getApplicationDocumentsDirectory().then((directory) {
         AppLogger.debug('Application documents directory initialized: \\${directory.path}');
@@ -46,21 +40,9 @@ void main() async {
     } else {
       AppLogger.debug('Application documents directory not supported on this platform.');
     }
-
-    // Configure Firestore settings
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-      cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
-    );
-    
-    // Initialize PDF templates
     initializeTemplates();
     AppLogger.debug('PDF templates initialized');
-    
-    // Create shared instances
     final userService = UserService();
-    final firestore = FirebaseFirestore.instance;
-    
     runApp(
       MultiProvider(
         providers: [
@@ -68,7 +50,7 @@ void main() async {
           ChangeNotifierProvider(create: (_) => OrganizationProvider()),
           Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
           Provider<VolunteerHoursReportService>(
-            create: (_) => VolunteerHoursReportService(userService, firestore),
+            create: (_) => VolunteerHoursReportService(userService, null),
           ),
         ],
         child: const MyApp(),
