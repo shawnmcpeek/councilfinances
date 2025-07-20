@@ -9,8 +9,11 @@ import 'package:knights_management/src/screens/finance_screen.dart';
 import 'package:knights_management/src/screens/programs_screen.dart';
 import 'package:knights_management/src/screens/reports_screen.dart';
 import 'package:knights_management/src/screens/periodic_report_data.dart';
+import 'package:knights_management/src/screens/subscription_screen.dart';
 import 'package:knights_management/src/services/auth_service.dart';
 import 'package:knights_management/src/services/user_service.dart';
+import 'package:knights_management/src/services/subscription_service.dart';
+import 'package:knights_management/src/services/access_control_service.dart';
 import 'package:knights_management/src/utils/logger.dart';
 import 'package:knights_management/src/theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
@@ -26,10 +29,15 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     AppLogger.init();
+    
+    // Initialize Supabase
     await Supabase.initialize(
       url: 'https://fwcqtjsqetqavdhkahzy.supabase.co',
       anonKey: 'sb_publishable_H6iglIKUpKGjz-sA6W2PGA_3p7vqL7G',
     );
+    
+    // Initialize RevenueCat
+    await SubscriptionService().initialize();
     
     if (!kIsWeb && (Platform.isWindows || Platform.isMacOS || Platform.isLinux || Platform.isAndroid || Platform.isIOS)) {
       await getApplicationDocumentsDirectory().then((directory) {
@@ -48,6 +56,8 @@ void main() async {
         providers: [
           Provider<AuthService>(create: (_) => AuthService()),
           ChangeNotifierProvider(create: (_) => OrganizationProvider()),
+          Provider<SubscriptionService>(create: (_) => SubscriptionService()),
+          Provider<AccessControlService>(create: (_) => AccessControlService()),
           Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
           Provider<VolunteerHoursReportService>(
             create: (_) => VolunteerHoursReportService(userService, null),
@@ -109,12 +119,50 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
+  final AccessControlService _accessControl = AccessControlService();
+  final UserService _userService = UserService();
+  List<String> _visibleItems = ['home', 'profile'];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAccessPermissions();
+  }
+
+  Future<void> _loadAccessPermissions() async {
+    try {
+      final userProfile = await _userService.getUserProfile();
+      if (!mounted) return;
+      
+      if (userProfile != null) {
+        final isAssembly = context.read<OrganizationProvider>().isAssembly;
+        final visibleItems = await _accessControl.getVisibleNavigationItems(userProfile, isAssembly);
+        
+        if (mounted) {
+          setState(() {
+            _visibleItems = visibleItems;
+            _isLoading = false;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() => _isLoading = false);
+        }
+      }
+    } catch (e) {
+      AppLogger.error('Error loading access permissions', e);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   Future<void> _handleProgramsPressed() async {
     if (!mounted) return;
     
     try {
-      final userProfile = await UserService().getUserProfile();
+      final userProfile = await _userService.getUserProfile();
       if (!mounted) return;
       
       if (userProfile == null) {
@@ -148,55 +196,97 @@ class _MainScreenState extends State<MainScreen> {
     }
   }
 
+  void _onDestinationSelected(int index) async {
+    try {
+      final userProfile = await _userService.getUserProfile();
+      if (!mounted || userProfile == null) return;
+      
+      final isAssembly = context.read<OrganizationProvider>().isAssembly;
+      
+      // Check if user needs subscription for this navigation
+      final needsSubscription = await _accessControl.shouldRedirectToSubscription(userProfile, isAssembly);
+      
+      if (needsSubscription) {
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const SubscriptionScreen(),
+          ),
+        );
+        return;
+      }
+      
+      if (mounted) {
+        setState(() => _selectedIndex = index);
+      }
+    } catch (e) {
+      AppLogger.error('Error handling navigation', e);
+      if (mounted) {
+        setState(() => _selectedIndex = index);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    final screens = <Widget>[
+      const HomeScreen(),
+      if (_visibleItems.contains('programs')) const ProgramsCollectScreen(),
+      if (_visibleItems.contains('hours')) const HoursEntryScreen(),
+      if (_visibleItems.contains('finance')) const FinanceScreen(),
+      if (_visibleItems.contains('reports')) const ReportsScreen(),
+      ProfileScreen(
+        onProgramsPressed: _handleProgramsPressed,
+      ),
+    ];
+
+    final destinations = <NavigationDestination>[
+      const NavigationDestination(
+        icon: Icon(Icons.home),
+        label: 'Home',
+      ),
+      if (_visibleItems.contains('programs'))
+        const NavigationDestination(
+          icon: Icon(Icons.assignment),
+          label: 'Programs',
+        ),
+      if (_visibleItems.contains('hours'))
+        const NavigationDestination(
+          icon: Icon(Icons.timer),
+          label: 'Hours',
+        ),
+      if (_visibleItems.contains('finance'))
+        const NavigationDestination(
+          icon: Icon(Icons.attach_money),
+          label: 'Finance',
+        ),
+      if (_visibleItems.contains('reports'))
+        const NavigationDestination(
+          icon: Icon(Icons.summarize),
+          label: 'Reports',
+        ),
+      const NavigationDestination(
+        icon: Icon(Icons.person),
+        label: 'Profile',
+      ),
+    ];
+
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
-        children: [
-          const HomeScreen(),
-          const ProgramsCollectScreen(),
-          const HoursEntryScreen(),
-          const FinanceScreen(),
-          const ReportsScreen(),
-          ProfileScreen(
-            onProgramsPressed: _handleProgramsPressed,
-          ),
-        ],
+        children: screens,
       ),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _selectedIndex,
-        onDestinationSelected: (int index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.assignment),
-            label: 'Programs',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.timer),
-            label: 'Hours',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.attach_money),
-            label: 'Finance',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.summarize),
-            label: 'Reports',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.person),
-            label: 'Profile',
-          ),
-        ],
+        onDestinationSelected: _onDestinationSelected,
+        destinations: destinations,
       ),
     );
   }
