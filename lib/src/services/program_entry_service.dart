@@ -1,11 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:rxdart/rxdart.dart';
 import '../models/form1728p_program.dart';
 import '../models/program_entry_adapter.dart';
 import '../utils/logger.dart';
 
 class ProgramEntryService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
 
   Future<void> saveProgramEntry({
     required String organizationId,
@@ -24,37 +24,42 @@ class ProgramEntryService {
 
       final currentYear = DateTime.now().year.toString();
       
-      // Reference to the program's document in the year subcollection
-      final programRef = _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('program_entries')
-          .doc(currentYear)
-          .collection(category.name)
-          .doc(program.id);
+      // Check if entry exists
+      final existingResponse = await _supabase
+          .from('program_entries')
+          .select()
+          .eq('organizationId', organizationId)
+          .eq('year', currentYear)
+          .eq('category', category.name)
+          .eq('programId', program.id)
+          .single();
 
-      // Get the existing entry if it exists
-      final doc = await programRef.get();
-      
-      if (doc.exists) {
+      if (existingResponse != null) {
         // Update existing entry by adding to the current values
-        final existingData = doc.data() as Map<String, dynamic>;
-        final existingHours = existingData['hours'] as int? ?? 0;
-        final existingDisbursement = existingData['disbursement'] as double? ?? 0.0;
+        final existingHours = existingResponse['hours'] as int? ?? 0;
+        final existingDisbursement = existingResponse['disbursement'] as double? ?? 0.0;
+        final existingEntries = existingResponse['entries'] as List<dynamic>? ?? [];
 
-        await programRef.update({
-          'hours': existingHours + hours,
-          'disbursement': existingDisbursement + disbursement,
-          'lastUpdated': FieldValue.serverTimestamp(),
-          'entries': FieldValue.arrayUnion([{
-            'id': DateTime.now().millisecondsSinceEpoch.toString(),
-            'hours': hours,
-            'disbursement': disbursement,
-            'description': description,
-            'date': date.toIso8601String(),
-            'timestamp': Timestamp.now(),
-          }]),
-        });
+        final newEntry = {
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
+          'hours': hours,
+          'disbursement': disbursement,
+          'description': description,
+          'date': date.toIso8601String(),
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+
+        existingEntries.add(newEntry);
+
+        await _supabase
+            .from('program_entries')
+            .update({
+              'hours': existingHours + hours,
+              'disbursement': existingDisbursement + disbursement,
+              'lastUpdated': DateTime.now().toIso8601String(),
+              'entries': existingEntries,
+            })
+            .eq('id', existingResponse['id']);
 
         AppLogger.debug(
           'Updated program entry: ${program.name}, '
@@ -63,23 +68,29 @@ class ProgramEntryService {
         );
       } else {
         // Create new entry
-        await programRef.set({
-          'programId': program.id,
-          'programName': program.name,
-          'category': category.name,
+        final newEntry = {
+          'id': DateTime.now().millisecondsSinceEpoch.toString(),
           'hours': hours,
           'disbursement': disbursement,
-          'created': FieldValue.serverTimestamp(),
-          'lastUpdated': FieldValue.serverTimestamp(),
-          'entries': [{
-            'id': DateTime.now().millisecondsSinceEpoch.toString(),
-            'hours': hours,
-            'disbursement': disbursement,
-            'description': description,
-            'date': date.toIso8601String(),
-            'timestamp': Timestamp.now(),
-          }],
-        });
+          'description': description,
+          'date': date.toIso8601String(),
+          'timestamp': DateTime.now().toIso8601String(),
+        };
+
+        await _supabase
+            .from('program_entries')
+            .insert({
+              'organizationId': organizationId,
+              'year': currentYear,
+              'category': category.name,
+              'programId': program.id,
+              'programName': program.name,
+              'hours': hours,
+              'disbursement': disbursement,
+              'created': DateTime.now().toIso8601String(),
+              'lastUpdated': DateTime.now().toIso8601String(),
+              'entries': [newEntry],
+            });
 
         AppLogger.debug(
           'Created new program entry: ${program.name}, '
@@ -109,69 +120,51 @@ class ProgramEntryService {
       AppLogger.debug('Querying program entries for organization: $organizationId');
       AppLogger.debug('Years being queried: $currentYear, $lastYear');
 
-      // Create a stream for each category and year
-      final streams = <Stream<List<ProgramEntry>>>[];
-
-      for (final year in [currentYear, lastYear]) {
-        for (final category in Form1728PCategory.values) {
-          final path = 'organizations/$organizationId/program_entries/$year/${category.name}';
-          AppLogger.debug('Creating stream for path: $path');
-          
-          final stream = _firestore
-              .collection('organizations')
-              .doc(organizationId)
-              .collection('program_entries')
-              .doc(year)
-              .collection(category.name)
-              .orderBy('lastUpdated', descending: true)
-              .snapshots()
-              .map((snapshot) {
-                AppLogger.debug('Received snapshot for $path: ${snapshot.docs.length} documents');
-                final entries = <ProgramEntry>[];
+      return _supabase
+          .from('program_entries')
+          .stream(primaryKey: ['id'])
+          .eq('organizationId', organizationId)
+          .order('lastUpdated', ascending: false)
+          .map((response) {
+            AppLogger.debug('Received ${response.length} program entries from Supabase');
+            final entries = <ProgramEntry>[];
+            
+            for (final data in response) {
+              try {
+                final programEntries = (data['entries'] as List<dynamic>?) ?? [];
+                final category = Form1728PCategory.values.firstWhere(
+                  (c) => c.name == data['category'],
+                  orElse: () => Form1728PCategory.faith,
+                );
                 
-                for (final doc in snapshot.docs) {
+                for (final entry in programEntries) {
                   try {
-                    final data = doc.data();
-                    AppLogger.debug('Processing document data: $data');
-                    final programEntries = (data['entries'] as List<dynamic>?) ?? [];
-                    AppLogger.debug('Processing document ${doc.id} with ${programEntries.length} entries');
-                    
-                    for (final entry in programEntries) {
-                      try {
-                        entries.add(ProgramEntry(
-                          id: entry['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                          date: DateTime.parse(entry['date'] as String),
-                          category: category,
-                          program: Form1728PProgram(
-                            id: data['programId']?.toString() ?? '',
-                            name: data['programName']?.toString() ?? 'Unknown Program',
-                          ),
-                          hours: entry['hours'] as int? ?? 0,
-                          disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
-                          description: entry['description']?.toString() ?? '',
-                        ));
-                      } catch (e) {
-                        AppLogger.error('Error processing entry in document ${doc.id}: $e');
-                        AppLogger.debug('Entry data causing error: $entry');
-                      }
-                    }
+                    entries.add(ProgramEntry(
+                      id: entry['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                      date: DateTime.parse(entry['date'] as String),
+                      category: category,
+                      program: Form1728PProgram(
+                        id: data['programId']?.toString() ?? '',
+                        name: data['programName']?.toString() ?? 'Unknown Program',
+                      ),
+                      hours: entry['hours'] as int? ?? 0,
+                      disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
+                      description: entry['description']?.toString() ?? '',
+                    ));
                   } catch (e) {
-                    AppLogger.error('Error processing document ${doc.id}: $e');
+                    AppLogger.error('Error processing entry: $e');
+                    AppLogger.debug('Entry data causing error: $entry');
                   }
                 }
-                return entries;
-              });
-          streams.add(stream);
-        }
-      }
-
-      // Combine all streams into one
-      return Rx.combineLatestList(streams).map((lists) {
-        final allEntries = lists.expand((list) => list).toList();
-        allEntries.sort((a, b) => b.date.compareTo(a.date));
-        AppLogger.debug('Combined all streams: ${allEntries.length} total entries');
-        return allEntries;
-      });
+              } catch (e) {
+                AppLogger.error('Error processing program entry data: $e');
+              }
+            }
+            
+            entries.sort((a, b) => b.date.compareTo(a.date));
+            AppLogger.debug('Processed ${entries.length} total entries');
+            return entries;
+          });
     } catch (e) {
       AppLogger.error('Error in getProgramEntries: $e');
       rethrow;
@@ -187,26 +180,25 @@ class ProgramEntryService {
     try {
       final yearStr = year ?? DateTime.now().year.toString();
       
-      final doc = await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('program_entries')
-          .doc(yearStr)
-          .collection(category.name)
-          .doc(programId)
-          .get();
+      final response = await _supabase
+          .from('program_entries')
+          .select()
+          .eq('organizationId', organizationId)
+          .eq('year', yearStr)
+          .eq('category', category.name)
+          .eq('programId', programId)
+          .single();
 
-      if (!doc.exists) {
+      if (response == null) {
         return {
           'hours': 0,
           'disbursement': 0.0,
         };
       }
 
-      final data = doc.data() as Map<String, dynamic>;
       return {
-        'hours': data['hours'] as int? ?? 0,
-        'disbursement': data['disbursement'] as double? ?? 0.0,
+        'hours': response['hours'] as int? ?? 0,
+        'disbursement': response['disbursement'] as double? ?? 0.0,
       };
     } catch (e, stackTrace) {
       AppLogger.error('Error getting program entry', e, stackTrace);
@@ -222,14 +214,13 @@ class ProgramEntryService {
   }) async {
     try {
       final yearStr = year ?? DateTime.now().year.toString();
-      final docRef = _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('program_entries')
-          .doc(yearStr)
-          .collection(category.name)
-          .doc(programId);
-      await docRef.delete();
+      await _supabase
+          .from('program_entries')
+          .delete()
+          .eq('organizationId', organizationId)
+          .eq('year', yearStr)
+          .eq('category', category.name)
+          .eq('programId', programId);
       AppLogger.debug('Deleted program entry: $organizationId, $category, $programId, $yearStr');
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting program entry', e, stackTrace);
