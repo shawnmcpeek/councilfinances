@@ -1,11 +1,11 @@
 import 'dart:convert';
 import 'package:flutter/services.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/program.dart';
 import '../utils/logger.dart';
 
 class ProgramService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   static const String _systemProgramsPath = 'assets/data/system_programs.json';
 
   // Load system default programs from JSON asset
@@ -45,14 +45,13 @@ class ProgramService {
             : 'C${organizationId.padLeft(6, '0')}';
       }
 
-      final doc = await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc('states')
-          .get();
+      final response = await _supabase
+          .from('program_states')
+          .select()
+          .eq('organizationId', organizationId)
+          .single();
 
-      AppLogger.debug('Program states document exists: ${doc.exists}');
+      AppLogger.debug('Program states document exists: ${response != null}');
 
       // Reset all programs to enabled by default
       final programs = isAssembly ? programsData.assemblyPrograms : programsData.councilPrograms;
@@ -64,11 +63,9 @@ class ProgramService {
       }
 
       // Apply stored states if the document exists
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        
+      if (response != null) {
         // Handle program states
-        final states = data['states'] as Map<String, dynamic>?;
+        final states = response['states'] as Map<String, dynamic>?;
         if (states != null) {
           for (var entry in states.entries) {
             final programId = entry.key;
@@ -86,7 +83,7 @@ class ProgramService {
         }
 
         // Handle financial types
-        final financialTypes = data['financialTypes'] as Map<String, dynamic>?;
+        final financialTypes = response['financialTypes'] as Map<String, dynamic>?;
         if (financialTypes != null) {
           for (var entry in financialTypes.entries) {
             final programId = entry.key;
@@ -108,15 +105,13 @@ class ProgramService {
       } else {
         AppLogger.debug('No program states found, using defaults');
         // Create default states document
-        await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc('states')
-          .set({
+        await _supabase
+          .from('program_states')
+          .insert({
+            'organizationId': organizationId,
             'states': {},
             'financialTypes': {},
-            'createdAt': FieldValue.serverTimestamp(),
+            'createdAt': DateTime.now().toIso8601String(),
           });
       }
     } catch (e, stackTrace) {
@@ -129,16 +124,15 @@ class ProgramService {
   // Get custom programs for a specific organization
   Future<List<Program>> getCustomPrograms(String organizationId, bool isAssembly) async {
     try {
-      final snapshot = await _firestore.collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .where('isAssembly', isEqualTo: isAssembly)
-          .get();
+      final response = await _supabase
+          .from('custom_programs')
+          .select()
+          .eq('organizationId', organizationId)
+          .eq('isAssembly', isAssembly);
 
-      return snapshot.docs.map((doc) {
-        final data = doc.data();
+      return response.map((data) {
         return Program.fromMap({
-          'id': doc.id,
+          'id': data['id'],
           'name': data['name'],
           'category': data['category'],
           'isSystemDefault': data['isSystemDefault'] ?? false,
@@ -155,23 +149,20 @@ class ProgramService {
   // Add a custom program
   Future<void> addCustomProgram(String organizationId, Program program, bool isAssembly) async {
     try {
-      final docRef = _firestore.collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc();
-
       final programData = {
-        'id': docRef.id,
         'name': program.name,
         'category': program.category,
         'isSystemDefault': false,
         'financialType': program.financialType.name,
         'isEnabled': true,
         'isAssembly': isAssembly,
-        'createdAt': FieldValue.serverTimestamp(),
+        'organizationId': organizationId,
+        'createdAt': DateTime.now().toIso8601String(),
       };
 
-      await docRef.set(programData);
+      await _supabase
+          .from('custom_programs')
+          .insert(programData);
       AppLogger.debug('Added custom program: ${program.name} with financial type: ${program.financialType.name}');
     } catch (e) {
       AppLogger.error('Error adding custom program', e);
@@ -182,15 +173,13 @@ class ProgramService {
   // Update all program states at once
   Future<void> updateProgramStates(String organizationId, Map<String, dynamic> states) async {
     try {
-      final docRef = _firestore.collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc('states');
-
-      await docRef.set({
-        'states': states,
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _supabase
+          .from('program_states')
+          .upsert({
+            'organizationId': organizationId,
+            'states': states,
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
       
       AppLogger.debug('Updated program states: $states');
     } catch (e) {
@@ -202,20 +191,18 @@ class ProgramService {
   // Update a single program (handles both system and custom programs)
   Future<void> updateCustomProgram(String organizationId, Program program, bool isAssembly) async {
     try {
-      final docRef = _firestore.collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc(program.id);
-
       final programData = {
         'name': program.name,
         'category': program.category,
         'financialType': program.financialType.name,
         'isEnabled': program.isEnabled,
-        'updatedAt': FieldValue.serverTimestamp(),
+        'updatedAt': DateTime.now().toIso8601String(),
       };
 
-      await docRef.update(programData);
+      await _supabase
+          .from('custom_programs')
+          .update(programData)
+          .eq('id', program.id);
       AppLogger.debug('Updated custom program: ${program.name} with financial type: ${program.financialType.name}');
     } catch (e) {
       AppLogger.error('Error updating custom program', e);
@@ -233,41 +220,12 @@ class ProgramService {
             : 'C${organizationId.padLeft(6, '0')}';
       }
 
-      await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('custom_programs')
-          .doc(programId)
-          .delete();
+      await _supabase
+          .from('custom_programs')
+          .delete()
+          .eq('id', programId);
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting program', e, stackTrace);
-      rethrow;
-    }
-  }
-
-  Future<void> migrateExistingPrograms(String organizationId) async {
-    try {
-      final programsSnapshot = await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .get();
-
-      final batch = _firestore.batch();
-
-      for (var doc in programsSnapshot.docs) {
-        final data = doc.data();
-        if (!data.containsKey('financialType')) {
-          batch.update(doc.reference, {
-            'financialType': FinancialType.both.name,
-          });
-        }
-      }
-
-      await batch.commit();
-      AppLogger.debug('Completed migration of existing programs for organization: $organizationId');
-    } catch (e) {
-      AppLogger.error('Error migrating existing programs', e);
       rethrow;
     }
   }
@@ -275,17 +233,15 @@ class ProgramService {
   // Add this new method
   Future<void> updateProgramFinancialType(String organizationId, String programId, FinancialType type) async {
     try {
-      final docRef = _firestore.collection('organizations')
-          .doc(organizationId)
-          .collection('programs')
-          .doc('states');
-
-      await docRef.set({
-        'financialTypes': {
-          programId: type.name,
-        },
-        'updatedAt': FieldValue.serverTimestamp(),
-      }, SetOptions(merge: true));
+      await _supabase
+          .from('program_states')
+          .upsert({
+            'organizationId': organizationId,
+            'financialTypes': {
+              programId: type.name,
+            },
+            'updatedAt': DateTime.now().toIso8601String(),
+          });
       
       AppLogger.debug('Updated program financial type: $programId to ${type.name}');
     } catch (e) {
