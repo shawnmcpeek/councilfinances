@@ -104,7 +104,9 @@ class AuthWrapper extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         
-        return snapshot.hasData ? const MainScreen() : const LoginScreen();
+        final authState = snapshot.data as AuthState?;
+        final hasUser = authState?.session != null;
+        return hasUser ? const MainScreen() : const LoginScreen();
       },
     );
   }

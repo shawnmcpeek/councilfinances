@@ -79,13 +79,13 @@ class IndividualSurveyService {
     bool isAssembly,
   ) async {
     final response = await _supabase
-        .from('hours')
+        .from('hours_entries')
         .select()
-        .eq('userId', userId)
-        .eq('organizationId', organizationId)
-        .eq('isAssembly', isAssembly)
-        .gte('startTime', startDate.toIso8601String())
-        .lt('startTime', endDate.toIso8601String());
+        .eq('user_id', userId)
+                  .eq('organization_id', organizationId)
+          .eq('is_assembly', isAssembly)
+                  .gte('start_time', startDate.toIso8601String())
+          .lt('start_time', endDate.toIso8601String());
 
     return response
         .map((data) => HoursEntry.fromMap(data))

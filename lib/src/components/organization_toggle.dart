@@ -3,8 +3,9 @@ import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
 import '../theme/app_theme.dart';
 import '../models/user_profile.dart';
+import '../services/user_service.dart';
 
-class OrganizationToggle extends StatelessWidget {
+class OrganizationToggle extends StatefulWidget {
   final UserProfile? userProfile;
   final bool? isAssembly;
   final Function(bool)? onChanged;
@@ -17,10 +18,50 @@ class OrganizationToggle extends StatelessWidget {
   });
 
   @override
+  State<OrganizationToggle> createState() => _OrganizationToggleState();
+}
+
+class _OrganizationToggleState extends State<OrganizationToggle> {
+  UserProfile? _userProfile;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserProfile();
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      final userService = UserService();
+      final profile = await userService.getUserProfile();
+      if (mounted) {
+        setState(() {
+          _userProfile = profile;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.only(bottom: AppTheme.smallSpacing),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Consumer<OrganizationProvider>(
       builder: (context, organizationProvider, child) {
-        final isAssemblyValue = isAssembly ?? organizationProvider.isAssembly;
+        final isAssemblyValue = widget.isAssembly ?? organizationProvider.isAssembly;
+        final hasAssemblyData = _userProfile?.assemblyNumber != null && 
+                               _userProfile?.assemblyRoles.isNotEmpty == true;
         
         return Padding(
           padding: const EdgeInsets.only(bottom: AppTheme.smallSpacing),
@@ -30,7 +71,7 @@ class OrganizationToggle extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     if (isAssemblyValue) {
-                      onChanged?.call(false);
+                      widget.onChanged?.call(false);
                       organizationProvider.setOrganization(false);
                     }
                   },
@@ -41,13 +82,18 @@ class OrganizationToggle extends StatelessWidget {
               SizedBox(width: AppTheme.spacing),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {
+                  onPressed: hasAssemblyData ? () {
                     if (!isAssemblyValue) {
-                      onChanged?.call(true);
+                      widget.onChanged?.call(true);
                       organizationProvider.setOrganization(true);
                     }
-                  },
-                  style: AppTheme.getButtonStyle(isSelected: isAssemblyValue),
+                  } : null,
+                  style: hasAssemblyData 
+                    ? AppTheme.getButtonStyle(isSelected: isAssemblyValue)
+                    : AppTheme.getButtonStyle(isSelected: false).copyWith(
+                        backgroundColor: WidgetStateProperty.all(Colors.grey[300]),
+                        foregroundColor: WidgetStateProperty.all(Colors.grey[600]),
+                      ),
                   child: const Text('Assembly'),
                 ),
               ),

@@ -27,16 +27,16 @@ class HoursService {
 
       final formattedOrgId = _formatOrganizationId(entry.organizationId, isAssembly);
       final data = {
-        'userId': user.id,
-        'organizationId': formattedOrgId,
-        'isAssembly': isAssembly,
-        'programId': entry.programId,
-        'programName': entry.programName,
+        'user_id': user.id,
+        'organization_id': formattedOrgId,
+        'is_assembly': isAssembly,
+        'program_id': entry.programId,
+        'program_name': entry.programName,
         'category': entry.category.name,
-        'startTime': entry.startTime.toIso8601String(),
-        'endTime': entry.endTime.toIso8601String(),
-        'totalHours': entry.totalHours,
-        'createdAt': DateTime.now().toIso8601String(),
+        'start_time': entry.startTime.toIso8601String(),
+        'end_time': entry.endTime.toIso8601String(),
+        'total_hours': entry.totalHours,
+        'created_at': DateTime.now().toIso8601String(),
       };
 
       // Add optional fields only if they have values
@@ -49,7 +49,7 @@ class HoursService {
 
       AppLogger.debug('Adding hours entry: $data');
       await _supabase
-          .from('hours')
+          .from('hours_entries')
           .insert(data);
     } catch (e) {
       AppLogger.error('Error adding hours entry', e);
@@ -64,15 +64,15 @@ class HoursService {
 
       final formattedOrgId = _formatOrganizationId(entry.organizationId, isAssembly);
       final data = {
-        'organizationId': formattedOrgId,
-        'isAssembly': isAssembly,
-        'programId': entry.programId,
-        'programName': entry.programName,
+        'organization_id': formattedOrgId,
+        'is_assembly': isAssembly,
+        'program_id': entry.programId,
+        'program_name': entry.programName,
         'category': entry.category.name,
-        'startTime': entry.startTime.toIso8601String(),
-        'endTime': entry.endTime.toIso8601String(),
-        'totalHours': entry.totalHours,
-        'updatedAt': DateTime.now().toIso8601String(),
+        'start_time': entry.startTime.toIso8601String(),
+        'end_time': entry.endTime.toIso8601String(),
+        'total_hours': entry.totalHours,
+        'updated_at': DateTime.now().toIso8601String(),
       };
 
       // Add optional fields only if they have values
@@ -85,7 +85,7 @@ class HoursService {
 
       AppLogger.debug('Updating hours entry: $data');
       await _supabase
-          .from('hours')
+          .from('hours_entries')
           .update(data)
           .eq('id', entry.id);
     } catch (e) {
@@ -101,7 +101,7 @@ class HoursService {
 
       AppLogger.debug('Deleting hours entry: $entryId');
       await _supabase
-          .from('hours')
+          .from('hours_entries')
           .delete()
           .eq('id', entryId);
     } catch (e) {
@@ -118,9 +118,9 @@ class HoursService {
       AppLogger.debug('Getting hours entries for organization: $organizationId and user: ${user.id}');
       
       return _supabase
-          .from('hours')
+          .from('hours_entries')
           .stream(primaryKey: ['id'])
-          .order('startTime', ascending: false)
+          .order('start_time', ascending: false)
           .limit(20)
           .map((response) {
             AppLogger.debug('Received ${response.length} hours entries from Supabase');
@@ -148,13 +148,13 @@ class HoursService {
       final endOfYear = DateTime(year + 1).toIso8601String();
 
       final response = await _supabase
-          .from('hours')
+          .from('hours_entries')
           .select()
-          .eq('organizationId', formattedOrgId)
-          .eq('userId', user.id)
-          .gte('startTime', startOfYear)
-          .lt('startTime', endOfYear)
-          .order('startTime', ascending: false);
+          .eq('organization_id', formattedOrgId)
+          .eq('user_id', user.id)
+          .gte('start_time', startOfYear)
+          .lt('start_time', endOfYear)
+          .order('start_time', ascending: false);
 
       return response
           .map((data) => HoursEntry.fromMap(data))
@@ -162,6 +162,23 @@ class HoursService {
     } catch (e) {
       AppLogger.error('Error getting hours entries for year $year', e);
       rethrow;
+    }
+  }
+
+  // Delete all hours entries for the current user
+  Future<void> deleteUserHours() async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
+
+      AppLogger.debug('Deleting all hours entries for user: ${user.id}');
+      await _supabase
+          .from('hours_entries')
+          .delete()
+          .eq('user_id', user.id);
+    } catch (e) {
+      AppLogger.error('Error deleting user hours', e);
+      throw Exception('Failed to delete user hours: ${e.toString()}');
     }
   }
 } 

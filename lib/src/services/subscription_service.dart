@@ -2,9 +2,13 @@ import 'package:purchases_flutter/purchases_flutter.dart';
 import '../utils/logger.dart';
 import '../models/user_profile.dart';
 import '../models/member_roles.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class SubscriptionService {
   static const String _apiKey = 'YOUR_REVENUECAT_API_KEY'; // TODO: Replace with actual key
+  
+  // Feature flag to disable RevenueCat completely
+  static const bool _enableRevenueCat = false;
   
   // Singleton pattern
   static final SubscriptionService _instance = SubscriptionService._internal();
@@ -22,18 +26,31 @@ class SubscriptionService {
   // Initialize RevenueCat
   Future<void> initialize() async {
     try {
+      // Skip RevenueCat initialization if disabled by feature flag or on web platform
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('RevenueCat initialization skipped (disabled by feature flag or web platform)');
+        return;
+      }
+      
       await Purchases.setLogLevel(LogLevel.debug);
       await Purchases.configure(PurchasesConfiguration(_apiKey));
       AppLogger.debug('RevenueCat initialized successfully');
     } catch (e) {
       AppLogger.error('Failed to initialize RevenueCat', e);
-      rethrow;
+      // Don't rethrow if disabled by feature flag or on web platform
+      if (_enableRevenueCat && !kIsWeb) {
+        rethrow;
+      }
     }
   }
 
   // Get current user's subscription status
   Future<CustomerInfo?> getCustomerInfo() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('getCustomerInfo not available (disabled by feature flag or web platform)');
+        return null;
+      }
       return await Purchases.getCustomerInfo();
     } catch (e) {
       AppLogger.error('Error getting customer info', e);
@@ -44,6 +61,11 @@ class SubscriptionService {
   // Check if user has active subscription for specific access level
   Future<bool> hasActiveSubscription(AccessLevel requiredLevel) async {
     try {
+      // If RevenueCat is disabled, grant all access levels
+      if (!_enableRevenueCat || kIsWeb) {
+        return true; // Grant access to all levels when RevenueCat is disabled
+      }
+      
       final customerInfo = await getCustomerInfo();
       if (customerInfo == null) return false;
 
@@ -66,6 +88,10 @@ class SubscriptionService {
   // Check if user is in trial period
   Future<bool> isInTrialPeriod() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        return false; // No trial when RevenueCat is disabled
+      }
+      
       final customerInfo = await getCustomerInfo();
       if (customerInfo == null) return false;
 
@@ -81,6 +107,10 @@ class SubscriptionService {
   // Get trial end date
   Future<DateTime?> getTrialEndDate() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        return null; // No trial when RevenueCat is disabled
+      }
+      
       final customerInfo = await getCustomerInfo();
       if (customerInfo == null) return null;
 
@@ -107,6 +137,11 @@ class SubscriptionService {
   // Purchase single access subscription
   Future<bool> purchaseSingleAccess() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('Purchase not available (disabled by feature flag or web platform)');
+        return false;
+      }
+      
       final offerings = await Purchases.getOfferings();
       final currentOffering = offerings.current;
       
@@ -132,6 +167,11 @@ class SubscriptionService {
   // Purchase organization access subscription
   Future<bool> purchaseOrganizationAccess() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('Purchase not available (disabled by feature flag or web platform)');
+        return false;
+      }
+      
       final offerings = await Purchases.getOfferings();
       final currentOffering = offerings.current;
       
@@ -157,6 +197,11 @@ class SubscriptionService {
   // Restore purchases
   Future<bool> restorePurchases() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('Restore purchases not available (disabled by feature flag or web platform)');
+        return false;
+      }
+      
       final customerInfo = await Purchases.restorePurchases();
       AppLogger.debug('Purchases restored successfully');
       return customerInfo.entitlements.active.isNotEmpty;
@@ -169,6 +214,11 @@ class SubscriptionService {
   // Get subscription offerings
   Future<Offerings?> getOfferings() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        AppLogger.debug('Offerings not available (disabled by feature flag or web platform)');
+        return null;
+      }
+      
       return await Purchases.getOfferings();
     } catch (e) {
       AppLogger.error('Error getting offerings', e);
@@ -179,6 +229,11 @@ class SubscriptionService {
   // Check if user needs subscription for their access level
   Future<bool> needsSubscription(UserProfile userProfile, bool isAssembly) async {
     try {
+      // If RevenueCat is disabled, no subscription is needed
+      if (!_enableRevenueCat || kIsWeb) {
+        return false; // No subscription required when RevenueCat is disabled
+      }
+      
       // Determine user's highest access level
       AccessLevel highestLevel = AccessLevel.basic;
       
@@ -212,6 +267,17 @@ class SubscriptionService {
   // Get subscription status for display
   Future<Map<String, dynamic>> getSubscriptionStatus() async {
     try {
+      if (!_enableRevenueCat || kIsWeb) {
+        return {
+          'hasActiveSubscription': true, // Show as having active subscription when disabled
+          'isInTrial': false,
+          'trialEndDate': null,
+          'activeEntitlements': ['full_access'], // Show full access entitlements
+          'expirationDate': null,
+          'platform': _enableRevenueCat ? 'mobile_disabled' : 'web',
+        };
+      }
+      
       final customerInfo = await getCustomerInfo();
       final isInTrial = await isInTrialPeriod();
       final trialEndDate = await getTrialEndDate();

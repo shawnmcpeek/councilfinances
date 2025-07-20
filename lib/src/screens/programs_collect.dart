@@ -159,7 +159,7 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
         .getProgramEntries(organizationId)
         .listen(
           (entries) {
-            AppLogger.debug('Received ${entries.length} entries from Firestore');
+            AppLogger.debug('Received ${entries.length} entries from Supabase');
             if (mounted) {
               setState(() => _entries = entries);
             }

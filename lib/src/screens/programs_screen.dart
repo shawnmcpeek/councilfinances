@@ -62,13 +62,22 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   bool _checkFullAccess() {
-    if (_userProfile == null) return false;
+    if (_userProfile == null) {
+      AppLogger.debug('_checkFullAccess: _userProfile is null');
+      return false;
+    }
     
     final isAssembly = context.read<OrganizationProvider>().isAssembly;
+    AppLogger.debug('_checkFullAccess: isAssembly=$isAssembly, councilRoles=${_userProfile!.councilRoles}, assemblyRoles=${_userProfile!.assemblyRoles}');
+    
     if (isAssembly) {
-      return _userProfile!.assemblyRoles.any((role) => role.accessLevel == AccessLevel.full);
+      final hasFullAccess = _userProfile!.assemblyRoles.any((role) => role.accessLevel == AccessLevel.full);
+      AppLogger.debug('_checkFullAccess: Assembly mode, hasFullAccess=$hasFullAccess');
+      return hasFullAccess;
     } else {
-      return _userProfile!.councilRoles.any((role) => role.accessLevel == AccessLevel.full);
+      final hasFullAccess = _userProfile!.councilRoles.any((role) => role.accessLevel == AccessLevel.full);
+      AppLogger.debug('_checkFullAccess: Council mode, hasFullAccess=$hasFullAccess');
+      return hasFullAccess;
     }
   }
 
@@ -167,7 +176,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         AppLogger.debug('Custom program ${program.name} (${program.id}): $isEnabled');
       }
 
-      AppLogger.debug('Saving program states to Firestore: $allProgramStates');
+              AppLogger.debug('Saving program states to Supabase: $allProgramStates');
       // Save all states at once
       await _programService.updateProgramStates(_organizationId!, allProgramStates);
 
@@ -208,6 +217,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   Future<void> _addCustomProgram() async {
+    AppLogger.debug('_addCustomProgram called, _hasFullAccess=$_hasFullAccess');
     if (!_hasFullAccess) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -243,6 +253,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   @override
   Widget build(BuildContext context) {
     final isAssembly = context.watch<OrganizationProvider>().isAssembly;
+    AppLogger.debug('ProgramsScreen build: _hasFullAccess=$_hasFullAccess, isAssembly=$isAssembly');
 
     return Scaffold(
       appBar: AppBar(
@@ -307,8 +318,15 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                 flex: 1,
                 child: FilledButton(
                   onPressed: () {
-                    if (_userProfile?.councilNumber == null) return;
-                    if (!isAssembly) return; // Only allow pressing when in Assembly mode
+                    AppLogger.debug('Council button pressed. Current isAssembly: $isAssembly');
+                    if (_userProfile?.councilNumber == null) {
+                      AppLogger.debug('Council number is null, returning');
+                      return;
+                    }
+                    if (!isAssembly) {
+                      AppLogger.debug('Already in Council mode, returning');
+                      return;
+                    }
                     setState(() {
                       _hasFullAccess = _checkFullAccess();
                       _hasUnsavedChanges = false;
@@ -339,8 +357,16 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
                   flex: 1,
                   child: FilledButton(
                     onPressed: () {
-                      if (_userProfile?.assemblyNumber == null) return;
-                      if (isAssembly) return; // Only allow pressing when in Council mode
+                      AppLogger.debug('Assembly button pressed. Current isAssembly: $isAssembly');
+                      if (_userProfile?.assemblyNumber == null) {
+                        AppLogger.debug('Assembly number is null, returning');
+                        return;
+                      }
+                      if (isAssembly) {
+                        AppLogger.debug('Already in Assembly mode, returning');
+                        return;
+                      }
+                      AppLogger.debug('Switching to Assembly mode. Assembly number: ${_userProfile!.assemblyNumber}');
                       setState(() {
                         _hasFullAccess = _checkFullAccess();
                         _hasUnsavedChanges = false;

@@ -32,20 +32,20 @@ class VolunteerHoursReportService extends BasePdfReportService {
       AppLogger.debug('Querying hours between $startDate and $endDate for organization $organizationId');
       
       final response = await _supabase
-          .from('hours')
+          .from('hours_entries')
           .select()
-          .eq('userId', userId)
-          .eq('organizationId', organizationId)
-          .gte('startTime', startDate.toIso8601String())
-          .lte('startTime', endDate.toIso8601String());
+          .eq('user_id', userId)
+          .eq('organization_id', organizationId)
+          .gte('start_time', startDate.toIso8601String())
+          .lte('start_time', endDate.toIso8601String());
 
       // Group hours by program
       final Map<String, double> programHours = {};
       double totalHours = 0;
 
       for (var data in response) {
-        final program = data['programName'] as String;
-        final hours = data['totalHours'] as num;
+        final program = data['program_name'] as String;
+        final hours = data['total_hours'] as num;
         
         programHours[program] = (programHours[program] ?? 0) + hours.toDouble();
         totalHours += hours.toDouble();

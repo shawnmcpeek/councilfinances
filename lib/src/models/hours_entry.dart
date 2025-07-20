@@ -48,22 +48,22 @@ class HoursEntry {
   factory HoursEntry.fromMap(Map<String, dynamic> data) {
     return HoursEntry(
       id: data['id'] as String,
-      userId: data['userId'] as String,
-      organizationId: data['organizationId'] as String,
-      isAssembly: data['isAssembly'] as bool? ?? false,
-      programId: data['programId'] as String,
-      programName: data['programName'] as String,
+      userId: data['user_id'] as String,
+      organizationId: data['organization_id'] as String,
+      isAssembly: data['is_assembly'] as bool? ?? false,
+      programId: data['program_id'] as String,
+      programName: data['program_name'] as String,
       category: HoursCategory.values.firstWhere(
         (e) => e.name == (data['category'] as String? ?? 'faith'),
         orElse: () => HoursCategory.faith,
       ),
-      startTime: DateTime.parse(data['startTime'] as String),
-      endTime: DateTime.parse(data['endTime'] as String),
-      totalHours: (data['totalHours'] as num).toDouble(),
+      startTime: DateTime.parse(data['start_time'] as String),
+      endTime: DateTime.parse(data['end_time'] as String),
+      totalHours: (data['total_hours'] as num).toDouble(),
       disbursement: (data['disbursement'] as num?)?.toDouble(),
       description: data['description'] as String?,
-      createdAt: DateTime.parse(data['createdAt'] as String),
-      updatedAt: data['updatedAt'] != null ? DateTime.parse(data['updatedAt'] as String) : null,
+      createdAt: DateTime.parse(data['created_at'] as String),
+      updatedAt: data['updated_at'] != null ? DateTime.parse(data['updated_at'] as String) : null,
     );
   }
 

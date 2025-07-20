@@ -42,7 +42,7 @@ class Form1728ReportService extends BasePdfReportService {
       
       for (final category in categories) {
         final response = await _supabase
-            .from('program_entries')
+            .from('programs')
             .select()
             .eq('organizationId', organizationId)
             .eq('year', year)

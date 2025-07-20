@@ -158,7 +158,7 @@ class ReportService {
       
       for (final category in categories) {
         final response = await _supabase
-            .from('program_entries')
+            .from('programs')
             .select()
             .eq('organizationId', organizationId)
             .eq('year', year)
@@ -322,9 +322,9 @@ class ReportService {
       final endDate = DateTime(int.parse(year) + 1, 1, 1).toIso8601String();
       
       final response = await _supabase
-          .from('hours')
+          .from('hours_entries')
           .select()
-          .eq('userId', userId)
+          .eq('user_id', userId)
           .gte('date', startDate)
           .lt('date', endDate);
 

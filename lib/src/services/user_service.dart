@@ -21,12 +21,13 @@ class UserService {
       return UserProfile.fromMap({
         ...response,
         'uid': response['id'],
-        'firstName': response['firstName'] ?? '',
-        'lastName': response['lastName'] ?? '',
-        'membershipNumber': response['membershipNumber'] ?? 0,
-        'councilNumber': response['councilNumber'] ?? 0,
-        'councilRoles': response['councilRoles'] ?? [],
-        'assemblyRoles': response['assemblyRoles'] ?? [],
+        'firstName': response['first_name'] ?? '',
+        'lastName': response['last_name'] ?? '',
+        'membershipNumber': response['membership_number'] ?? 0,
+        'councilNumber': response['council_number'] ?? 0,
+        'assemblyNumber': response['assembly_number'],
+        'councilRoles': response['council_roles'] ?? [],
+        'assemblyRoles': response['assembly_roles'] ?? [],
       });
     } catch (e) {
       AppLogger.error('Error fetching user profile', e);
@@ -47,12 +48,13 @@ class UserService {
       return UserProfile.fromMap({
         ...response,
         'uid': response['id'],
-        'firstName': response['firstName'] ?? '',
-        'lastName': response['lastName'] ?? '',
-        'membershipNumber': response['membershipNumber'] ?? 0,
-        'councilNumber': response['councilNumber'] ?? 0,
-        'councilRoles': response['councilRoles'] ?? [],
-        'assemblyRoles': response['assemblyRoles'] ?? [],
+        'firstName': response['first_name'] ?? '',
+        'lastName': response['last_name'] ?? '',
+        'membershipNumber': response['membership_number'] ?? 0,
+        'councilNumber': response['council_number'] ?? 0,
+        'assemblyNumber': response['assembly_number'],
+        'councilRoles': response['council_roles'] ?? [],
+        'assemblyRoles': response['assembly_roles'] ?? [],
       });
     } catch (e, stackTrace) {
       AppLogger.error('Error fetching user profile by ID', e, stackTrace);
@@ -96,6 +98,22 @@ class UserService {
     } catch (e, stackTrace) {
       AppLogger.error('Error getting current user profile', e, stackTrace);
       return null;
+    }
+  }
+
+  // Delete user profile from database
+  Future<void> deleteUserProfile() async {
+    try {
+      final user = _supabase.auth.currentUser;
+      if (user == null) throw Exception('No authenticated user found');
+
+      await _supabase
+          .from('users')
+          .delete()
+          .eq('id', user.id);
+    } catch (e) {
+      AppLogger.error('Error deleting user profile', e);
+      throw Exception('Failed to delete profile: ${e.toString()}');
     }
   }
 }

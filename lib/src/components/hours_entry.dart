@@ -178,7 +178,7 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
       final endDateTime = _combineDateAndTime(_endDate, _endTime);
       
       final entry = HoursEntry(
-        id: '',  // Will be set by Firestore
+        id: '',  // Will be set by Supabase
         userId: '',  // Will be set by service
         organizationId: widget.organizationId,
         isAssembly: widget.isAssembly,

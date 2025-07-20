@@ -33,14 +33,14 @@ class UserProfile {
 
   Map<String, dynamic> toMap() {
     return {
-      'uid': uid,
-      'firstName': firstName,
-      'lastName': lastName,
-      'membershipNumber': membershipNumber,
-      'councilNumber': councilNumber,
-      'assemblyNumber': assemblyNumber,
-      'councilRoles': councilRoles.map((role) => role.name).toList(),
-      'assemblyRoles': assemblyRoles.map((role) => role.name).toList(),
+      'id': uid,
+      'first_name': firstName,
+      'last_name': lastName,
+      'membership_number': membershipNumber,
+      'council_number': councilNumber,
+      'assembly_number': assemblyNumber,
+      'council_roles': councilRoles.map((role) => role.name).toList(),
+      'assembly_roles': assemblyRoles.map((role) => role.name).toList(),
       'jurisdiction': jurisdiction,
     };
   }

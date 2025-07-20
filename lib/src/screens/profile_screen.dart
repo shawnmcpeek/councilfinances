@@ -5,6 +5,7 @@ import '../models/member_roles.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../services/hours_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/logger.dart';
 
@@ -23,6 +24,7 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = UserService();
+  final _hoursService = HoursService();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _membershipNumberController = TextEditingController();
@@ -54,6 +56,84 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _showAssemblyRoles = isValid;
       });
+    }
+  }
+
+  void _showDeleteAccountDialog() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Account'),
+          content: const Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Are you sure you want to delete your account? This action cannot be undone and will permanently remove:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              SizedBox(height: 8),
+              Text('• Your profile information'),
+              Text('• Your volunteer hours history'),
+              Text('• Your account access'),
+              SizedBox(height: 12),
+              Text(
+                'Note: Data you\'ve contributed to your organization (programs, financial entries, etc.) will be preserved as it belongs to the organization.',
+                style: TextStyle(fontStyle: FontStyle.italic),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'This action is permanent and cannot be recovered.',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('CANCEL'),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _deleteAccount();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('DELETE'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _deleteAccount() async {
+    try {
+      setState(() => _isLoading = true);
+      
+      // Delete user's volunteer hours
+      await _hoursService.deleteUserHours();
+      
+      // Delete user profile from Supabase
+      await _userService.deleteUserProfile();
+      
+      // Sign out the user
+      await AuthService().signOut();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Account deleted successfully')),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Error deleting account', e);
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting account: ${e.toString()}')),
+        );
+      }
     }
   }
 
@@ -348,6 +428,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 },
                 style: AppTheme.outlinedButtonStyle,
                 child: const Text('Sign Out'),
+              ),
+              SizedBox(height: AppTheme.largeSpacing),
+              OutlinedButton(
+                onPressed: _showDeleteAccountDialog,
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  side: const BorderSide(color: Colors.red),
+                ),
+                child: const Text('Delete Account'),
               ),
             ],
           ),

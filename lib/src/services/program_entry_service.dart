@@ -28,10 +28,10 @@ class ProgramEntryService {
       final existingResponse = await _supabase
           .from('program_entries')
           .select()
-          .eq('organizationId', organizationId)
+          .eq('organization_id', organizationId)
           .eq('year', currentYear)
           .eq('category', category.name)
-          .eq('programId', program.id)
+          .eq('program_id', program.id)
           .maybeSingle();
 
       if (existingResponse != null) {
@@ -56,7 +56,7 @@ class ProgramEntryService {
             .update({
               'hours': existingHours + hours,
               'disbursement': existingDisbursement + disbursement,
-              'lastUpdated': DateTime.now().toIso8601String(),
+              'last_updated': DateTime.now().toIso8601String(),
               'entries': existingEntries,
             })
             .eq('id', existingResponse['id']);
@@ -80,15 +80,15 @@ class ProgramEntryService {
         await _supabase
             .from('program_entries')
             .insert({
-              'organizationId': organizationId,
+              'organization_id': organizationId,
               'year': currentYear,
               'category': category.name,
-              'programId': program.id,
-              'programName': program.name,
+              'program_id': program.id,
+              'program_name': program.name,
               'hours': hours,
               'disbursement': disbursement,
               'created': DateTime.now().toIso8601String(),
-              'lastUpdated': DateTime.now().toIso8601String(),
+              'last_updated': DateTime.now().toIso8601String(),
               'entries': [newEntry],
             });
 
@@ -123,8 +123,8 @@ class ProgramEntryService {
       return _supabase
           .from('program_entries')
           .stream(primaryKey: ['id'])
-          .eq('organizationId', organizationId)
-          .order('lastUpdated', ascending: false)
+          .eq('organization_id', organizationId)
+          .order('last_updated', ascending: false)
           .map((response) {
             AppLogger.debug('Received ${response.length} program entries from Supabase');
             final entries = <ProgramEntry>[];
@@ -144,8 +144,8 @@ class ProgramEntryService {
                       date: DateTime.parse(entry['date'] as String),
                       category: category,
                       program: Form1728PProgram(
-                        id: data['programId']?.toString() ?? '',
-                        name: data['programName']?.toString() ?? 'Unknown Program',
+                        id: data['program_id']?.toString() ?? '',
+                        name: data['program_name']?.toString() ?? 'Unknown Program',
                       ),
                       hours: entry['hours'] as int? ?? 0,
                       disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
@@ -183,10 +183,10 @@ class ProgramEntryService {
       final response = await _supabase
           .from('program_entries')
           .select()
-          .eq('organizationId', organizationId)
+          .eq('organization_id', organizationId)
           .eq('year', yearStr)
           .eq('category', category.name)
-          .eq('programId', programId)
+          .eq('program_id', programId)
           .maybeSingle();
 
       return {
@@ -210,10 +210,10 @@ class ProgramEntryService {
       await _supabase
           .from('program_entries')
           .delete()
-          .eq('organizationId', organizationId)
+          .eq('organization_id', organizationId)
           .eq('year', yearStr)
           .eq('category', category.name)
-          .eq('programId', programId);
+          .eq('program_id', programId);
       AppLogger.debug('Deleted program entry: $organizationId, $category, $programId, $yearStr');
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting program entry', e, stackTrace);
