@@ -8,7 +8,7 @@ import '../models/program.dart';
 import '../models/hours_entry.dart';
 import '../models/user_profile.dart';
 import '../utils/logger.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'program_dropdown.dart';
 
 class HoursEntryForm extends StatefulWidget {
@@ -185,8 +185,8 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         programId: _selectedProgram!.id,
         programName: _selectedProgram!.name,
         category: _selectedCategory!,
-        startTime: Timestamp.fromDate(startDateTime),
-        endTime: Timestamp.fromDate(endDateTime),
+        startTime: startDateTime,
+        endTime: endDateTime,
         totalHours: _calculateTotalHours(),
         disbursement: double.tryParse(_disbursementController.text),
         description: _descriptionController.text.trim(),

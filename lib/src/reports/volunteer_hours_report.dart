@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../theme/app_theme.dart';
 import 'volunteer_hours_report_service.dart';
 import 'package:provider/provider.dart';
@@ -30,7 +30,7 @@ class VolunteerHoursReport extends StatelessWidget {
     try {
       final service = VolunteerHoursReportService(
         context.read<UserService>(),
-        FirebaseFirestore.instance,
+        Supabase.instance.client,
       );
       await service.generateVolunteerHoursReport(userId, selectedYear, organizationId);
       if (context.mounted) {
