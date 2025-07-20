@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/services.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../utils/logger.dart';
@@ -130,7 +130,7 @@ class Form1728FieldMap {
 }
 
 class ReportService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
 
   Future<Map<String, dynamic>> aggregateProgramData(String organizationId, String year) async {
@@ -157,16 +157,14 @@ class ReportService {
       final categories = ['faith', 'family', 'community', 'life'];
       
       for (final category in categories) {
-        final QuerySnapshot snapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('program_entries')
-            .doc(year)
-            .collection(category)
-            .get();
+        final response = await _supabase
+            .from('program_entries')
+            .select()
+            .eq('organizationId', organizationId)
+            .eq('year', year)
+            .eq('category', category);
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
+        for (final data in response) {
           final programId = data['programId'] as String;
           final hours = data['hours'] as int? ?? 0;
           final disbursement = (data['disbursement'] as num?)?.toDouble() ?? 0.0;
@@ -320,19 +318,21 @@ class ReportService {
       }
 
       // Query hours for the user and year
-      final hoursSnapshot = await FirebaseFirestore.instance
-          .collection('hours')
-          .where('userId', isEqualTo: userId)
-          .where('date', isGreaterThanOrEqualTo: DateTime(int.parse(year), 1, 1))
-          .where('date', isLessThan: DateTime(int.parse(year) + 1, 1, 1))
-          .get();
+      final startDate = DateTime(int.parse(year), 1, 1).toIso8601String();
+      final endDate = DateTime(int.parse(year) + 1, 1, 1).toIso8601String();
+      
+      final response = await _supabase
+          .from('hours')
+          .select()
+          .eq('userId', userId)
+          .gte('date', startDate)
+          .lt('date', endDate);
 
       // Group hours by program
       final Map<String, double> programHours = {};
       double totalHours = 0;
 
-      for (var doc in hoursSnapshot.docs) {
-        final data = doc.data();
+      for (var data in response) {
         final program = data['program'] as String;
         final hours = (data['hours'] as num).toDouble();
         
