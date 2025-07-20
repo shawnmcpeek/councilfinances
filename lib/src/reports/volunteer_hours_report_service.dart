@@ -1,5 +1,5 @@
 import 'dart:ui';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart';
 import '../services/user_service.dart';
 import '../utils/logger.dart';
@@ -7,9 +7,9 @@ import 'base_pdf_report_service.dart';
 
 class VolunteerHoursReportService extends BasePdfReportService {
   final UserService _userService;
-  final FirebaseFirestore _firestore;
+  final SupabaseClient _supabase;
 
-  VolunteerHoursReportService(this._userService, this._firestore);
+  VolunteerHoursReportService(this._userService, this._supabase);
 
   @override
   String get templatePath => '';  // No template file, we generate from scratch
@@ -31,21 +31,19 @@ class VolunteerHoursReportService extends BasePdfReportService {
       
       AppLogger.debug('Querying hours between $startDate and $endDate for organization $organizationId');
       
-      final hoursQuery = await _firestore
-          .collection('organizations')
-          .doc(organizationId)
-          .collection('hours')
-          .where('userId', isEqualTo: userId)
-          .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
-          .get();
+      final response = await _supabase
+          .from('hours')
+          .select()
+          .eq('userId', userId)
+          .eq('organizationId', organizationId)
+          .gte('startTime', startDate.toIso8601String())
+          .lte('startTime', endDate.toIso8601String());
 
       // Group hours by program
       final Map<String, double> programHours = {};
       double totalHours = 0;
 
-      for (var doc in hoursQuery.docs) {
-        final data = doc.data();
+      for (var data in response) {
         final program = data['programName'] as String;
         final hours = data['totalHours'] as num;
         

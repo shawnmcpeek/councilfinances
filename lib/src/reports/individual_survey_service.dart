@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../models/hours_entry.dart';
@@ -8,7 +8,7 @@ import '../utils/logger.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
 
 class IndividualSurveyService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
   static const String _fillIndividualSurveyUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/fillIndividualSurveyReport';
 
@@ -78,18 +78,17 @@ class IndividualSurveyService {
     DateTime endDate,
     bool isAssembly,
   ) async {
-    final snapshot = await _firestore
-        .collection('organizations')
-        .doc(organizationId)
-        .collection('hours')
-        .where('userId', isEqualTo: userId)
-        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-        .where('startTime', isLessThan: Timestamp.fromDate(endDate))
-        .where('isAssembly', isEqualTo: isAssembly)
-        .get();
+    final response = await _supabase
+        .from('hours')
+        .select()
+        .eq('userId', userId)
+        .eq('organizationId', organizationId)
+        .eq('isAssembly', isAssembly)
+        .gte('startTime', startDate.toIso8601String())
+        .lt('startTime', endDate.toIso8601String());
 
-    return snapshot.docs
-        .map((doc) => HoursEntry.fromFirestore(doc))
+    return response
+        .map((data) => HoursEntry.fromMap(data))
         .toList();
   }
 

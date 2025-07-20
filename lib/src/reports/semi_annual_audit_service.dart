@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import '../utils/logger.dart';
@@ -9,7 +9,7 @@ import 'pdf_template_manager.dart';
 import 'audit_field_map.dart';
 
 class SemiAnnualAuditService extends BasePdfReportService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
   static const String _auditReportTemplate = 'audit2_1295_p.pdf';
   static const String _fillAuditReportUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/fillAuditReport';
@@ -154,18 +154,16 @@ class SemiAnnualAuditService extends BasePdfReportService {
     for (final year in years) {
       try {
         // Fetch income
-        final incomeSnapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('income')
-            .doc(year.toString())
-            .collection('entries')
-            .where('date', isGreaterThanOrEqualTo: startDate)
-            .where('date', isLessThanOrEqualTo: endDate)
-            .get();
+        final incomeResponse = await _supabase
+            .from('finance_entries')
+            .select()
+            .eq('organizationId', organizationId)
+            .eq('year', year.toString())
+            .eq('type', 'income')
+            .gte('date', startDate.toIso8601String())
+            .lte('date', endDate.toIso8601String());
             
-        for (final doc in incomeSnapshot.docs) {
-          final data = doc.data();
+        for (final data in incomeResponse) {
           final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final date = _parseDate(data['date']);
@@ -181,18 +179,16 @@ class SemiAnnualAuditService extends BasePdfReportService {
         }
 
         // Fetch expenses
-        final expenseSnapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('expenses')
-            .doc(year.toString())
-            .collection('entries')
-            .where('date', isGreaterThanOrEqualTo: startDate)
-            .where('date', isLessThanOrEqualTo: endDate)
-            .get();
+        final expenseResponse = await _supabase
+            .from('finance_entries')
+            .select()
+            .eq('organizationId', organizationId)
+            .eq('year', year.toString())
+            .eq('type', 'expense')
+            .gte('date', startDate.toIso8601String())
+            .lte('date', endDate.toIso8601String());
             
-        for (final doc in expenseSnapshot.docs) {
-          final data = doc.data();
+        for (final data in expenseResponse) {
           final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final date = _parseDate(data['date']);
@@ -216,8 +212,8 @@ class SemiAnnualAuditService extends BasePdfReportService {
   }
 
   DateTime? _parseDate(dynamic dateValue) {
-    if (dateValue is Timestamp) {
-      return dateValue.toDate();
+    if (dateValue is String) {
+      return DateTime.tryParse(dateValue);
     } else if (dateValue is DateTime) {
       return dateValue;
     }

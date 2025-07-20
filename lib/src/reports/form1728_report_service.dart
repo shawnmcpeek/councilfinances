@@ -1,11 +1,11 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/logger.dart';
 import '../services/user_service.dart';
 import 'base_pdf_report_service.dart';
 import 'pdf_template_manager.dart';
 
 class Form1728ReportService extends BasePdfReportService {
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
   final PdfTemplateManager _templateManager = PdfTemplateManager();
 
@@ -41,16 +41,14 @@ class Form1728ReportService extends BasePdfReportService {
       final categories = ['faith', 'family', 'community', 'life'];
       
       for (final category in categories) {
-        final QuerySnapshot snapshot = await _db
-            .collection('organizations')
-            .doc(organizationId)
-            .collection('program_entries')
-            .doc(year)
-            .collection(category)
-            .get();
+        final response = await _supabase
+            .from('program_entries')
+            .select()
+            .eq('organizationId', organizationId)
+            .eq('year', year)
+            .eq('category', category);
 
-        for (final doc in snapshot.docs) {
-          final data = doc.data() as Map<String, dynamic>;
+        for (final data in response) {
           final programId = data['programId'] as String;
           final hours = data['hours'] as int? ?? 0;
           final disbursement = (data['disbursement'] as num?)?.toDouble() ?? 0.0;
