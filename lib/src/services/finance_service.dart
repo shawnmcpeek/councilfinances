@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../models/finance_entry.dart';
 import '../utils/logger.dart';
 import '../models/payment_method.dart';
@@ -6,7 +6,7 @@ import '../models/program.dart';
 import '../services/auth_service.dart';
 
 class FinanceService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final SupabaseClient _supabase = Supabase.instance.client;
   final AuthService _authService = AuthService();
 
   String _getFormattedOrgId(String organizationId, bool isAssembly) {
@@ -25,27 +25,19 @@ class FinanceService {
       final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
       AppLogger.debug('Getting finance entries for organization: $formattedOrgId');
       
-      final List<FinanceEntry> entries = [];
       final currentYear = DateTime.now().year;
       final years = [currentYear, currentYear - 1]; // Current and previous year only
       AppLogger.debug('Querying years: ${years.join(", ")}');
 
-      // Get income and expense entries for all relevant years
-      final incomeSnapshots = await _getYearlySnapshots(formattedOrgId, years, 'income');
-      final expenseSnapshots = await _getYearlySnapshots(formattedOrgId, years, 'expenses');
+      // Get all finance entries for the organization
+      final response = await _supabase
+          .from('finance_entries')
+          .select()
+          .eq('organizationId', formattedOrgId)
+          .inFilter('year', years.map((y) => y.toString()).toList())
+          .order('date', ascending: false);
 
-      // Process income entries
-      for (var snapshot in incomeSnapshots) {
-        entries.addAll(_processEntries(snapshot, false));
-      }
-
-      // Process expense entries
-      for (var snapshot in expenseSnapshots) {
-        entries.addAll(_processEntries(snapshot, true));
-      }
-
-      // Sort all entries by date
-      entries.sort((a, b) => b.date.compareTo(a.date));
+      final entries = response.map((data) => FinanceEntry.fromMap(data)).toList();
       
       AppLogger.debug('Returning ${entries.length} entries');
       return entries;
@@ -54,88 +46,6 @@ class FinanceService {
       AppLogger.error('Stack trace:', stackTrace);
       rethrow;
     }
-  }
-
-  Future<List<QuerySnapshot<Map<String, dynamic>>>> _getYearlySnapshots(
-    String formattedOrgId,
-    List<int> years,
-    String type,
-  ) async {
-    AppLogger.debug('Fetching $type entries for years: ${years.join(", ")}');
-    return Future.wait(
-      years.map((year) {
-        AppLogger.debug('Querying $type collection for year: $year');
-        return _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('finance')
-          .doc(type)
-          .collection(year.toString())
-          .get();
-      })
-    );
-  }
-
-  List<FinanceEntry> _processEntries(QuerySnapshot<Map<String, dynamic>> snapshot, bool isExpense) {
-    final entries = <FinanceEntry>[];
-    final type = isExpense ? 'expense' : 'income';
-    
-    AppLogger.debug('Processing $type snapshot with ${snapshot.docs.length} documents');
-    for (var doc in snapshot.docs) {
-      try {
-        final data = doc.data();
-        AppLogger.debug('Processing $type document ${doc.id}: $data');
-        
-        // Validate required fields
-        if (!_validateRequiredFields(data, doc.id, type)) continue;
-
-        final date = data['date'];
-        final amount = data['amount'];
-        
-        // Type validation
-        if (!_validateDataTypes(date, amount, doc.id, type)) continue;
-
-        entries.add(FinanceEntry(
-          id: doc.id,
-          date: date.toDate(),
-          program: Program(
-            id: data['programId'] as String,
-            name: data['programName'] as String,
-            category: (data['category'] as String?) ?? 'unknown',
-            isSystemDefault: false,
-            financialType: isExpense ? FinancialType.expenseOnly : FinancialType.incomeOnly,
-          ),
-          amount: amount.toDouble(),
-          paymentMethod: (data['paymentMethod'] as String?) ?? 'Unknown',
-          checkNumber: isExpense ? data['checkNumber'] as String? : null,
-          description: (data['description'] as String?) ?? '',
-          isExpense: isExpense,
-        ));
-      } catch (e, stackTrace) {
-        AppLogger.error('Error processing $type entry ${doc.id}', e);
-        AppLogger.error('Stack trace for $type entry ${doc.id}:', stackTrace);
-      }
-    }
-    return entries;
-  }
-
-  bool _validateRequiredFields(Map<String, dynamic> data, String docId, String type) {
-    if (!data.containsKey('date') || 
-        !data.containsKey('amount') || 
-        !data.containsKey('programId') || 
-        !data.containsKey('programName')) {
-      AppLogger.error('$type entry $docId missing required fields', data);
-      return false;
-    }
-    return true;
-  }
-
-  bool _validateDataTypes(dynamic date, dynamic amount, String docId, String type) {
-    if (date is! Timestamp || amount is! num) {
-      AppLogger.error('$type entry $docId has invalid data types', {'date': date, 'amount': amount});
-      return false;
-    }
-    return true;
   }
 
   Map<String, dynamic> _createEntryData({
@@ -151,15 +61,15 @@ class FinanceService {
   }) {
     return {
       'id': docId,
-      'date': Timestamp.fromDate(date),
+      'date': date.toIso8601String(),
       'amount': amount,
       'description': description,
       'programId': programId,
       'programName': programName,
       'paymentMethod': paymentMethod.name,
       if (checkNumber != null) 'checkNumber': checkNumber,
-      'createdAt': FieldValue.serverTimestamp(),
-      'updatedAt': FieldValue.serverTimestamp(),
+      'createdAt': DateTime.now().toIso8601String(),
+      'updatedAt': DateTime.now().toIso8601String(),
       'createdBy': userId,
       'updatedBy': userId,
     };
@@ -230,28 +140,27 @@ class FinanceService {
       if (user == null) throw Exception('User must be logged in to add entries');
 
       final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
-      final docRef = _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('finance')
-          .doc(type)
-          .collection(date.year.toString())
-          .doc();
-
       final data = _createEntryData(
-        docId: docRef.id,
+        docId: '', // Supabase will generate the ID
         date: date,
         amount: amount,
         description: description,
         paymentMethod: paymentMethod,
         programId: programId,
         programName: programName,
-        userId: user.uid,
+        userId: user.id,
         checkNumber: checkNumber,
       );
 
+      // Add organization and type info
+      data['organizationId'] = formattedOrgId;
+      data['isExpense'] = type == 'expenses';
+      data['year'] = date.year.toString();
+
       AppLogger.debug('Adding $type entry: $data');
-      await docRef.set(data);
+      await _supabase
+          .from('finance_entries')
+          .insert(data);
     } catch (e) {
       AppLogger.error('Error adding $type entry', e);
       rethrow;
@@ -268,36 +177,15 @@ class FinanceService {
       final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
       AppLogger.debug('Getting finance entries for organization: $formattedOrgId, program: $programId, year: $year');
       
-      final List<FinanceEntry> entries = [];
+      final response = await _supabase
+          .from('finance_entries')
+          .select()
+          .eq('organizationId', formattedOrgId)
+          .eq('programId', programId)
+          .eq('year', year)
+          .order('date', ascending: false);
 
-      // Get income entries
-      final incomeSnapshot = await _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('finance')
-          .doc('income')
-          .collection(year)
-          .where('programId', isEqualTo: programId)
-          .get();
-
-      // Get expense entries
-      final expenseSnapshot = await _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('finance')
-          .doc('expenses')
-          .collection(year)
-          .where('programId', isEqualTo: programId)
-          .get();
-
-      // Process income entries
-      entries.addAll(_processEntries(incomeSnapshot, false));
-
-      // Process expense entries
-      entries.addAll(_processEntries(expenseSnapshot, true));
-
-      // Sort all entries by date
-      entries.sort((a, b) => b.date.compareTo(a.date));
+      final entries = response.map((data) => FinanceEntry.fromMap(data)).toList();
       
       AppLogger.debug('Returning ${entries.length} entries for program $programId');
       return entries;
@@ -317,16 +205,11 @@ class FinanceService {
   }) async {
     try {
       final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
-      final type = isExpense ? 'expenses' : 'income';
-      final docRef = _firestore
-          .collection('organizations')
-          .doc(formattedOrgId)
-          .collection('finance')
-          .doc(type)
-          .collection(year.toString())
-          .doc(entryId);
-      await docRef.delete();
-      AppLogger.debug('Deleted $type entry: $entryId for $formattedOrgId, year $year');
+      await _supabase
+          .from('finance_entries')
+          .delete()
+          .eq('id', entryId);
+      AppLogger.debug('Deleted finance entry: $entryId for $formattedOrgId, year $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting finance entry', e, stackTrace);
       rethrow;

@@ -1,4 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'program.dart';
 
 class FinanceEntry {
@@ -22,11 +21,10 @@ class FinanceEntry {
     required this.isExpense,
   });
 
-  factory FinanceEntry.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>;
+  factory FinanceEntry.fromMap(Map<String, dynamic> data) {
     return FinanceEntry(
-      id: doc.id,
-      date: (data['date'] as Timestamp).toDate(),
+      id: data['id'] as String,
+      date: DateTime.parse(data['date'] as String),
       program: Program.fromMap(data['program'] as Map<String, dynamic>),
       amount: (data['amount'] as num).toDouble(),
       paymentMethod: data['paymentMethod'] as String,
@@ -38,7 +36,7 @@ class FinanceEntry {
 
   Map<String, dynamic> toMap() {
     return {
-      'date': Timestamp.fromDate(date),
+      'date': date.toIso8601String(),
       'program': program.toMap(),
       'amount': amount,
       'paymentMethod': paymentMethod,
