@@ -290,6 +290,71 @@
         "systemDefault": true,
         "financialType": "both"
       }
+    ],
+    "assembly": [
+      {
+        "id": "membership_dues",
+        "name": "Membership Dues",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "incomeOnly"
+      },
+      {
+        "id": "assembly_insurance",
+        "name": "Assembly Insurance",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "interest",
+        "name": "Interest",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "incomeOnly"
+      },
+      {
+        "id": "convention",
+        "name": "Convention",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "postage",
+        "name": "Postage",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "supplies",
+        "name": "Supplies",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "per_capita_state",
+        "name": "Per Capita - State",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "per_capita_supreme",
+        "name": "Per Capita - Supreme",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      },
+      {
+        "id": "bank_charges",
+        "name": "Bank Charges",
+        "category": "ASSEMBLY",
+        "systemDefault": true,
+        "financialType": "expenseOnly"
+      }
     ]
   }
 } 

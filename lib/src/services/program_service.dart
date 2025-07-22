@@ -21,6 +21,10 @@ class ProgramService {
       final programsData = ProgramsData.fromJson(jsonData);
       AppLogger.info('Successfully parsed ProgramsData from JSON');
       
+      // Debug logging to see what's loaded
+      AppLogger.debug('Council programs keys: ${programsData.councilPrograms.keys.toList()}');
+      AppLogger.debug('Assembly programs keys: ${programsData.assemblyPrograms.keys.toList()}');
+      
       return programsData;
     } catch (e, stackTrace) {
       AppLogger.error('Error loading system programs', e, stackTrace);

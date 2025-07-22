@@ -107,18 +107,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       // Always load the current organization's program states and custom programs
       await _programService.loadProgramStates(_systemPrograms!, orgId, isAssembly);
 
-      // Determine correct orgId and isAssembly for custom programs
-      String customOrgId = orgId;
-      bool customIsAssembly = isAssembly;
-      if (!isAssembly && orgId.startsWith('A')) {
-        // If in council mode but orgId is assembly, switch to council orgId
-        if (_userProfile?.councilNumber != null) {
-          customOrgId = 'C${_userProfile!.councilNumber.toString().padLeft(6, '0')}';
-          customIsAssembly = false;
-        }
-      }
-      AppLogger.debug('getCustomPrograms called with orgId: $customOrgId, isAssembly: $customIsAssembly');
-      final customPrograms = await _programService.getCustomPrograms(customOrgId, customIsAssembly);
+      // Use the current organization ID and assembly state for custom programs
+      AppLogger.debug('getCustomPrograms called with orgId: $orgId, isAssembly: $isAssembly');
+      final customPrograms = await _programService.getCustomPrograms(orgId, isAssembly);
 
       if (!mounted) return;
       setState(() {
@@ -206,6 +197,18 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     if (!_hasFullAccess) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('You do not have permission to modify programs')),
+      );
+      return;
+    }
+
+    // Council and Assembly category programs are non-toggleable
+    final bool isCouncilCategory = program.category.toLowerCase() == 'council';
+    final bool isAssemblyCategory = program.category.toLowerCase() == 'assembly';
+    
+    if (isCouncilCategory || isAssemblyCategory) {
+      final categoryName = isCouncilCategory ? 'Council' : 'Assembly';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('$categoryName category programs cannot be disabled')),
       );
       return;
     }
@@ -307,6 +310,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
     final programs = isAssembly 
         ? _systemPrograms?.assemblyPrograms ?? {}
         : _systemPrograms?.councilPrograms ?? {};
+    
+    AppLogger.debug('_buildBody: isAssembly=$isAssembly, programs keys=${programs.keys.toList()}');
+    AppLogger.debug('_buildBody: custom programs=${_customPrograms.map((p) => '${p.name} (${p.category})').toList()}');
 
     return Column(
       children: [
@@ -443,6 +449,13 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   Widget _buildProgramTile(Program program) {
+    final isAssembly = context.watch<OrganizationProvider>().isAssembly;
+    
+    // Council and Assembly category programs are non-toggleable
+    final bool isCouncilCategory = program.category.toLowerCase() == 'council';
+    final bool isAssemblyCategory = program.category.toLowerCase() == 'assembly';
+    final bool isToggleable = !isCouncilCategory && !isAssemblyCategory;
+    
     // Get the current enabled state, considering pending changes
     final bool isEnabled = _pendingStateChanges.containsKey(program.id)
         ? _pendingStateChanges[program.id] ?? program.isEnabled
@@ -453,10 +466,18 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       trailing: _hasFullAccess ? Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Switch(
-            value: isEnabled,
-            onChanged: (value) => _toggleProgramStatus(program),
-          ),
+          if (isToggleable) ...[
+            Switch(
+              value: isEnabled,
+              onChanged: (value) => _toggleProgramStatus(program),
+            ),
+          ] else ...[
+            // Show a disabled switch for Council/Assembly category programs
+            Switch(
+              value: true,
+              onChanged: null,
+            ),
+          ],
           if (!program.isSystemDefault) ...[
             IconButton(
               icon: const Icon(Icons.edit),

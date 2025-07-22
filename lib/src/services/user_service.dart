@@ -6,6 +6,42 @@ import 'dart:async';
 class UserService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
+  // Auto-create organization if it doesn't exist
+  Future<void> _ensureOrganizationExists(int councilNumber, int? assemblyNumber, String jurisdiction) async {
+    try {
+      // Ensure council exists
+      final councilId = 'C${councilNumber.toString().padLeft(6, '0')}';
+      await _supabase
+          .from('organizations')
+          .upsert({
+            'id': councilId,
+            'name': 'Council #$councilNumber',
+            'type': 'council',
+            'jurisdiction': jurisdiction,
+          })
+          .eq('id', councilId);
+
+      // Ensure assembly exists if provided
+      if (assemblyNumber != null) {
+        final assemblyId = 'A${assemblyNumber.toString().padLeft(6, '0')}';
+        await _supabase
+            .from('organizations')
+            .upsert({
+              'id': assemblyId,
+              'name': 'Assembly #$assemblyNumber',
+              'type': 'assembly',
+              'jurisdiction': jurisdiction,
+            })
+            .eq('id', assemblyId);
+      }
+
+      AppLogger.debug('Ensured organizations exist: Council $councilId, Assembly ${assemblyNumber != null ? 'A${assemblyNumber.toString().padLeft(6, '0')}' : 'none'}');
+    } catch (e) {
+      AppLogger.error('Error ensuring organizations exist', e);
+      // Don't rethrow - this is a best-effort operation
+    }
+  }
+
   // Get current user profile
   Future<UserProfile?> getUserProfile() async {
     try {
@@ -67,6 +103,9 @@ class UserService {
     try {
       final user = _supabase.auth.currentUser;
       if (user == null) throw Exception('No authenticated user found');
+
+      // Ensure organizations exist before updating profile
+      await _ensureOrganizationExists(profile.councilNumber, profile.assemblyNumber, profile.jurisdiction);
 
       final profileData = profile.toMap()
         ..removeWhere((key, value) => value == null);
