@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../theme/app_theme.dart';
-import '../services/user_service.dart';
-import '../models/user_profile.dart';
-import '../components/organization_toggle.dart';
 import 'finance/income_entry.dart';
 import 'finance/expense_entry.dart';
 import 'finance/transaction_history.dart';
 import '../providers/organization_provider.dart';
+import '../providers/user_provider.dart';
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -17,31 +15,19 @@ class FinanceScreen extends StatefulWidget {
 }
 
 class _FinanceScreenState extends State<FinanceScreen> {
-  bool _isLoading = false;
-  UserProfile? _userProfile;
+  VoidCallback? _refreshTransactionHistory;
 
   @override
   void initState() {
     super.initState();
-    _loadUserProfile();
+    // Ensure user profile is loaded
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<UserProvider>().loadUserProfile();
+    });
   }
 
-  Future<void> _loadUserProfile() async {
-    setState(() => _isLoading = true);
-    try {
-      final userProfile = await UserService().getCurrentUserProfile();
-      setState(() {
-        _userProfile = userProfile;
-        _isLoading = false;
-      });
-    } catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error loading user profile')),
-        );
-      }
-    }
+  void _refreshTransactions() {
+    _refreshTransactionHistory?.call();
   }
 
   @override
@@ -50,41 +36,41 @@ class _FinanceScreenState extends State<FinanceScreen> {
       appBar: AppBar(
         title: const Text('Finance'),
       ),
-      body: Consumer<OrganizationProvider>(
-        builder: (context, organizationProvider, child) {
-          return _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : AppTheme.screenContent(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const OrganizationToggle(),
-                        IncomeEntry(
-                          isAssembly: organizationProvider.isAssembly,
-                          organizationId: _userProfile?.getOrganizationId(
-                            organizationProvider.isAssembly,
-                          ) ?? '',
-                        ),
-                        SizedBox(height: AppTheme.smallSpacing),
-                        ExpenseEntry(
-                          isAssembly: organizationProvider.isAssembly,
-                          organizationId: _userProfile?.getOrganizationId(
-                            organizationProvider.isAssembly,
-                          ) ?? '',
-                        ),
-                        SizedBox(height: AppTheme.spacing),
-                        TransactionHistory(
-                          isAssembly: organizationProvider.isAssembly,
-                          organizationId: _userProfile?.getOrganizationId(
-                            organizationProvider.isAssembly,
-                          ) ?? '',
-                        ),
-                        SizedBox(height: AppTheme.spacing),
-                      ],
-                    ),
-                  ),
-                );
+      body: Consumer2<OrganizationProvider, UserProvider>(
+        builder: (context, organizationProvider, userProvider, child) {
+          final organizationId = userProvider.getOrganizationId(organizationProvider.isAssembly);
+          
+          if (userProvider.userProfile == null || organizationId == null) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          return SingleChildScrollView(
+            padding: AppTheme.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Income Entry
+                IncomeEntry(
+                  organizationId: organizationId,
+                  onEntryAdded: _refreshTransactions,
+                ),
+                const SizedBox(height: AppTheme.spacing),
+                
+                // Expense Entry
+                ExpenseEntry(
+                  organizationId: organizationId,
+                  onEntryAdded: _refreshTransactions,
+                ),
+                const SizedBox(height: AppTheme.spacing),
+                
+                // Transaction History
+                TransactionHistory(
+                  organizationId: organizationId,
+                  ref: _refreshTransactionHistory,
+                ),
+              ],
+            ),
+          );
         },
       ),
     );

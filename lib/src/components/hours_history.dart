@@ -6,87 +6,51 @@ import '../models/hours_entry_adapter.dart';
 import '../components/log_display.dart';
 import '../components/hours_entry.dart';
 
-class HoursHistoryList extends StatefulWidget {
+class HoursHistory extends StatefulWidget {
   final String organizationId;
-  final bool isAssembly;
 
-  const HoursHistoryList({
+  const HoursHistory({
     super.key,
     required this.organizationId,
-    required this.isAssembly,
   });
 
   @override
-  State<HoursHistoryList> createState() => _HoursHistoryListState();
+  State<HoursHistory> createState() => _HoursHistoryState();
 }
 
-class _HoursHistoryListState extends State<HoursHistoryList> {
+class _HoursHistoryState extends State<HoursHistory> {
   final _hoursService = HoursService();
-  StreamSubscription<List<HoursEntry>>? _subscription;
   List<HoursEntry> _entries = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _subscribeToEntries();
+    _loadEntries();
   }
 
   @override
-  void didUpdateWidget(HoursHistoryList oldWidget) {
+  void didUpdateWidget(HoursHistory oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.organizationId != widget.organizationId ||
-        oldWidget.isAssembly != widget.isAssembly) {
-      _subscribeToEntries();
+    if (oldWidget.organizationId != widget.organizationId) {
+      _loadEntries();
     }
   }
 
-  @override
-  void dispose() {
-    _subscription?.cancel();
-    super.dispose();
-  }
-
-  void _subscribeToEntries() {
-    _subscription?.cancel();
-    
-    if (widget.organizationId.isEmpty) {
-      setState(() {
-        _entries = [];
-        _isLoading = false;
-      });
-      return;
-    }
-
+  Future<void> _loadEntries() async {
     setState(() => _isLoading = true);
-
     try {
-      _subscription = _hoursService
-          .getHoursEntries(widget.organizationId, widget.isAssembly)
-          .listen(
-        (entries) {
-          if (mounted) {
-            setState(() {
-              _entries = entries;
-              _isLoading = false;
-            });
-          }
-        },
-        onError: (error) {
-          if (mounted) {
-            setState(() => _isLoading = false);
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error loading hours: $error')),
-            );
-          }
-        },
-      );
+      final entries = await _hoursService.getHoursEntries(widget.organizationId);
+      if (mounted) {
+        setState(() {
+          _entries = entries;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
+      // AppLogger.error('Error loading hours entries', e); // Assuming AppLogger is defined elsewhere
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading hours: $e')),
-        );
       }
     }
   }
@@ -107,10 +71,9 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
           context: context,
           builder: (context) => HoursEntryForm(
             organizationId: widget.organizationId,
-            isAssembly: widget.isAssembly,
           ),
         );
-        if (updated != null) _subscribeToEntries();
+        if (updated != null) _loadEntries();
       },
       onDelete: (adapter) async {
         final confirm = await showDialog<bool>(
@@ -128,9 +91,8 @@ class _HoursHistoryListState extends State<HoursHistoryList> {
           await _hoursService.deleteHoursEntry(
             widget.organizationId,
             adapter.entry.id,
-            widget.isAssembly,
           );
-          _subscribeToEntries();
+          _loadEntries();
         }
       },
     );

@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
-import '../components/program_dropdown.dart';
-import '../services/finance_service.dart';
 import '../models/program.dart';
-import '../utils/logger.dart';
-import 'package:provider/provider.dart';
-import '../providers/organization_provider.dart';
+import '../services/finance_service.dart';
+import 'program_dropdown.dart';
 
 class ProgramBudget extends StatefulWidget {
   final String organizationId;
@@ -57,12 +54,9 @@ class _ProgramBudgetState extends State<ProgramBudget> {
     });
 
     try {
-      final isAssembly = context.read<OrganizationProvider>().isAssembly;
-      
       // Get all financial entries for the selected program and year
       final entries = await _financeService.getFinanceEntriesForProgram(
         widget.organizationId,
-        isAssembly,
         _selectedProgram!.id,
         _selectedYear!,
       );
@@ -88,7 +82,7 @@ class _ProgramBudgetState extends State<ProgramBudget> {
         });
       }
     } catch (e) {
-      AppLogger.error('Error calculating program budget', e);
+      // AppLogger.error('Error calculating program budget', e); // This line was removed
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Error calculating budget: ${e.toString()}')),
@@ -168,7 +162,6 @@ class _ProgramBudgetState extends State<ProgramBudget> {
             const SizedBox(height: AppTheme.spacing),
             ProgramDropdown(
               organizationId: widget.organizationId,
-              isAssembly: context.watch<OrganizationProvider>().isAssembly,
               selectedProgram: _selectedProgram,
               onChanged: (program) {
                 setState(() {

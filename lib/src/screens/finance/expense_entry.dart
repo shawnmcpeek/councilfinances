@@ -9,12 +9,12 @@ import '../../components/program_dropdown.dart';
 
 class ExpenseEntry extends StatefulWidget {
   final String organizationId;
-  final bool isAssembly;
+  final VoidCallback? onEntryAdded;
 
   const ExpenseEntry({
     super.key,
     required this.organizationId,
-    required this.isAssembly,
+    this.onEntryAdded,
   });
 
   @override
@@ -75,7 +75,6 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
     try {
       await _financeService.addExpenseEntry(
         organizationId: widget.organizationId,
-        isAssembly: widget.isAssembly,
         date: _selectedDate,
         amount: double.parse(_amountController.text),
         description: _descriptionController.text.trim(),
@@ -94,6 +93,9 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
         _dateController.text = _formatDate(_selectedDate);
         _selectedPaymentMethod = PaymentMethod.cash;
       });
+
+      // Notify parent to refresh transaction history
+      widget.onEntryAdded?.call();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,7 +147,6 @@ class _ExpenseEntryState extends State<ExpenseEntry> {
                   children: [
                     ProgramDropdown(
                       organizationId: widget.organizationId,
-                      isAssembly: widget.isAssembly,
                       filterType: FinancialType.expenseOnly,
                       selectedProgram: _selectedProgram,
                       onChanged: (value) => setState(() => _selectedProgram = value),

@@ -60,12 +60,9 @@ class _HoursEntryScreenState extends State<HoursEntryScreen> {
       // Load system programs if we haven't yet
       _systemPrograms ??= await _programService.loadSystemPrograms();
       
-      // Load program states
-      await _programService.loadProgramStates(
-        _systemPrograms!, 
-        _userProfile!.getOrganizationId(true), 
-        true
-      );
+      // Load program states for the current organization
+      final organizationId = _userProfile!.getOrganizationId(true); // Default to assembly for now
+      await _programService.loadProgramStates(_systemPrograms!, organizationId);
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -106,12 +103,10 @@ class _HoursEntryScreenState extends State<HoursEntryScreen> {
                         children: [
                           HoursEntryForm(
                             organizationId: organizationId,
-                            isAssembly: organizationProvider.isAssembly,
                           ),
                           SizedBox(height: AppTheme.spacing),
-                          HoursHistoryList(
+                          HoursHistory(
                             organizationId: organizationId,
-                            isAssembly: organizationProvider.isAssembly,
                           ),
                         ],
                       ),

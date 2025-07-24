@@ -7,12 +7,12 @@ import '../../components/log_display.dart';
 
 class TransactionHistory extends StatefulWidget {
   final String organizationId;
-  final bool isAssembly;
+  final VoidCallback? ref;
 
   const TransactionHistory({
     super.key,
     required this.organizationId,
-    required this.isAssembly,
+    this.ref,
   });
 
   @override
@@ -33,10 +33,14 @@ class _TransactionHistoryState extends State<TransactionHistory> {
   @override
   void didUpdateWidget(TransactionHistory oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.organizationId != widget.organizationId || 
-        oldWidget.isAssembly != widget.isAssembly) {
+    if (oldWidget.organizationId != widget.organizationId) {
       _loadTransactions();
     }
+  }
+
+  // Public method to refresh transactions
+  Future<void> refresh() async {
+    await _loadTransactions();
   }
 
   Future<void> _loadTransactions() async {
@@ -46,7 +50,6 @@ class _TransactionHistoryState extends State<TransactionHistory> {
     try {
       final entries = await _financeService.getFinanceEntries(
         widget.organizationId,
-        widget.isAssembly,
       );
 
       if (mounted) {
@@ -106,7 +109,6 @@ class _TransactionHistoryState extends State<TransactionHistory> {
           await _financeService.deleteFinanceEntry(
             organizationId: widget.organizationId,
             entryId: adapter.entry.id,
-            isAssembly: widget.isAssembly,
             isExpense: adapter.entry.isExpense,
             year: adapter.entry.date.year,
           );

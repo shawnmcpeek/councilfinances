@@ -20,37 +20,27 @@ class HoursService {
     return '$prefix${organizationId.padLeft(6, '0')}';
   }
 
-  Future<void> addHoursEntry(HoursEntry entry, bool isAssembly) async {
+  // Add a new hours entry
+  Future<void> addHoursEntry(HoursEntry entry) async {
     try {
-      final user = _authService.currentUser;
-      if (user == null) throw Exception('No authenticated user found');
-
-      final formattedOrgId = _formatOrganizationId(entry.organizationId, isAssembly);
-      final data = {
-        'user_id': user.id,
-        'organization_id': formattedOrgId,
-        'is_assembly': isAssembly,
+      final entryData = {
+        'id': entry.id,
+        'user_id': entry.userId,
+        'organization_id': entry.organizationId,
         'program_id': entry.programId,
         'program_name': entry.programName,
-        'category': entry.category.name,
+        'category': entry.category,
         'start_time': entry.startTime.toIso8601String(),
         'end_time': entry.endTime.toIso8601String(),
         'total_hours': entry.totalHours,
-        'created_at': DateTime.now().toIso8601String(),
+        'disbursement': entry.disbursement,
+        'description': entry.description,
       };
 
-      // Add optional fields only if they have values
-      if (entry.disbursement != null) {
-        data['disbursement'] = entry.disbursement as Object;
-      }
-      if (entry.description?.isNotEmpty == true) {
-        data['description'] = entry.description as Object;
-      }
-
-      AppLogger.debug('Adding hours entry: $data');
       await _supabase
           .from('hours_entries')
-          .insert(data);
+          .insert(entryData);
+      AppLogger.debug('Added hours entry: ${entry.id}');
     } catch (e) {
       AppLogger.error('Error adding hours entry', e);
       rethrow;
@@ -94,7 +84,7 @@ class HoursService {
     }
   }
 
-  Future<void> deleteHoursEntry(String organizationId, String entryId, bool isAssembly) async {
+  Future<void> deleteHoursEntry(String organizationId, String entryId) async {
     try {
       final user = _authService.currentUser;
       if (user == null) throw Exception('No authenticated user found');
@@ -110,24 +100,16 @@ class HoursService {
     }
   }
 
-  Stream<List<HoursEntry>> getHoursEntries(String organizationId, bool isAssembly) {
+  // Get hours entries for a specific organization
+  Future<List<HoursEntry>> getHoursEntries(String organizationId) async {
     try {
-      final user = _authService.currentUser;
-      if (user == null) throw Exception('No authenticated user found');
-
-      AppLogger.debug('Getting hours entries for organization: $organizationId and user: ${user.id}');
-      
-      return _supabase
+      final response = await _supabase
           .from('hours_entries')
-          .stream(primaryKey: ['id'])
-          .order('start_time', ascending: false)
-          .limit(20)
-          .map((response) {
-            AppLogger.debug('Received ${response.length} hours entries from Supabase');
-            return response
-                .map((data) => HoursEntry.fromMap(data))
-                .toList();
-          });
+          .select('*')
+          .eq('organization_id', organizationId)
+          .order('created_at', ascending: false);
+
+      return response.map((data) => HoursEntry.fromMap(data)).toList();
     } catch (e) {
       AppLogger.error('Error getting hours entries', e);
       rethrow;

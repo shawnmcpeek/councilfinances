@@ -82,12 +82,6 @@ class _AuthFormState extends State<AuthForm> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Welcome',
-            style: AppTheme.headingStyle,
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: AppTheme.spacing),
-          Text(
             _isSignUp ? 'Create an account' : 'Sign in to continue',
             style: AppTheme.subheadingStyle,
             textAlign: TextAlign.center,

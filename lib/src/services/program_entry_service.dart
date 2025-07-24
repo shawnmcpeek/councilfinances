@@ -77,9 +77,13 @@ class ProgramEntryService {
           'timestamp': DateTime.now().toIso8601String(),
         };
 
+        // Generate a unique ID for the program entry
+        final entryId = '${organizationId}_${program.id}_$currentYear';
+        
         await _supabase
             .from('program_entries')
             .insert({
+              'id': entryId,
               'organization_id': organizationId,
               'year': currentYear,
               'category': category.name,
@@ -120,6 +124,8 @@ class ProgramEntryService {
       AppLogger.debug('Querying program entries for organization: $organizationId');
       AppLogger.debug('Years being queried: $currentYear, $lastYear');
 
+      AppLogger.debug('Setting up realtime subscription for program_entries');
+      
       return _supabase
           .from('program_entries')
           .stream(primaryKey: ['id'])
@@ -127,6 +133,7 @@ class ProgramEntryService {
           .order('last_updated', ascending: false)
           .map((response) {
             AppLogger.debug('Received ${response.length} program entries from Supabase');
+            AppLogger.debug('Raw response: $response');
             final entries = <ProgramEntry>[];
             
             for (final data in response) {
@@ -164,6 +171,10 @@ class ProgramEntryService {
             entries.sort((a, b) => b.date.compareTo(a.date));
             AppLogger.debug('Processed ${entries.length} total entries');
             return entries;
+          })
+          .handleError((error) {
+            AppLogger.error('Error in program entries stream: $error');
+            return <ProgramEntry>[];
           });
     } catch (e) {
       AppLogger.error('Error in getProgramEntries: $e');

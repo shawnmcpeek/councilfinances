@@ -78,16 +78,15 @@ class IndividualSurveyService {
     DateTime endDate,
     bool isAssembly,
   ) async {
-    final response = await _supabase
+    // Get hours entries for the organization
+    final hoursResponse = await _supabase
         .from('hours_entries')
-        .select()
-        .eq('user_id', userId)
-                  .eq('organization_id', organizationId)
-          .eq('is_assembly', isAssembly)
-                  .gte('start_time', startDate.toIso8601String())
-          .lt('start_time', endDate.toIso8601String());
+        .select('*')
+        .eq('organization_id', organizationId)
+        .gte('start_time', startDate.toIso8601String())
+        .lte('start_time', endDate.toIso8601String());
 
-    return response
+    return hoursResponse
         .map((data) => HoursEntry.fromMap(data))
         .toList();
   }

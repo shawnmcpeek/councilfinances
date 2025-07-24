@@ -36,13 +36,19 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   @override
   void initState() {
     super.initState();
-    _organizationId = widget.organizationId;
     _userService.getUserProfile().then((profile) {
       if (profile != null) {
         setState(() {
           _userProfile = profile;
+          // Set organization ID based on current toggle state and user profile
+          final isAssembly = context.read<OrganizationProvider>().isAssembly;
+          if (isAssembly && profile.assemblyNumber != null) {
+            _organizationId = 'A${profile.assemblyNumber.toString().padLeft(6, '0')}';
+          } else if (!isAssembly) {
+            _organizationId = 'C${profile.councilNumber.toString().padLeft(6, '0')}';
+          }
         });
-    _loadPrograms();
+        _loadPrograms();
       }
     });
   }
@@ -55,7 +61,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
         _organizationId = widget.organizationId;
       });
       // Only reload if we haven't loaded these programs before
-      if (_systemPrograms == null && _userProfile != null) {
+      if (_systemPrograms == null) {
         _loadPrograms();
       }
     }
@@ -105,11 +111,11 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
       _systemPrograms ??= await _programService.loadSystemPrograms();
       
       // Always load the current organization's program states and custom programs
-      await _programService.loadProgramStates(_systemPrograms!, orgId, isAssembly);
-
-      // Use the current organization ID and assembly state for custom programs
-      AppLogger.debug('getCustomPrograms called with orgId: $orgId, isAssembly: $isAssembly');
-      final customPrograms = await _programService.getCustomPrograms(orgId, isAssembly);
+      await _programService.loadProgramStates(_systemPrograms!, orgId);
+      
+      // Load custom programs
+      AppLogger.debug('getCustomPrograms called with orgId: $orgId');
+      final customPrograms = await _programService.getCustomPrograms(orgId);
 
       if (!mounted) return;
       setState(() {
@@ -169,7 +175,9 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
               AppLogger.debug('Saving program states to Supabase: $allProgramStates');
       // Save all states at once
-      await _programService.updateProgramStates(_organizationId!, allProgramStates);
+      await _programService.updateProgramStates(_organizationId!, allProgramStates, programsData: _systemPrograms);
+      AppLogger.debug('Program states saved, reloading programs...');
+      await _loadPrograms();
 
       setState(() {
         _hasUnsavedChanges = false;
@@ -240,7 +248,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
     if (result != null && _organizationId != null) {
       try {
-        await _programService.addCustomProgram(_organizationId!, result, isAssembly);
+        await _programService.addCustomProgram(_organizationId!, result);
         if (!mounted) return;
         _loadPrograms();
       } catch (e) {
@@ -449,8 +457,6 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
   }
 
   Widget _buildProgramTile(Program program) {
-    final isAssembly = context.watch<OrganizationProvider>().isAssembly;
-    
     // Council and Assembly category programs are non-toggleable
     final bool isCouncilCategory = program.category.toLowerCase() == 'council';
     final bool isAssemblyCategory = program.category.toLowerCase() == 'assembly';
@@ -483,18 +489,17 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
               icon: const Icon(Icons.edit),
               onPressed: () async {
                 if (!mounted) return;
-                final isAssembly = context.read<OrganizationProvider>().isAssembly;
                 final result = await showDialog<Program>(
                   context: context,
                   builder: (context) => _ProgramDialog(
-                    isAssembly: isAssembly,
+                    isAssembly: false, // Default to false since we're not using it
                     program: program,
                   ),
                 );
 
                 if (result != null && _organizationId != null) {
                   try {
-                    await _programService.updateCustomProgram(_organizationId!, result, isAssembly);
+                    await _programService.updateCustomProgram(_organizationId!, result);
                     if (!mounted) return;
                     _loadPrograms();
                   } catch (e) {
@@ -511,7 +516,6 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
               icon: const Icon(Icons.delete),
               onPressed: () async {
                 if (!mounted) return;
-                final isAssembly = context.read<OrganizationProvider>().isAssembly;
                 final confirm = await showDialog<bool>(
                   context: context,
                   builder: (context) => AlertDialog(
@@ -532,7 +536,7 @@ class _ProgramsScreenState extends State<ProgramsScreen> {
 
                 if (confirm == true && _organizationId != null) {
                   try {
-                    await _programService.deleteCustomProgram(_organizationId!, program.id, isAssembly);
+                    await _programService.deleteCustomProgram(_organizationId!, program.id);
                     if (!mounted) return;
                     _loadPrograms();
                   } catch (e) {
@@ -568,6 +572,7 @@ class _ProgramDialog extends StatefulWidget {
 class _ProgramDialogState extends State<_ProgramDialog> {
   late final TextEditingController _nameController;
   late String _selectedCategory;
+  late FinancialType _selectedFinancialType;
 
   @override
   void initState() {
@@ -575,6 +580,7 @@ class _ProgramDialogState extends State<_ProgramDialog> {
     _nameController = TextEditingController(text: widget.program?.name ?? '');
     _selectedCategory = widget.program?.category ?? 
         (widget.isAssembly ? ProgramCategory.patriotic.name : ProgramCategory.faith.name);
+    _selectedFinancialType = widget.program?.financialType ?? FinancialType.both;
   }
 
   @override
@@ -623,6 +629,22 @@ class _ProgramDialogState extends State<_ProgramDialog> {
               labelText: 'Category',
             ),
           ),
+          const SizedBox(height: 16),
+          DropdownButtonFormField<FinancialType>(
+            value: _selectedFinancialType,
+            items: FinancialType.values.map((type) => DropdownMenuItem(
+              value: type,
+              child: Text(type.displayName),
+            )).toList(),
+            onChanged: (value) {
+              if (value != null) {
+                setState(() => _selectedFinancialType = value);
+              }
+            },
+            decoration: const InputDecoration(
+              labelText: 'Financial Type',
+            ),
+          ),
         ],
       ),
       actions: [
@@ -641,6 +663,7 @@ class _ProgramDialogState extends State<_ProgramDialog> {
               name: _nameController.text,
               category: _selectedCategory,
               isSystemDefault: false,
+              financialType: _selectedFinancialType,
             );
 
             Navigator.pop(context, program);

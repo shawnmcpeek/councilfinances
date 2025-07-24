@@ -227,40 +227,19 @@ class SubscriptionService {
   }
 
   // Check if user needs subscription for their access level
-  Future<bool> needsSubscription(UserProfile userProfile, bool isAssembly) async {
+  Future<bool> needsSubscription(UserProfile userProfile) async {
     try {
-      // If RevenueCat is disabled, no subscription is needed
-      if (!_enableRevenueCat || kIsWeb) {
-        return false; // No subscription required when RevenueCat is disabled
+      // Check if user has assembly number (indicating assembly access)
+      if (userProfile.assemblyNumber != null) {
+        // User has assembly access, check if they need subscription
+        return !await hasActiveSubscription(AccessLevel.full); // Assuming full access is needed for assembly
       }
       
-      // Determine user's highest access level
-      AccessLevel highestLevel = AccessLevel.basic;
-      
-      if (isAssembly) {
-        for (final role in userProfile.assemblyRoles) {
-          if (role.accessLevel.index > highestLevel.index) {
-            highestLevel = role.accessLevel;
-          }
-        }
-      } else {
-        for (final role in userProfile.councilRoles) {
-          if (role.accessLevel.index > highestLevel.index) {
-            highestLevel = role.accessLevel;
-          }
-        }
-      }
-
-      // Basic access is always free
-      if (highestLevel == AccessLevel.basic) {
-        return false;
-      }
-
-      // Check if user has active subscription for their level
-      return !await hasActiveSubscription(highestLevel);
+      // User only has council access, no subscription needed
+      return false;
     } catch (e) {
-      AppLogger.error('Error checking if user needs subscription', e);
-      return true; // Default to requiring subscription on error
+      AppLogger.error('Error checking subscription needs', e);
+      return false;
     }
   }
 

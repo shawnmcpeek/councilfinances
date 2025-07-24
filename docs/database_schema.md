@@ -28,7 +28,6 @@
 - `is_system_default` (boolean)
 - `financial_type` (text) - 'expenseOnly', 'incomeOnly', 'both'
 - `is_enabled` (boolean)
-- `is_assembly` (boolean)
 - `organization_id` (text) - Foreign key to organizations.id
 
 ### budget_entries
@@ -63,7 +62,6 @@
 - `id` (text) - Primary key
 - `user_id` (text) - Foreign key to users.id
 - `organization_id` (text) - Foreign key to organizations.id
-- `is_assembly` (boolean)
 - `program_id` (text) - Foreign key to programs.id
 - `program_name` (text)
 - `category` (text)

@@ -54,9 +54,9 @@ class AccessControlService {
   }
 
   // Check if user needs subscription for their current access level
-  Future<bool> needsSubscription(UserProfile userProfile, bool isAssembly) async {
+  Future<bool> needsSubscription(UserProfile userProfile) async {
     try {
-      return await _subscriptionService.needsSubscription(userProfile, isAssembly);
+      return await _subscriptionService.needsSubscription(userProfile);
     } catch (e) {
       AppLogger.error('Error checking subscription requirement', e);
       return true; // Default to requiring subscription on error
@@ -64,29 +64,27 @@ class AccessControlService {
   }
 
   // Get user's current access level for the organization
-  AccessLevel getCurrentAccessLevel(UserProfile userProfile, bool isAssembly) {
-    try {
-      AccessLevel highestLevel = AccessLevel.basic;
-      
-      if (isAssembly) {
-        for (final role in userProfile.assemblyRoles) {
-          if (role.accessLevel.index > highestLevel.index) {
-            highestLevel = role.accessLevel;
-          }
-        }
-      } else {
-        for (final role in userProfile.councilRoles) {
-          if (role.accessLevel.index > highestLevel.index) {
-            highestLevel = role.accessLevel;
-          }
+  AccessLevel getCurrentAccessLevel(UserProfile userProfile) {
+    // Determine the highest access level from user's roles
+    AccessLevel highestLevel = AccessLevel.basic;
+    
+    // Check council roles
+    for (final role in userProfile.councilRoles) {
+      if (role.accessLevel.index > highestLevel.index) {
+        highestLevel = role.accessLevel;
+      }
+    }
+    
+    // Check assembly roles (if user has assembly access)
+    if (userProfile.assemblyNumber != null) {
+      for (final role in userProfile.assemblyRoles) {
+        if (role.accessLevel.index > highestLevel.index) {
+          highestLevel = role.accessLevel;
         }
       }
-      
-      return highestLevel;
-    } catch (e) {
-      AppLogger.error('Error getting current access level', e);
-      return AccessLevel.basic; // Default to basic access on error
     }
+    
+    return highestLevel;
   }
 
   // Check if Finance screen should be visible
@@ -130,39 +128,30 @@ class AccessControlService {
   }
 
   // Get list of visible navigation items
-  Future<List<String>> getVisibleNavigationItems(UserProfile userProfile, bool isAssembly) async {
-    final items = <String>[];
+  Future<List<String>> getVisibleNavigationItems(UserProfile userProfile) async {
+    final List<String> visibleItems = ['home', 'finance', 'hours', 'programs'];
     
-    // Home is always visible
-    items.add('home');
-    
-    // Check other screens
-    if (await shouldShowPrograms(userProfile, isAssembly)) {
-      items.add('programs');
+    // Add reports if user has appropriate access
+    final accessLevel = getCurrentAccessLevel(userProfile);
+    if (accessLevel.index >= AccessLevel.full.index) {
+      visibleItems.add('reports');
     }
     
-    if (await shouldShowHours(userProfile, isAssembly)) {
-      items.add('hours');
+    // Add subscription if user has assembly access but needs subscription
+    if (userProfile.assemblyNumber != null) {
+      final needsSub = await needsSubscription(userProfile);
+      if (needsSub) {
+        visibleItems.add('subscription');
+      }
     }
     
-    if (await shouldShowFinance(userProfile, isAssembly)) {
-      items.add('finance');
-    }
-    
-    if (await shouldShowReports(userProfile, isAssembly)) {
-      items.add('reports');
-    }
-    
-    // Profile is always visible
-    items.add('profile');
-    
-    return items;
+    return visibleItems;
   }
 
   // Check if user should be redirected to subscription screen
-  Future<bool> shouldRedirectToSubscription(UserProfile userProfile, bool isAssembly) async {
+  Future<bool> shouldRedirectToSubscription(UserProfile userProfile) async {
     try {
-      final currentLevel = getCurrentAccessLevel(userProfile, isAssembly);
+      final currentLevel = getCurrentAccessLevel(userProfile); // Assuming isAssembly is false for this context
       
       // Basic access is always free
       if (currentLevel == AccessLevel.basic) {
@@ -170,7 +159,7 @@ class AccessControlService {
       }
       
       // Check if user needs subscription for their current level
-      return await needsSubscription(userProfile, isAssembly);
+      return await needsSubscription(userProfile);
     } catch (e) {
       AppLogger.error('Error checking subscription redirect', e);
       return false; // Default to not redirecting on error

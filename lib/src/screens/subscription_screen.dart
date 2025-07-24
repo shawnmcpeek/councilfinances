@@ -42,8 +42,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
         throw Exception('User profile not found');
       }
 
-      final isAssembly = context.read<OrganizationProvider>().isAssembly;
-      final needsSubscription = await _subscriptionService.needsSubscription(userProfile, isAssembly);
+      final needsSubscription = await _subscriptionService.needsSubscription(userProfile);
       final subscriptionStatus = await _subscriptionService.getSubscriptionStatus();
 
       if (!mounted) return;

@@ -9,32 +9,21 @@ class FinanceService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final AuthService _authService = AuthService();
 
-  String _getFormattedOrgId(String organizationId, bool isAssembly) {
-    // If the ID already starts with C or A, return it as is
-    if (organizationId.startsWith('C') || organizationId.startsWith('A')) {
-      return organizationId;
-    }
-    
-    // Otherwise, add the prefix
-    final orgPrefix = isAssembly ? 'A' : 'C';
-    return '$orgPrefix${organizationId.padLeft(6, '0')}';
-  }
-
-  Future<List<FinanceEntry>> getFinanceEntries(String organizationId, bool isAssembly) async {
+  Future<List<FinanceEntry>> getFinanceEntries(String organizationId) async {
     try {
-      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
-      AppLogger.debug('Getting finance entries for organization: $formattedOrgId');
+      AppLogger.debug('Getting finance entries for organization: $organizationId');
       
       final currentYear = DateTime.now().year;
-      final years = [currentYear, currentYear - 1]; // Current and previous year only
-      AppLogger.debug('Querying years: ${years.join(", ")}');
+      final startOfPreviousYear = DateTime(currentYear - 1, 1, 1);
+      
+      AppLogger.debug('Querying from $startOfPreviousYear to now');
 
-      // Get all finance entries for the organization
+      // Get all finance entries for the organization from previous year to now
       final response = await _supabase
           .from('finance_entries')
           .select()
-          .eq('organizationId', formattedOrgId)
-          .inFilter('year', years.map((y) => y.toString()).toList())
+          .eq('organization_id', organizationId)
+          .gte('date', startOfPreviousYear.toIso8601String())
           .order('date', ascending: false);
 
       final entries = response.map((data) => FinanceEntry.fromMap(data)).toList();
@@ -64,20 +53,19 @@ class FinanceService {
       'date': date.toIso8601String(),
       'amount': amount,
       'description': description,
-      'programId': programId,
-      'programName': programName,
-      'paymentMethod': paymentMethod.name,
-      if (checkNumber != null) 'checkNumber': checkNumber,
-      'createdAt': DateTime.now().toIso8601String(),
-      'updatedAt': DateTime.now().toIso8601String(),
-      'createdBy': userId,
-      'updatedBy': userId,
+      'program_id': programId,
+      'program_name': programName,
+      'payment_method': paymentMethod.name,
+      if (checkNumber != null) 'check_number': checkNumber,
+      'created_at': DateTime.now().toIso8601String(),
+      'updated_at': DateTime.now().toIso8601String(),
+      'created_by': userId,
+      'updated_by': userId,
     };
   }
 
   Future<void> addIncomeEntry({
     required String organizationId,
-    required bool isAssembly,
     required DateTime date,
     required double amount,
     required String description,
@@ -87,7 +75,6 @@ class FinanceService {
   }) async {
     await _addEntry(
       organizationId: organizationId,
-      isAssembly: isAssembly,
       date: date,
       amount: amount,
       description: description,
@@ -100,7 +87,6 @@ class FinanceService {
 
   Future<void> addExpenseEntry({
     required String organizationId,
-    required bool isAssembly,
     required DateTime date,
     required double amount,
     required String description,
@@ -111,7 +97,6 @@ class FinanceService {
   }) async {
     await _addEntry(
       organizationId: organizationId,
-      isAssembly: isAssembly,
       date: date,
       amount: amount,
       description: description,
@@ -125,7 +110,6 @@ class FinanceService {
 
   Future<void> _addEntry({
     required String organizationId,
-    required bool isAssembly,
     required DateTime date,
     required double amount,
     required String description,
@@ -139,9 +123,8 @@ class FinanceService {
       final user = _authService.currentUser;
       if (user == null) throw Exception('User must be logged in to add entries');
 
-      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
       final data = _createEntryData(
-        docId: '', // Supabase will generate the ID
+        docId: '${user.id}_${DateTime.now().millisecondsSinceEpoch}', // Generate unique id
         date: date,
         amount: amount,
         description: description,
@@ -153,9 +136,8 @@ class FinanceService {
       );
 
       // Add organization and type info
-      data['organizationId'] = formattedOrgId;
-      data['isExpense'] = type == 'expenses';
-      data['year'] = date.year.toString();
+      data['organization_id'] = organizationId;
+      data['is_expense'] = type == 'expenses';
 
       AppLogger.debug('Adding $type entry: $data');
       await _supabase
@@ -169,20 +151,23 @@ class FinanceService {
 
   Future<List<FinanceEntry>> getFinanceEntriesForProgram(
     String organizationId,
-    bool isAssembly,
     String programId,
     String year,
   ) async {
     try {
-      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
-      AppLogger.debug('Getting finance entries for organization: $formattedOrgId, program: $programId, year: $year');
+      final yearInt = int.parse(year);
+      final startOfYear = DateTime(yearInt, 1, 1);
+      final endOfYear = DateTime(yearInt, 12, 31, 23, 59, 59);
+      
+      AppLogger.debug('Getting finance entries for organization: $organizationId, program: $programId, year: $year');
       
       final response = await _supabase
           .from('finance_entries')
           .select()
-          .eq('organizationId', formattedOrgId)
-          .eq('programId', programId)
-          .eq('year', year)
+          .eq('organization_id', organizationId)
+          .eq('program_id', programId)
+          .gte('date', startOfYear.toIso8601String())
+          .lte('date', endOfYear.toIso8601String())
           .order('date', ascending: false);
 
       final entries = response.map((data) => FinanceEntry.fromMap(data)).toList();
@@ -199,17 +184,15 @@ class FinanceService {
   Future<void> deleteFinanceEntry({
     required String organizationId,
     required String entryId,
-    required bool isAssembly,
     required bool isExpense,
     required int year,
   }) async {
     try {
-      final formattedOrgId = _getFormattedOrgId(organizationId, isAssembly);
       await _supabase
           .from('finance_entries')
           .delete()
           .eq('id', entryId);
-      AppLogger.debug('Deleted finance entry: $entryId for $formattedOrgId, year $year');
+      AppLogger.debug('Deleted finance entry: $entryId for $organizationId, year $year');
     } catch (e, stackTrace) {
       AppLogger.error('Error deleting finance entry', e, stackTrace);
       rethrow;

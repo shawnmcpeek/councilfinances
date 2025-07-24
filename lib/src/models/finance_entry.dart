@@ -25,12 +25,19 @@ class FinanceEntry {
     return FinanceEntry(
       id: data['id'] as String,
       date: DateTime.parse(data['date'] as String),
-      program: Program.fromMap(data['program'] as Map<String, dynamic>),
+      program: Program.fromMap({
+        'id': data['program_id'] as String,
+        'name': data['program_name'] as String,
+        'category': '',
+        'isSystemDefault': false,
+        'financialType': 'both',
+        'isEnabled': true,
+      }),
       amount: (data['amount'] as num).toDouble(),
-      paymentMethod: data['paymentMethod'] as String,
-      checkNumber: data['checkNumber'] as String?,
+      paymentMethod: data['payment_method'] as String,
+      checkNumber: data['check_number'] as String?,
       description: data['description'] as String?,
-      isExpense: data['isExpense'] as bool,
+      isExpense: data['is_expense'] as bool,
     );
   }
 

@@ -7,7 +7,6 @@ import 'package:dropdown_search/dropdown_search.dart';
 
 class ProgramDropdown extends StatefulWidget {
   final String organizationId;
-  final bool isAssembly;
   final FinancialType? filterType;
   final Program? selectedProgram;
   final Function(Program?) onChanged;
@@ -16,7 +15,6 @@ class ProgramDropdown extends StatefulWidget {
   const ProgramDropdown({
     super.key,
     required this.organizationId,
-    required this.isAssembly,
     this.filterType,
     this.selectedProgram,
     required this.onChanged,
@@ -40,6 +38,7 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
   }
 
   Future<void> _loadPrograms() async {
+    AppLogger.debug('ProgramDropdown: loading for orgId=${widget.organizationId}');
     if (widget.organizationId.isEmpty) return;
     
     setState(() => _isLoading = true);
@@ -48,14 +47,20 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
       _systemPrograms ??= await _programService.loadSystemPrograms();
       
       // Load program states and custom programs
-      await _programService.loadProgramStates(_systemPrograms!, widget.organizationId, widget.isAssembly);
-      final customPrograms = await _programService.getCustomPrograms(widget.organizationId, widget.isAssembly);
+      await _programService.loadProgramStates(_systemPrograms!, widget.organizationId);
+      final customPrograms = await _programService.getCustomPrograms(widget.organizationId);
 
       if (mounted) {
         setState(() {
           _customPrograms = customPrograms;
           _isLoading = false;
         });
+        final enabled = _getEnabledPrograms();
+        AppLogger.debug('ProgramDropdown: enabled programs after load: ${enabled.map((p) => p.name).toList()}');
+        AppLogger.debug('ProgramDropdown: custom programs count: ${customPrograms.length}');
+        if (customPrograms.isNotEmpty) {
+          AppLogger.debug('ProgramDropdown: custom programs: ${customPrograms.map((p) => '${p.name} (${p.id})').toList()}');
+        }
       }
     } catch (e) {
       AppLogger.error('Error loading programs', e);
@@ -70,36 +75,45 @@ class _ProgramDropdownState extends State<ProgramDropdown> {
     
     final List<Program> enabledPrograms = [];
     
+    // Determine if this is assembly or council based on organization ID prefix
+    final isAssembly = widget.organizationId.startsWith('A');
+    
     // Add system programs
-    final programs = widget.isAssembly 
+    final programs = isAssembly 
         ? _systemPrograms?.assemblyPrograms ?? {}
         : _systemPrograms?.councilPrograms ?? {};
     
+    AppLogger.debug('ProgramDropdown: system programs count: ${programs.values.expand((p) => p).length}');
+    
     for (var categoryPrograms in programs.values) {
-      enabledPrograms.addAll(
-        categoryPrograms.where((program) => 
-          program.isEnabled && 
-          (widget.filterType == null || 
-           program.financialType == widget.filterType ||
-           program.financialType == FinancialType.both)
-        )
-      );
+      final enabledSystemPrograms = categoryPrograms.where((program) => 
+        program.isEnabled && 
+        (widget.filterType == null || 
+         program.financialType == widget.filterType ||
+         program.financialType == FinancialType.both)
+      ).toList();
+      enabledPrograms.addAll(enabledSystemPrograms);
+      AppLogger.debug('ProgramDropdown: enabled system programs: ${enabledSystemPrograms.map((p) => p.name).toList()}');
     }
     
     // Add custom programs
     if (_customPrograms != null) {
-      enabledPrograms.addAll(
-        _customPrograms!.where((program) => 
-          program.isEnabled &&
-          (widget.filterType == null || 
-           program.financialType == widget.filterType ||
-           program.financialType == FinancialType.both)
-        )
-      );
+      AppLogger.debug('ProgramDropdown: checking ${_customPrograms!.length} custom programs');
+      final enabledCustomPrograms = _customPrograms!.where((program) => 
+        program.isEnabled &&
+        (widget.filterType == null || 
+         program.financialType == widget.filterType ||
+         program.financialType == FinancialType.both)
+      ).toList();
+      enabledPrograms.addAll(enabledCustomPrograms);
+      AppLogger.debug('ProgramDropdown: enabled custom programs: ${enabledCustomPrograms.map((p) => p.name).toList()}');
+      AppLogger.debug('ProgramDropdown: filterType=${widget.filterType}');
     }
     
     // Sort alphabetically by name
     enabledPrograms.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    
+    AppLogger.debug('ProgramDropdown: total enabled programs: ${enabledPrograms.map((p) => p.name).toList()}');
     
     return enabledPrograms;
   }

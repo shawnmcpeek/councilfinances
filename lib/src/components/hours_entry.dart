@@ -13,12 +13,10 @@ import 'program_dropdown.dart';
 
 class HoursEntryForm extends StatefulWidget {
   final String organizationId;
-  final bool isAssembly;
 
   const HoursEntryForm({
     super.key,
     required this.organizationId,
-    required this.isAssembly,
   });
 
   @override
@@ -84,7 +82,7 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
       _systemPrograms ??= await _programService.loadSystemPrograms();
       
       // Load program states
-      await _programService.loadProgramStates(_systemPrograms!, widget.organizationId, widget.isAssembly);
+      await _programService.loadProgramStates(_systemPrograms!, widget.organizationId);
 
       if (mounted) {
         setState(() => _isLoading = false);
@@ -181,7 +179,6 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         id: '',  // Will be set by Supabase
         userId: '',  // Will be set by service
         organizationId: widget.organizationId,
-        isAssembly: widget.isAssembly,
         programId: _selectedProgram!.id,
         programName: _selectedProgram!.name,
         category: _selectedCategory!,
@@ -193,7 +190,7 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         createdAt: DateTime.now(),
       );
 
-      await _hoursService.addHoursEntry(entry, widget.isAssembly);
+      await _hoursService.addHoursEntry(entry);
       
       if (mounted) {
         // Reset form
@@ -248,7 +245,7 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
                   decoration: AppTheme.formFieldDecorationWithLabel('Category'),
                   value: _selectedCategory,
                   items: HoursCategory.values
-                      .where((category) => !category.isAssemblyOnly || widget.isAssembly)
+                      .where((category) => !category.isAssemblyOnly || false) // Always show assembly categories
                       .map((category) => DropdownMenuItem(
                             value: category,
                             child: Text(category.displayName),
@@ -262,7 +259,6 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
                 // Program Dropdown
                 ProgramDropdown(
                   organizationId: widget.organizationId,
-                  isAssembly: widget.isAssembly,
                   selectedProgram: _selectedProgram,
                   onChanged: (program) => setState(() => _selectedProgram = program),
                 ),

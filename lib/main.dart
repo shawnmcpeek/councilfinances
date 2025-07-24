@@ -19,6 +19,7 @@ import 'package:knights_management/src/theme/app_theme.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:provider/provider.dart';
 import 'src/providers/organization_provider.dart';
+import 'src/providers/user_provider.dart';
 import 'src/reports/form1728_report_service.dart';
 import 'src/reports/volunteer_hours_report_service.dart';
 import 'src/reports/pdf_template_manager.dart';
@@ -56,6 +57,7 @@ void main() async {
         providers: [
           Provider<AuthService>(create: (_) => AuthService()),
           ChangeNotifierProvider(create: (_) => OrganizationProvider()),
+          ChangeNotifierProvider(create: (_) => UserProvider()),
           Provider<SubscriptionService>(create: (_) => SubscriptionService()),
           Provider<AccessControlService>(create: (_) => AccessControlService()),
           Provider<Form1728ReportService>(create: (_) => Form1728ReportService()),
@@ -104,7 +106,7 @@ class AuthWrapper extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         
-        final authState = snapshot.data as AuthState?;
+        final authState = snapshot.data;
         final hasUser = authState?.session != null;
         return hasUser ? const MainScreen() : const LoginScreen();
       },
@@ -122,24 +124,37 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   int _selectedIndex = 0;
   final AccessControlService _accessControl = AccessControlService();
-  final UserService _userService = UserService();
   List<String> _visibleItems = ['home', 'profile'];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAccessPermissions();
+    // Load profile after initial build to avoid setState during build error
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadAccessPermissions();
+    });
   }
 
   Future<void> _loadAccessPermissions() async {
     try {
-      final userProfile = await _userService.getUserProfile();
+      final userProvider = context.read<UserProvider>();
+      await userProvider.loadUserProfile();
+      
       if (!mounted) return;
       
+      final userProfile = userProvider.userProfile;
       if (userProfile != null) {
-        final isAssembly = context.read<OrganizationProvider>().isAssembly;
-        final visibleItems = await _accessControl.getVisibleNavigationItems(userProfile, isAssembly);
+        final needsSubscription = await _accessControl.shouldRedirectToSubscription(userProfile);
+        
+        if (needsSubscription) {
+          if (mounted) {
+            Navigator.pushReplacementNamed(context, '/subscription');
+          }
+          return;
+        }
+        
+        final visibleItems = await _accessControl.getVisibleNavigationItems(userProfile);
         
         if (mounted) {
           setState(() {
@@ -164,8 +179,8 @@ class _MainScreenState extends State<MainScreen> {
     if (!mounted) return;
     
     try {
-      final userProfile = await _userService.getUserProfile();
-      if (!mounted) return;
+      final userProvider = context.read<UserProvider>();
+      final userProfile = userProvider.userProfile;
       
       if (userProfile == null) {
         if (!mounted) return;
@@ -200,13 +215,12 @@ class _MainScreenState extends State<MainScreen> {
 
   void _onDestinationSelected(int index) async {
     try {
-      final userProfile = await _userService.getUserProfile();
+      final userProvider = context.read<UserProvider>();
+      final userProfile = userProvider.userProfile;
       if (!mounted || userProfile == null) return;
       
-      final isAssembly = context.read<OrganizationProvider>().isAssembly;
-      
       // Check if user needs subscription for this navigation
-      final needsSubscription = await _accessControl.shouldRedirectToSubscription(userProfile, isAssembly);
+      final needsSubscription = await _accessControl.shouldRedirectToSubscription(userProfile);
       
       if (needsSubscription) {
         if (!mounted) return;

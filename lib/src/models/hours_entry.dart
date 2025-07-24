@@ -16,7 +16,6 @@ class HoursEntry {
   final String id;
   final String userId;
   final String organizationId;
-  final bool isAssembly;
   final String programId;
   final String programName;
   final HoursCategory category;
@@ -32,7 +31,6 @@ class HoursEntry {
     required this.id,
     required this.userId,
     required this.organizationId,
-    required this.isAssembly,
     required this.programId,
     required this.programName,
     required this.category,
@@ -50,7 +48,6 @@ class HoursEntry {
       id: data['id'] as String,
       userId: data['user_id'] as String,
       organizationId: data['organization_id'] as String,
-      isAssembly: data['is_assembly'] as bool? ?? false,
       programId: data['program_id'] as String,
       programName: data['program_name'] as String,
       category: HoursCategory.values.firstWhere(
@@ -71,7 +68,6 @@ class HoursEntry {
     final map = {
       'userId': userId,
       'organizationId': organizationId,
-      'isAssembly': isAssembly,
       'programId': programId,
       'programName': programName,
       'category': category.name,
@@ -98,7 +94,6 @@ class HoursEntry {
     String? id,
     String? userId,
     String? organizationId,
-    bool? isAssembly,
     String? programId,
     String? programName,
     HoursCategory? category,
@@ -114,7 +109,6 @@ class HoursEntry {
       id: id ?? this.id,
       userId: userId ?? this.userId,
       organizationId: organizationId ?? this.organizationId,
-      isAssembly: isAssembly ?? this.isAssembly,
       programId: programId ?? this.programId,
       programName: programName ?? this.programName,
       category: category ?? this.category,

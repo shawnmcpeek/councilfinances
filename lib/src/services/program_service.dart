@@ -33,79 +33,65 @@ class ProgramService {
   }
 
   // Load program states for a specific organization
-  Future<void> loadProgramStates(ProgramsData programsData, String organizationId, bool isAssembly) async {
+  Future<void> loadProgramStates(ProgramsData programsData, String organizationId) async {
     try {
-      if (organizationId.isEmpty) {
-        AppLogger.error('Cannot load program states: organizationId is empty');
-        return;
-      }
-
       AppLogger.debug('Loading program states for organization: $organizationId');
       
-      // Ensure organization ID is properly formatted
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        organizationId = isAssembly 
-            ? 'A${organizationId.padLeft(6, '0')}'
-            : 'C${organizationId.padLeft(6, '0')}';
-      }
-
+      // Get all programs for this organization
       final response = await _supabase
           .from('programs')
-          .select()
+          .select('*')
           .eq('organization_id', organizationId);
 
-      // Reset all programs to enabled by default
+      // Create a map of program states
+      final Map<String, bool> programStates = {};
+      for (var data in response) {
+        programStates[data['id']] = data['is_enabled'] ?? true;
+      }
+
+      // Determine if this is assembly or council based on organization ID prefix
+      final isAssembly = organizationId.startsWith('A');
       final programs = isAssembly ? programsData.assemblyPrograms : programsData.councilPrograms;
+      
+      // Update program states
       for (var categoryPrograms in programs.values) {
         for (var program in categoryPrograms) {
-          program.isEnabled = true;
-          program.financialType = FinancialType.both; // Set default financial type
+          program.isEnabled = programStates[program.id] ?? true;
         }
       }
-
-      // Apply stored states from programs table
-      for (var data in response) {
-        final programId = data['id'] as String;
-        final isEnabled = data['is_enabled'] as bool? ?? true;
-        final financialTypeStr = data['financial_type'] as String? ?? 'both';
-
-        for (var categoryPrograms in programs.values) {
-          for (var program in categoryPrograms) {
-            if (program.id == programId) {
-              program.isEnabled = isEnabled;
-              program.financialType = FinancialType.values.firstWhere(
-                (type) => type.name == financialTypeStr,
-                orElse: () => FinancialType.both
-              );
-              break;
-            }
-          }
-        }
-      }
-    } catch (e, stackTrace) {
-      AppLogger.error('Error loading program states', e, stackTrace);
-      // Don't rethrow, just log the error and continue with default states
-      AppLogger.info('Continuing with default program states');
+    } catch (e) {
+      AppLogger.error('Error loading program states', e);
+      rethrow;
     }
   }
 
   // Get custom programs for a specific organization
-  Future<List<Program>> getCustomPrograms(String organizationId, bool isAssembly) async {
+  Future<List<Program>> getCustomPrograms(String organizationId) async {
     try {
-      AppLogger.debug('getCustomPrograms: orgId=$organizationId, isAssembly=$isAssembly');
+      AppLogger.debug('getCustomPrograms: orgId=$organizationId');
       
+      // Ensure organization ID is properly formatted
+      String formattedOrgId = organizationId;
+      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
+        // This shouldn't happen in normal flow, but handle it gracefully
+        AppLogger.debug('getCustomPrograms: invalid orgId format, using as-is: $organizationId');
+      }
+      
+      // Get custom programs from the programs table where is_system_default = false
       final response = await _supabase
           .from('programs')
-          .select()
-          .eq('organization_id', organizationId)
-          .eq('is_assembly', isAssembly)
+          .select('*')
+          .eq('organization_id', formattedOrgId)
           .eq('is_system_default', false);
 
-      AppLogger.debug('getCustomPrograms: raw response length=${response.length}');
-      AppLogger.debug('getCustomPrograms: raw response=$response');
+      AppLogger.debug('getCustomPrograms: programs response length=${response.length}');
+      AppLogger.debug('getCustomPrograms: programs response=$response');
 
-      return response.map((data) {
-        return Program.fromMap({
+      // Convert to Program objects
+      final List<Program> customPrograms = [];
+      
+      for (var data in response) {
+        final program = Program.fromMap({
           'id': data['id'],
           'name': data['name'],
           'category': data['category'],
@@ -113,7 +99,13 @@ class ProgramService {
           'financialType': data['financial_type'] ?? FinancialType.both.name,
           'isEnabled': data['is_enabled'] ?? true,
         });
-      }).toList();
+        customPrograms.add(program);
+        AppLogger.debug('getCustomPrograms: added custom program: ${data['name']}');
+      }
+
+      AppLogger.debug('getCustomPrograms: parsed custom programs: ${customPrograms.map((p) => '${p.name} (${p.id})').toList()}');
+      
+      return customPrograms;
     } catch (e) {
       AppLogger.error('Error getting custom programs', e);
       rethrow;
@@ -121,7 +113,7 @@ class ProgramService {
   }
 
   // Add a custom program
-  Future<void> addCustomProgram(String organizationId, Program program, bool isAssembly) async {
+  Future<void> addCustomProgram(String organizationId, Program program) async {
     try {
       // Generate a unique ID for the program
       final programId = '${organizationId}_${DateTime.now().millisecondsSinceEpoch}';
@@ -129,11 +121,10 @@ class ProgramService {
       final programData = {
         'id': programId,
         'name': program.name,
-        'category': program.category,
+        'category': program.category.toUpperCase(), // Ensure category is uppercase
         'is_system_default': false,
         'financial_type': program.financialType.name,
         'is_enabled': true,
-        'is_assembly': isAssembly,
         'organization_id': organizationId,
       };
 
@@ -148,11 +139,49 @@ class ProgramService {
   }
 
   // Update all program states at once
-  Future<void> updateProgramStates(String organizationId, Map<String, dynamic> states) async {
+  Future<void> updateProgramStates(String organizationId, Map<String, bool> states, {ProgramsData? programsData}) async {
     try {
-      // This method would need to be updated to work with individual program records
-      // For now, we'll just log that it's not implemented
-      AppLogger.debug('updateProgramStates not implemented for programs table structure');
+      AppLogger.debug('Updating program states for organization: $organizationId');
+      for (final entry in states.entries) {
+        final programId = entry.key;
+        final isEnabled = entry.value;
+        // Try to find the program in system programs if programsData is provided
+        Program? systemProgram;
+        if (programsData != null) {
+          final isAssembly = organizationId.startsWith('A');
+          final programsMap = isAssembly ? programsData.assemblyPrograms : programsData.councilPrograms;
+          for (var categoryPrograms in programsMap.values) {
+            for (var program in categoryPrograms) {
+              if (program.id == programId) {
+                systemProgram = program;
+                break;
+              }
+            }
+            if (systemProgram != null) break;
+          }
+        }
+        final upsertData = {
+          'id': programId,
+          'organization_id': organizationId,
+          'is_enabled': isEnabled,
+        };
+        if (systemProgram != null) {
+          upsertData['name'] = systemProgram.name;
+          upsertData['category'] = systemProgram.category;
+          upsertData['is_system_default'] = true;
+          upsertData['financial_type'] = systemProgram.financialType.name;
+        }
+        await _supabase
+            .from('programs')
+            .upsert(upsertData);
+        AppLogger.debug('Upserted program $programId with is_enabled=$isEnabled');
+      }
+      // Fetch and log all programs for the org after upsert
+      final allPrograms = await _supabase
+          .from('programs')
+          .select()
+          .eq('organization_id', organizationId);
+      AppLogger.debug('All programs for org $organizationId after upsert: $allPrograms');
     } catch (e) {
       AppLogger.error('Error updating program states', e);
       rethrow;
@@ -160,7 +189,7 @@ class ProgramService {
   }
 
   // Update a single program (handles both system and custom programs)
-  Future<void> updateCustomProgram(String organizationId, Program program, bool isAssembly) async {
+  Future<void> updateCustomProgram(String organizationId, Program program) async {
     try {
       final programData = {
         'name': program.name,
@@ -181,21 +210,16 @@ class ProgramService {
   }
 
   // Delete a custom program
-  Future<void> deleteCustomProgram(String organizationId, String programId, bool isAssembly) async {
+  Future<void> deleteCustomProgram(String organizationId, String programId) async {
     try {
-      // Ensure organization ID is properly formatted
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        organizationId = isAssembly 
-            ? 'A${organizationId.padLeft(6, '0')}'
-            : 'C${organizationId.padLeft(6, '0')}';
-      }
-
       await _supabase
           .from('programs')
           .delete()
-          .eq('id', programId);
-    } catch (e, stackTrace) {
-      AppLogger.error('Error deleting program', e, stackTrace);
+          .eq('id', programId)
+          .eq('organization_id', organizationId);
+      AppLogger.debug('Deleted custom program: $programId');
+    } catch (e) {
+      AppLogger.error('Error deleting custom program', e);
       rethrow;
     }
   }

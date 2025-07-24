@@ -133,7 +133,17 @@ class UserService {
           .eq('id', user.id)
           .single();
 
-      return UserProfile.fromMap(response);
+      return UserProfile.fromMap({
+        ...response,
+        'uid': response['id'],
+        'firstName': response['first_name'] ?? '',
+        'lastName': response['last_name'] ?? '',
+        'membershipNumber': response['membership_number'] ?? 0,
+        'councilNumber': response['council_number'] ?? 0,
+        'assemblyNumber': response['assembly_number'],
+        'councilRoles': response['council_roles'] ?? [],
+        'assemblyRoles': response['assembly_roles'] ?? [],
+      });
     } catch (e, stackTrace) {
       AppLogger.error('Error getting current user profile', e, stackTrace);
       return null;
