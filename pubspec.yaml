@@ -63,14 +63,14 @@ flutter_icons:
   ios: true
   web:
     generate: true
-    image_path: "assets/images/knights3.png"
+    image_path: "assets/images/knights1.png"
   windows:
     generate: true
-    image_path: "assets/images/knights3.png"
+    image_path: "assets/images/knights1.png"
   macos:
     generate: true
-    image_path: "assets/images/knights3.png"
-  image_path: "assets/images/knights3.png"
+    image_path: "assets/images/knights1.png"
+  image_path: "assets/images/knights1.png"
 
 # St Michael Pray for us
 # St Joseph, Pray for us

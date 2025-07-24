@@ -10,12 +10,11 @@ import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
 
 import '../models/member_roles.dart';
-
-
-
+import '../components/budget_entry_table.dart';
 
 
 import '../screens/semi_annual_audit_entry_screen.dart';
+import '../screens/budget_entry_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -172,6 +171,55 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       if (organizationId.isNotEmpty)
                         ProgramBudget(
                           organizationId: organizationId,
+                        ),
+                      if (organizationId.isNotEmpty)
+                        Card(
+                          child: Padding(
+                            padding: AppTheme.cardPadding,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Annual Budget',
+                                  style: Theme.of(context).textTheme.titleLarge,
+                                ),
+                                const SizedBox(height: AppTheme.smallSpacing),
+                                Text(
+                                  'Generate or edit the annual budget for the upcoming year.',
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                                const SizedBox(height: AppTheme.spacing),
+                                FilledButton.icon(
+                                  onPressed: _isLoading ? null : () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => BudgetEntryScreen(
+                                          organizationId: organizationId,
+                                          userProfile: _userProfile!,
+                                          year: (DateTime.now().year + 1).toString(),
+                                          isFullAccess: _hasFinancialAccess(),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  style: AppTheme.filledButtonStyle,
+                                  icon: _isLoading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                        ),
+                                      )
+                                    : const Icon(Icons.edit),
+                                  label: Text(_isLoading ? 'Loading...' : 'Generate/Edit Budget'),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       const SizedBox(height: 24),
                       const Divider(),
