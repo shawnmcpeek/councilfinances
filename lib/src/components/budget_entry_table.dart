@@ -8,6 +8,12 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../services/report_file_saver.dart';
+import 'package:pdf/pdf.dart';
+import 'organization_toggle.dart';
+import 'package:provider/provider.dart';
+import '../providers/organization_provider.dart';
+import '../providers/user_provider.dart';
 
 class BudgetEntryTable extends StatefulWidget {
   final String organizationId;
@@ -82,7 +88,16 @@ class _BudgetEntryTableState extends State<BudgetEntryTable> {
       _prevYearExpenses[program.id] = prevEntry?.expenses ?? 0.0;
       _prevYearIncome[program.id] = prevEntry?.income ?? 0.0;
     }
-    _isLocked = _budgetService.isBudgetLocked(widget.year) || (entries.isNotEmpty && entries.first.status == 'finalized');
+    // Debug output
+    final now = DateTime.now();
+    final budgetYear = int.tryParse(widget.year) ?? 0;
+    final lockDate = DateTime(budgetYear, 1, 1);
+    final isDateLocked = now.isAfter(lockDate) || now.isAtSameMomentAs(lockDate);
+    final isStatusLocked = entries.isNotEmpty && entries.first.status == 'finalized';
+    // Print debug info
+    // ignore: avoid_print
+    print('DEBUG: Budget year: ${widget.year}, Now: $now, Lock date: $lockDate, isDateLocked: $isDateLocked, isStatusLocked: $isStatusLocked, status: ${entries.isNotEmpty ? entries.first.status : 'none'}');
+    _isLocked = isDateLocked;
     setState(() => _isLoading = false);
   }
 
@@ -127,8 +142,23 @@ class _BudgetEntryTableState extends State<BudgetEntryTable> {
         title: const Text('Submit Budget'),
         content: const Text('Submitting these budget numbers will finalize them on January 1. After that, they cannot be changed. Are you sure you want to submit?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Submit'),
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -146,173 +176,258 @@ class _BudgetEntryTableState extends State<BudgetEntryTable> {
   }
 
   Future<void> _exportPDF() async {
-    final pdf = pw.Document();
-    pdf.addPage(
-      pw.Page(
-        build: (pw.Context context) {
-          return pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Text('Budget for ${widget.year}', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
-              pw.SizedBox(height: 16),
-              pw.Table(
-                border: pw.TableBorder.all(),
-                children: [
-                  pw.TableRow(
-                    children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Program Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Planned Expense', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Planned Income', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
-                    ],
-                  ),
-                  ..._programs.map((program) => pw.TableRow(
-                    children: [
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(program.name)),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(_expenseControllers[program.id]?.text ?? '0.00')),
-                      pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(_incomeControllers[program.id]?.text ?? '0.00')),
-                    ],
-                  )),
-                ],
-              ),
-            ],
-          );
-        },
-      ),
-    );
-    final output = await getTemporaryDirectory();
-    final file = File('${output.path}/budget_${widget.organizationId}_${widget.year}.pdf');
-    await file.writeAsBytes(await pdf.save());
-    await Share.shareXFiles([XFile(file.path)], text: 'Budget for ${widget.year}');
+    try {
+      final pdf = pw.Document();
+      // Calculate totals
+      double totalExpenses = 0;
+      double totalIncome = 0;
+      for (final program in _programs) {
+        final expense = double.tryParse(_expenseControllers[program.id]?.text ?? '0.00') ?? 0.0;
+        final income = double.tryParse(_incomeControllers[program.id]?.text ?? '0.00') ?? 0.0;
+        totalExpenses += expense;
+        totalIncome += income;
+      }
+      final profitLoss = totalIncome - totalExpenses;
+      // Determine organization name and ID for header and file name
+      final organizationProvider = Provider.of<OrganizationProvider>(context, listen: false);
+      final userProvider = Provider.of<UserProvider>(context, listen: false);
+      final isAssembly = organizationProvider.isAssembly;
+      final userProfile = userProvider.userProfile ?? widget.userProfile;
+      final organizationId = userProfile.getOrganizationId(isAssembly);
+      String orgName = isAssembly
+          ? 'Assembly ${userProfile.assemblyNumber}'
+          : 'Council ${userProfile.councilNumber}';
+      pdf.addPage(
+        pw.Page(
+          build: (pw.Context context) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text('Budget for $orgName Fiscal Year ${widget.year}', style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                pw.SizedBox(height: 16),
+                pw.Table(
+                  border: pw.TableBorder.all(),
+                  children: [
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Program Name', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Planned Expense', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Planned Income', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      ],
+                    ),
+                    ..._programs.map((program) => pw.TableRow(
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(program.name)),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(_expenseControllers[program.id]?.text ?? '0.00')),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(_incomeControllers[program.id]?.text ?? '0.00')),
+                      ],
+                    )),
+                    // Totals row
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('TOTAL', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(totalExpenses.toStringAsFixed(2), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(totalIncome.toStringAsFixed(2), style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                      ],
+                    ),
+                    // Profit/Loss row
+                    pw.TableRow(
+                      children: [
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('PROFIT / LOSS', style: pw.TextStyle(fontWeight: pw.FontWeight.bold))),
+                        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('')),
+                        pw.Padding(
+                          padding: const pw.EdgeInsets.all(4),
+                          child: pw.Text(
+                            (profitLoss >= 0 ? '+' : '') + profitLoss.toStringAsFixed(2),
+                            style: pw.TextStyle(
+                              fontWeight: pw.FontWeight.bold,
+                              color: profitLoss >= 0
+                                  ? PdfColor.fromInt(0xFF388E3C)
+                                  : PdfColor.fromInt(0xFFD32F2F),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            );
+          },
+        ),
+      );
+      final pdfBytes = await pdf.save();
+      // Use platform-specific file saver
+      await saveOrShareFile(
+        pdfBytes,
+        'budget_${organizationId}_${widget.year}.pdf',
+        'Budget for $orgName Fiscal Year ${widget.year}',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('PDF exported successfully.')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to export PDF: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-    // Group programs by category
-    final Map<String, List<Program>> programsByCategory = {};
-    for (final program in _programs) {
-      final category = program.category;
-      programsByCategory.putIfAbsent(category, () => []).add(program);
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(vertical: 16),
-      child: Padding(
-        padding: AppTheme.cardPadding,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Consumer2<OrganizationProvider, UserProvider>(
+      builder: (context, organizationProvider, userProvider, child) {
+        final userProfile = userProvider.userProfile ?? widget.userProfile;
+        final isAssembly = organizationProvider.isAssembly;
+        final organizationId = userProfile.getOrganizationId(isAssembly);
+        if (_isLoading) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        // Group programs by category
+        final Map<String, List<Program>> programsByCategory = {};
+        for (final program in _programs) {
+          final category = program.category;
+          programsByCategory.putIfAbsent(category, () => []).add(program);
+        }
+        return Card(
+          margin: const EdgeInsets.symmetric(vertical: 16),
+          child: Padding(
+            padding: AppTheme.cardPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('Annual Budget for ${widget.year}', style: Theme.of(context).textTheme.titleLarge),
-                IconButton(
-                  icon: const Icon(Icons.picture_as_pdf),
-                  tooltip: 'Export as PDF',
-                  onPressed: _exportPDF,
+                OrganizationToggle(
+                  userProfile: userProfile,
+                  isAssembly: isAssembly,
+                  onChanged: (newIsAssembly) async {
+                    context.read<OrganizationProvider>().setOrganization(newIsAssembly);
+                    setState(() => _isLoading = true);
+                    await _loadData();
+                  },
                 ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: _autofillFromPreviousYear,
-                    icon: const Icon(Icons.copy),
-                    label: const Text('Autofill from Previous Year'),
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text('Annual Budget for ${widget.year}', style: Theme.of(context).textTheme.titleLarge),
+                    // Replace PDF icon with Print Budget button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _autofillFromPreviousYear,
+                            icon: const Icon(Icons.copy),
+                            label: const Text('Autofill from Previous Year'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: (!_hasChanges || _isLocked || _isSaving) ? null : _saveAll,
+                            icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Icon(Icons.save),
+                            label: Text(_isSaving ? 'Saving...' : 'Save All'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: (_isLocked || _isSubmitting) ? null : _submitBudget,
+                            icon: _isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Icon(Icons.check_circle),
+                            label: Text(_isSubmitting ? 'Submitting...' : 'Submit Budget'),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: FilledButton.icon(
+                            onPressed: _exportPDF,
+                            icon: const Icon(Icons.print),
+                            label: const Text('Print Budget'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: (!_hasChanges || _isLocked || _isSaving) ? null : _saveAll,
-                    icon: _isSaving ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Icon(Icons.save),
-                    label: Text(_isSaving ? 'Saving...' : 'Save All'),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: (_isLocked || _isSubmitting) ? null : _submitBudget,
-                    icon: _isSubmitting ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.white))) : const Icon(Icons.check_circle),
-                    label: Text(_isSubmitting ? 'Submitting...' : 'Submit Budget'),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppTheme.spacing),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: DataTable(
-                columns: const [
-                  DataColumn(label: Text('Program Name')),
-                  DataColumn(label: Text('Planned Expense')),
-                  DataColumn(label: Text('Planned Income')),
-                ],
-                rows: [
-                  for (final category in programsByCategory.keys)
-                    ...[
-                      DataRow(
-                        color: MaterialStateProperty.all(Colors.grey[200]),
-                        cells: [
-                          DataCell(Text(
-                            category[0].toUpperCase() + category.substring(1).toLowerCase(),
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          )),
-                          const DataCell(SizedBox()),
-                          const DataCell(SizedBox()),
-                        ],
-                      ),
-                      ...programsByCategory[category]!.map((program) {
-                        final isEditable = widget.isFullAccess && !_isLocked;
-                        return DataRow(
-                          cells: [
-                            DataCell(Text(program.name)),
-                            DataCell(
-                              TextField(
-                                controller: _expenseControllers[program.id],
-                                enabled: isEditable,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                decoration: InputDecoration(
-                                  hintText: _prevYearExpenses[program.id]?.toStringAsFixed(2) ?? '0.00',
-                                  border: InputBorder.none,
-                                ),
-                                onChanged: (_) => setState(() => _hasChanges = true),
-                              ),
-                            ),
-                            DataCell(
-                              TextField(
-                                controller: _incomeControllers[program.id],
-                                enabled: isEditable,
-                                keyboardType: TextInputType.numberWithOptions(decimal: true),
-                                decoration: InputDecoration(
-                                  hintText: _prevYearIncome[program.id]?.toStringAsFixed(2) ?? '0.00',
-                                  border: InputBorder.none,
-                                ),
-                                onChanged: (_) => setState(() => _hasChanges = true),
-                              ),
-                            ),
-                          ],
-                        );
-                      }),
+                const SizedBox(height: AppTheme.spacing),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: DataTable(
+                    columns: const [
+                      DataColumn(label: Text('Program Name')),
+                      DataColumn(label: Text('Planned Expense')),
+                      DataColumn(label: Text('Planned Income')),
                     ],
-                ],
-              ),
-            ),
-            if (_isLocked)
-              Padding(
-                padding: const EdgeInsets.only(top: 16),
-                child: Text(
-                  'This budget is finalized and cannot be changed after January 1 of the budget year.',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red),
+                    rows: [
+                      for (final category in programsByCategory.keys)
+                        ...[
+                          DataRow(
+                            color: WidgetStateProperty.all(Colors.grey[200]),
+                            cells: [
+                              DataCell(Text(
+                                category[0].toUpperCase() + category.substring(1).toLowerCase(),
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                              )),
+                              const DataCell(SizedBox()),
+                              const DataCell(SizedBox()),
+                            ],
+                          ),
+                          ...programsByCategory[category]!.map((program) {
+                            final isEditable = widget.isFullAccess && !_isLocked;
+                            return DataRow(
+                              cells: [
+                                DataCell(Text(program.name)),
+                                DataCell(
+                                  TextField(
+                                    controller: _expenseControllers[program.id],
+                                    enabled: isEditable,
+                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      hintText: _prevYearExpenses[program.id]?.toStringAsFixed(2) ?? '0.00',
+                                      border: InputBorder.none,
+                                    ),
+                                    onChanged: (_) => setState(() => _hasChanges = true),
+                                  ),
+                                ),
+                                DataCell(
+                                  TextField(
+                                    controller: _incomeControllers[program.id],
+                                    enabled: isEditable,
+                                    keyboardType: TextInputType.numberWithOptions(decimal: true),
+                                    decoration: InputDecoration(
+                                      hintText: _prevYearIncome[program.id]?.toStringAsFixed(2) ?? '0.00',
+                                      border: InputBorder.none,
+                                    ),
+                                    onChanged: (_) => setState(() => _hasChanges = true),
+                                  ),
+                                ),
+                              ],
+                            );
+                          }),
+                        ],
+                    ],
+                  ),
                 ),
-              ),
-          ],
-        ),
-      ),
+                if (_isLocked)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: Text(
+                      _isLocked
+                        ? (DateTime.now().isAfter(DateTime(int.parse(widget.year), 1, 1))
+                            ? 'This budget is locked because it is now ${DateTime.now()} and the lock date for ${widget.year} is ${DateTime(int.parse(widget.year), 1, 1)}.'
+                            : 'This budget is locked because its status is finalized.')
+                        : '',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.red),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 } 
