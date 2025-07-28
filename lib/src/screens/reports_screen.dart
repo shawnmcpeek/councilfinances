@@ -8,12 +8,13 @@ import '../components/program_budget.dart';
 import '../reports/form1728_report.dart';
 import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
-
 import '../models/member_roles.dart';
-
-
 import '../screens/semi_annual_audit_entry_screen.dart';
 import '../screens/budget_entry_screen.dart';
+import '../screens/reimbursement_approval_screen.dart';
+import '../screens/reimbursement_gk_approval_screen.dart';
+import '../screens/reimbursement_payment_screen.dart';
+
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -70,6 +71,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
            (_userProfile?.assemblyRoles.isNotEmpty ?? false);
   }
 
+  bool _hasReimbursementApprovalAccess() {
+    return (_userProfile?.councilRoles.any((role) => 
+      role.name == 'financialSecretary' || 
+      role.name == 'grandKnight' || 
+      role.name == 'treasurer') ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => 
+      role.name == 'faithfulComptroller' || 
+      role.name == 'faithfulNavigator' || 
+      role.name == 'faithfulPurser') ?? false);
+  }
+
+  bool _hasFinancialOfficerAccess() {
+    return (_userProfile?.councilRoles.any((role) => role.name == 'financialSecretary') ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => role.name == 'faithfulComptroller') ?? false);
+  }
+
+  bool _hasGrandKnightAccess() {
+    return (_userProfile?.councilRoles.any((role) => role.name == 'grandKnight') ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => role.name == 'faithfulNavigator') ?? false);
+  }
+
+  bool _hasTreasurerAccess() {
+    return (_userProfile?.councilRoles.any((role) => role.name == 'treasurer') ?? false) ||
+           (_userProfile?.assemblyRoles.any((role) => role.name == 'faithfulPurser') ?? false);
+  }
 
 
   @override
@@ -231,6 +257,75 @@ class _ReportsScreenState extends State<ReportsScreen> {
                         isGenerating: isGeneratingVolunteerHours,
                         onGeneratingChange: (value) => setState(() => isGeneratingVolunteerHours = value),
                         onYearChange: (value) => setState(() => selectedYear = value),
+                      ),
+                    ],
+                    if (_hasReimbursementApprovalAccess()) ...[
+                      const Divider(),
+                      Card(
+                        child: Padding(
+                          padding: AppTheme.cardPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Reimbursement Approvals',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: AppTheme.smallSpacing),
+                              Text(
+                                'Manage reimbursement requests and approvals',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.spacing),
+                              if (_hasFinancialOfficerAccess()) ...[
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const ReimbursementApprovalScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: AppTheme.filledButtonStyle,
+                                  icon: const Icon(Icons.approval),
+                                  label: const Text('Financial Officer Approvals'),
+                                ),
+                                const SizedBox(height: AppTheme.smallSpacing),
+                              ],
+                              if (_hasGrandKnightAccess()) ...[
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const ReimbursementGkApprovalScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: AppTheme.filledButtonStyle,
+                                  icon: const Icon(Icons.verified_user),
+                                  label: const Text('Grand Knight Voucher Approvals'),
+                                ),
+                                const SizedBox(height: AppTheme.smallSpacing),
+                              ],
+                              if (_hasTreasurerAccess()) ...[
+                                FilledButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => const ReimbursementPaymentScreen(),
+                                      ),
+                                    );
+                                  },
+                                  style: AppTheme.filledButtonStyle,
+                                  icon: const Icon(Icons.payment),
+                                  label: const Text('Treasurer Payment Processing'),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ],

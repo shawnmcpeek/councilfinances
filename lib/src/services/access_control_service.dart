@@ -107,6 +107,11 @@ class AccessControlService {
     return await hasAccess(userProfile, isAssembly, AccessLevel.basic);
   }
 
+  // Check if Reimbursement screen should be visible
+  Future<bool> shouldShowReimbursement(UserProfile userProfile, bool isAssembly) async {
+    return await hasAccess(userProfile, isAssembly, AccessLevel.basic);
+  }
+
   // Check if user can edit programs (Define Programs)
   Future<bool> canEditPrograms(UserProfile userProfile, bool isAssembly) async {
     return await hasAccess(userProfile, isAssembly, AccessLevel.full);
@@ -129,7 +134,7 @@ class AccessControlService {
 
   // Get list of visible navigation items
   Future<List<String>> getVisibleNavigationItems(UserProfile userProfile) async {
-    final List<String> visibleItems = ['home', 'finance', 'hours', 'programs'];
+    final List<String> visibleItems = ['home', 'finance', 'hours', 'programs', 'reimbursement'];
     
     // Add reports if user has appropriate access
     final accessLevel = getCurrentAccessLevel(userProfile);

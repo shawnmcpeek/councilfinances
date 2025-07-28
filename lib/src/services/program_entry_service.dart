@@ -110,12 +110,8 @@ class ProgramEntryService {
 
   Stream<List<ProgramEntry>> getProgramEntries(String organizationId) {
     try {
-      AppLogger.debug('getProgramEntries called for organization: $organizationId');
-      
-      if (!organizationId.startsWith('C') && !organizationId.startsWith('A')) {
-        final error = 'Invalid organization ID format: $organizationId';
-        AppLogger.error(error);
-        throw Exception(error);
+      if (organizationId.isEmpty) {
+        return Stream.value(<ProgramEntry>[]);
       }
 
       final currentYear = DateTime.now().year.toString();
@@ -124,61 +120,65 @@ class ProgramEntryService {
       AppLogger.debug('Querying program entries for organization: $organizationId');
       AppLogger.debug('Years being queried: $currentYear, $lastYear');
 
-      AppLogger.debug('Setting up realtime subscription for program_entries');
+      AppLogger.debug('Using one-time fetch instead of realtime subscription to reduce database load');
       
-      return _supabase
-          .from('program_entries')
-          .stream(primaryKey: ['id'])
-          .eq('organization_id', organizationId)
-          .order('last_updated', ascending: false)
-          .map((response) {
-            AppLogger.debug('Received ${response.length} program entries from Supabase');
-            AppLogger.debug('Raw response: $response');
-            final entries = <ProgramEntry>[];
-            
-            for (final data in response) {
-              try {
-                final programEntries = (data['entries'] as List<dynamic>?) ?? [];
-                final category = Form1728PCategory.values.firstWhere(
-                  (c) => c.name == data['category'],
-                  orElse: () => Form1728PCategory.faith,
-                );
-                
-                for (final entry in programEntries) {
-                  try {
-                    entries.add(ProgramEntry(
-                      id: entry['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
-                      date: DateTime.parse(entry['date'] as String),
-                      category: category,
-                      program: Form1728PProgram(
-                        id: data['program_id']?.toString() ?? '',
-                        name: data['program_name']?.toString() ?? 'Unknown Program',
-                      ),
-                      hours: entry['hours'] as int? ?? 0,
-                      disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
-                      description: entry['description']?.toString() ?? '',
-                    ));
-                  } catch (e) {
-                    AppLogger.error('Error processing entry: $e');
-                    AppLogger.debug('Entry data causing error: $entry');
-                  }
-                }
-              } catch (e) {
-                AppLogger.error('Error processing program entry data: $e');
-              }
-            }
-            
-            entries.sort((a, b) => b.date.compareTo(a.date));
-            AppLogger.debug('Processed ${entries.length} total entries');
-            return entries;
-          })
-          .handleError((error) {
-            AppLogger.error('Error in program entries stream: $error');
-            return <ProgramEntry>[];
-          });
+      // Use one-time fetch instead of realtime to reduce database load
+      return Stream.fromFuture(_fetchProgramEntries(organizationId));
     } catch (e) {
       AppLogger.error('Error in getProgramEntries: $e');
       rethrow;
+    }
+  }
+
+  Future<List<ProgramEntry>> _fetchProgramEntries(String organizationId) async {
+    try {
+      final response = await _supabase
+          .from('program_entries')
+          .select()
+          .eq('organization_id', organizationId)
+          .order('last_updated', ascending: false);
+
+      AppLogger.debug('Received ${response.length} program entries from Supabase');
+      final entries = <ProgramEntry>[];
+      
+      for (final data in response) {
+        try {
+          final programEntries = (data['entries'] as List<dynamic>?) ?? [];
+          final category = Form1728PCategory.values.firstWhere(
+            (c) => c.name == data['category'],
+            orElse: () => Form1728PCategory.faith,
+          );
+          
+          for (final entry in programEntries) {
+            try {
+              entries.add(ProgramEntry(
+                id: entry['id']?.toString() ?? DateTime.now().millisecondsSinceEpoch.toString(),
+                date: DateTime.parse(entry['date'] as String),
+                category: category,
+                program: Form1728PProgram(
+                  id: data['program_id']?.toString() ?? '',
+                  name: data['program_name']?.toString() ?? 'Unknown Program',
+                ),
+                hours: entry['hours'] as int? ?? 0,
+                disbursement: (entry['disbursement'] as num?)?.toDouble() ?? 0.0,
+                description: entry['description']?.toString() ?? '',
+              ));
+            } catch (e) {
+              AppLogger.error('Error processing entry: $e');
+              AppLogger.debug('Entry data causing error: $entry');
+            }
+          }
+        } catch (e) {
+          AppLogger.error('Error processing program entry data: $e');
+        }
+      }
+      
+      entries.sort((a, b) => b.date.compareTo(a.date));
+      AppLogger.debug('Processed ${entries.length} total entries');
+      return entries;
+    } catch (e) {
+      AppLogger.error('Error fetching program entries: $e');
+      return <ProgramEntry>[];
     }
   }
 
@@ -231,4 +231,6 @@ class ProgramEntryService {
       rethrow;
     }
   }
+
+
 }

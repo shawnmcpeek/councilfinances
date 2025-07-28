@@ -10,6 +10,7 @@ import 'package:knights_management/src/screens/programs_screen.dart';
 import 'package:knights_management/src/screens/reports_screen.dart';
 import 'package:knights_management/src/screens/periodic_report_data.dart';
 import 'package:knights_management/src/screens/subscription_screen.dart';
+import 'package:knights_management/src/screens/reimbursement_request_screen.dart';
 import 'package:knights_management/src/services/auth_service.dart';
 import 'package:knights_management/src/services/user_service.dart';
 import 'package:knights_management/src/services/subscription_service.dart';
@@ -258,6 +259,7 @@ class _MainScreenState extends State<MainScreen> {
       if (_visibleItems.contains('hours')) const HoursEntryScreen(),
       if (_visibleItems.contains('finance')) const FinanceScreen(),
       if (_visibleItems.contains('reports')) const ReportsScreen(),
+      if (_visibleItems.contains('reimbursement')) const ReimbursementRequestScreen(),
       ProfileScreen(
         onProgramsPressed: _handleProgramsPressed,
       ),
@@ -287,6 +289,11 @@ class _MainScreenState extends State<MainScreen> {
         const NavigationDestination(
           icon: Icon(Icons.summarize),
           label: 'Reports',
+        ),
+      if (_visibleItems.contains('reimbursement'))
+        const NavigationDestination(
+          icon: Icon(Icons.receipt),
+          label: 'Receipts',
         ),
       const NavigationDestination(
         icon: Icon(Icons.person),

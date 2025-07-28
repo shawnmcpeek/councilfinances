@@ -6,6 +6,7 @@ import 'finance/expense_entry.dart';
 import 'finance/transaction_history.dart';
 import '../providers/organization_provider.dart';
 import '../providers/user_provider.dart';
+import '../components/organization_toggle.dart';
 
 class FinanceScreen extends StatefulWidget {
   const FinanceScreen({super.key});
@@ -44,29 +45,38 @@ class _FinanceScreenState extends State<FinanceScreen> {
             return const Center(child: CircularProgressIndicator());
           }
 
-          return SingleChildScrollView(
-            padding: AppTheme.screenPadding,
+          return AppTheme.screenContent(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Income Entry
-                IncomeEntry(
-                  organizationId: organizationId,
-                  onEntryAdded: _refreshTransactions,
-                ),
-                const SizedBox(height: AppTheme.spacing),
-                
-                // Expense Entry
-                ExpenseEntry(
-                  organizationId: organizationId,
-                  onEntryAdded: _refreshTransactions,
-                ),
-                const SizedBox(height: AppTheme.spacing),
-                
-                // Transaction History
-                TransactionHistory(
-                  organizationId: organizationId,
-                  ref: _refreshTransactionHistory,
+                const OrganizationToggle(),
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Income Entry
+                        IncomeEntry(
+                          organizationId: organizationId,
+                          onEntryAdded: _refreshTransactions,
+                        ),
+                        const SizedBox(height: AppTheme.spacing),
+                        
+                        // Expense Entry
+                        ExpenseEntry(
+                          organizationId: organizationId,
+                          onEntryAdded: _refreshTransactions,
+                        ),
+                        const SizedBox(height: AppTheme.spacing),
+                        
+                        // Transaction History
+                        TransactionHistory(
+                          organizationId: organizationId,
+                          ref: _refreshTransactionHistory,
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ],
             ),

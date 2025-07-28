@@ -5,7 +5,7 @@ class FinanceEntry {
   final DateTime date;
   final Program program;
   final double amount;
-  final String paymentMethod;
+  final String? paymentMethod;
   final String? checkNumber;
   final String? description;
   final bool isExpense;
@@ -15,7 +15,7 @@ class FinanceEntry {
     required this.date,
     required this.program,
     required this.amount,
-    required this.paymentMethod,
+    this.paymentMethod,
     this.checkNumber,
     this.description,
     required this.isExpense,
@@ -34,7 +34,7 @@ class FinanceEntry {
         'isEnabled': true,
       }),
       amount: (data['amount'] as num).toDouble(),
-      paymentMethod: data['payment_method'] as String,
+      paymentMethod: data['payment_method'] as String?,
       checkNumber: data['check_number'] as String?,
       description: data['description'] as String?,
       isExpense: data['is_expense'] as bool,

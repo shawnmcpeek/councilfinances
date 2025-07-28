@@ -5,9 +5,6 @@ import '../services/program_service.dart';
 import '../models/user_profile.dart';
 import '../theme/app_theme.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:share_plus/share_plus.dart';
-import 'dart:io';
-import 'package:path_provider/path_provider.dart';
 import '../services/report_file_saver.dart';
 import 'package:pdf/pdf.dart';
 import 'organization_toggle.dart';
@@ -283,7 +280,6 @@ class _BudgetEntryTableState extends State<BudgetEntryTable> {
       builder: (context, organizationProvider, userProvider, child) {
         final userProfile = userProvider.userProfile ?? widget.userProfile;
         final isAssembly = organizationProvider.isAssembly;
-        final organizationId = userProfile.getOrganizationId(isAssembly);
         if (_isLoading) {
           return const Center(child: CircularProgressIndicator());
         }

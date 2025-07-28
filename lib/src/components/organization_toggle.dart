@@ -68,34 +68,61 @@ class _OrganizationToggleState extends State<OrganizationToggle> {
           child: Row(
             children: [
               Expanded(
-                child: ElevatedButton(
-                  onPressed: () {
-                    if (isAssemblyValue) {
-                      widget.onChanged?.call(false);
-                      organizationProvider.setOrganization(false);
-                    }
-                  },
-                  style: AppTheme.getButtonStyle(isSelected: !isAssemblyValue),
-                  child: const Text('Council'),
-                ),
+                child: !isAssemblyValue 
+                  ? FilledButton(
+                      onPressed: () {
+                        if (isAssemblyValue) {
+                          widget.onChanged?.call(false);
+                          organizationProvider.setOrganization(false);
+                        }
+                      },
+                      style: AppTheme.filledButtonStyle,
+                      child: const Text('Council'),
+                    )
+                  : OutlinedButton(
+                      onPressed: () {
+                        if (isAssemblyValue) {
+                          widget.onChanged?.call(false);
+                          organizationProvider.setOrganization(false);
+                        }
+                      },
+                      style: AppTheme.outlinedButtonStyle,
+                      child: const Text('Council'),
+                    ),
               ),
               SizedBox(width: AppTheme.spacing),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: hasAssemblyData ? () {
-                    if (!isAssemblyValue) {
-                      widget.onChanged?.call(true);
-                      organizationProvider.setOrganization(true);
-                    }
-                  } : null,
-                  style: hasAssemblyData 
-                    ? AppTheme.getButtonStyle(isSelected: isAssemblyValue)
-                    : AppTheme.getButtonStyle(isSelected: false).copyWith(
-                        backgroundColor: WidgetStateProperty.all(Colors.grey[300]),
-                        foregroundColor: WidgetStateProperty.all(Colors.grey[600]),
-                      ),
-                  child: const Text('Assembly'),
-                ),
+                child: isAssemblyValue 
+                  ? FilledButton(
+                      onPressed: hasAssemblyData ? () {
+                        if (!isAssemblyValue) {
+                          widget.onChanged?.call(true);
+                          organizationProvider.setOrganization(true);
+                        }
+                      } : null,
+                      style: hasAssemblyData 
+                        ? AppTheme.filledButtonStyle
+                        : AppTheme.filledButtonStyle.copyWith(
+                            backgroundColor: WidgetStateProperty.all(Colors.grey[300]),
+                            foregroundColor: WidgetStateProperty.all(Colors.grey[600]),
+                          ),
+                      child: const Text('Assembly'),
+                    )
+                  : OutlinedButton(
+                      onPressed: hasAssemblyData ? () {
+                        if (!isAssemblyValue) {
+                          widget.onChanged?.call(true);
+                          organizationProvider.setOrganization(true);
+                        }
+                      } : null,
+                      style: hasAssemblyData 
+                        ? AppTheme.outlinedButtonStyle
+                        : AppTheme.outlinedButtonStyle.copyWith(
+                            backgroundColor: WidgetStateProperty.all(Colors.grey[300]),
+                            foregroundColor: WidgetStateProperty.all(Colors.grey[600]),
+                          ),
+                      child: const Text('Assembly'),
+                    ),
               ),
             ],
           ),
