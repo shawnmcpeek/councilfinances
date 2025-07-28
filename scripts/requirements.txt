@@ -1,2 +1,1 @@
-firebase-admin==6.4.0
-Pillow==10.2.0 
+requests>=2.31.0 

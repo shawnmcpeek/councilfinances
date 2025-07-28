@@ -1,0 +1,54 @@
+id,organization_id,name,category,is_system_default,financial_type,is_enabled,is_assembly
+honor_guard,A000094,Honor Guard,PATRIOTIC,true,both,true,true
+assembly_insurance,A000094,Assembly Insurance,ASSEMBLY,true,both,true,true
+veterans_support,A000094,Veterans Support,PATRIOTIC,true,both,false,true
+patriotic_rosary,A000094,Patriotic Rosary,PATRIOTIC,true,both,true,true
+flag_retirement,A000094,Flag Retirement Ceremony,PATRIOTIC,true,both,true,true
+memorial_mass,A000094,Memorial Mass,PATRIOTIC,true,both,false,true
+color_corps,A000094,Color Corps Events,PATRIOTIC,true,both,true,true
+assembly_social,A000094,Assembly Social Events,COMMUNITY,true,both,true,true
+civic_events,A000094,Civic Events Support,COMMUNITY,true,both,true,true
+military_support,A000094,Military Support Programs,COMMUNITY,true,both,true,true
+chalice_program,A000094,Chalice Program,FAITH,true,both,true,true
+religious_ceremonies,A000094,Religious Ceremonies Support,FAITH,true,both,true,true
+pilgrimage_program,A000094,Pilgrimage Program,FAITH,true,both,true,true
+march_for_life,C015857,March for Life,LIFE,true,both,true,false
+special_olympics,C015857,Special Olympics,LIFE,true,both,true,false
+C015857_rsvp_fundraiser,C015857,RSVP Fundraiser,COMMUNITY,false,both,true,false
+C015857_fish_fry,C015857,Fish Fry,COMMUNITY,false,both,true,false
+ultrasound,C015857,Ultrasound Program,LIFE,true,both,false,false
+pregnancy_center,C015857,Pregnancy Center Support,LIFE,true,both,true,false
+membership_dues,C015857,Membership Dues,COUNCIL,true,both,true,true
+council_insurance,C015857,Council Insurance,COUNCIL,true,both,true,false
+interest,C015857,Interest,COUNCIL,true,both,true,true
+convention,C015857,Convention,COUNCIL,true,both,true,true
+postage,C015857,Postage,COUNCIL,true,both,true,true
+supplies,C015857,Supplies,COUNCIL,true,both,true,true
+per_capita_state,C015857,Per Capita - State,COUNCIL,true,both,true,true
+rsvp,C015857,RSVP (Refund Support Vocations Program),FAITH,true,both,true,false
+into_the_breach,C015857,Into the Breach,FAITH,true,both,false,false
+spiritual_reflection,C015857,Spiritual Reflection,FAITH,true,both,false,false
+holy_hour,C015857,Holy Hour,FAITH,true,both,true,false
+rosary_program,C015857,Rosary Program,FAITH,true,both,false,false
+food_for_families,C015857,Food for Families,FAMILY,true,both,true,false
+family_of_month,C015857,Family of the Month/Year,FAMILY,true,both,true,false
+family_prayer_night,C015857,Family Prayer Night,FAMILY,true,both,false,false
+per_capita_supreme,C015857,Per Capita - Supreme,COUNCIL,true,both,true,true
+bank_charges,C015857,Bank Charges,COUNCIL,true,both,true,true
+C015857_1753034113931,C015857,Movie Knight,COMMUNITY,false,both,true,false
+C015857_1753313543044,C015857,Peaches & Pears,COMMUNITY,false,both,true,false
+C015857_football_crazr,C015857,Football Crazr,COUNCIL,false,both,true,false
+C015857_parish_movie_knight,C015857,Parish Movie Knight,FAMILY,false,both,true,false
+C015857_parish_breakfast,C015857,Parish Breakfast,COMMUNITY,false,both,true,false
+C015857_chairperson_fund,C015857,Chairperson Fund,FAITH,false,both,true,false
+C015857_st_martin_hot_chocolate,C015857,St Martin of Tours Hot Chocolate,FAITH,false,both,true,false
+C015857_unbound,C015857,Unbound,LIFE,false,both,true,false
+C015857_membership_expenses,C015857,Membership Expenses,COUNCIL,false,both,true,false
+C015857_disaster_relief,C015857,Disaster Relief,COMMUNITY,false,both,true,false
+C015857_seminarian_donations,C015857,Seminarian Donations,FAITH,false,both,true,false
+family_week,C015857,Family Week,FAMILY,true,both,false,false
+coats_for_kids,C015857,Coats for Kids,COMMUNITY,true,both,true,false
+global_wheelchair,C015857,Global Wheelchair Mission,COMMUNITY,true,both,false,false
+habitat,C015857,Habitat for Humanity,COMMUNITY,true,both,false,false
+free_throw,C015857,Free Throw Championship,COMMUNITY,true,both,false,false
+essay_contest,C015857,Catholic Citizenship Essay Contest,COMMUNITY,true,both,false,false
