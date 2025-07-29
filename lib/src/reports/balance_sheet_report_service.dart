@@ -81,15 +81,12 @@ class BalanceSheetReportService extends BasePdfReportService {
     final pageSize = currentPage.getClientSize();
     final margin = 20.0;
     final contentWidth = pageSize.width - (2 * margin);
-    final maxPageHeight = pageSize.height - (2 * margin);
     double yPosition = margin;
 
     // Set up fonts
     final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 18, style: PdfFontStyle.bold);
     final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold);
-    final PdfFont sectionFont = PdfStandardFont(PdfFontFamily.helvetica, 12, style: PdfFontStyle.bold);
     final PdfFont bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
-    final PdfFont smallFont = PdfStandardFont(PdfFontFamily.helvetica, 8);
 
     // Draw title on first page
     currentPage.graphics.drawString(
@@ -119,7 +116,6 @@ class BalanceSheetReportService extends BasePdfReportService {
     final programNameWidth = 150.0;
     final monthWidth = 70.0;
     final totalWidth = 90.0;
-    final tableWidth = programNameWidth + (12 * monthWidth) + totalWidth;
 
     // Draw Income Section on first page
     currentPage.graphics.drawString(
@@ -130,7 +126,7 @@ class BalanceSheetReportService extends BasePdfReportService {
     );
     yPosition += 25;
 
-    final incomeGrid = _createBalanceSheetGrid(balanceSheetData.incomeRows, balanceSheetData.monthlyIncomeTotals, false);
+    final incomeGrid = _createBalanceSheetGrid(balanceSheetData.incomeRows, balanceSheetData.monthlyIncomeTotals, false, programNameWidth, monthWidth, totalWidth);
     incomeGrid.draw(
       page: currentPage,
       bounds: Rect.fromLTWH(margin, yPosition, contentWidth, pageSize.height - yPosition - margin),
@@ -171,7 +167,7 @@ class BalanceSheetReportService extends BasePdfReportService {
       format: PdfStringFormat(alignment: PdfTextAlignment.center)
     );
 
-    final expenseGrid = _createBalanceSheetGrid(balanceSheetData.expenseRows, balanceSheetData.monthlyExpenseTotals, true);
+    final expenseGrid = _createBalanceSheetGrid(balanceSheetData.expenseRows, balanceSheetData.monthlyExpenseTotals, true, programNameWidth, monthWidth, totalWidth);
     expenseGrid.draw(
       page: expensePage,
       bounds: Rect.fromLTWH(margin, margin + 95, contentWidth, pageSize.height - margin - 95 - margin),
@@ -201,19 +197,19 @@ class BalanceSheetReportService extends BasePdfReportService {
     }
   }
 
-  PdfGrid _createBalanceSheetGrid(List<BalanceSheetRow> rows, Map<int, double> monthlyTotals, bool isExpense) {
+  PdfGrid _createBalanceSheetGrid(List<BalanceSheetRow> rows, Map<int, double> monthlyTotals, bool isExpense, double programNameWidth, double monthWidth, double totalWidth) {
     // Create a PdfGrid
     PdfGrid grid = PdfGrid();
     
     // Add columns to grid (14 columns: Program Name + 12 months + Total)
     grid.columns.add(count: 14);
     
-    // Set column widths - make them narrow to fit all columns
-    grid.columns[0].width = 100; // Program Name
+    // Set column widths using the passed variables
+    grid.columns[0].width = programNameWidth; // Program Name
     for (int i = 1; i <= 12; i++) {
-      grid.columns[i].width = 45; // Month columns - very narrow
+      grid.columns[i].width = monthWidth; // Month columns
     }
-    grid.columns[13].width = 60; // Total column
+    grid.columns[13].width = totalWidth; // Total column
     
     // Add header row
     grid.headers.add(1);
