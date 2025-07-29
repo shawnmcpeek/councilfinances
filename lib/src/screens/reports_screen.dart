@@ -5,6 +5,7 @@ import '../models/user_profile.dart';
 import '../theme/app_theme.dart';
 import '../components/organization_toggle.dart';
 import '../components/program_budget.dart';
+import '../reports/balance_sheet_report_service.dart';
 import '../reports/form1728_report.dart';
 import '../reports/volunteer_hours_report.dart';
 import '../providers/organization_provider.dart';
@@ -29,6 +30,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool isGeneratingForm1728 = false;
   bool isGeneratingVolunteerHours = false;
   bool isGeneratingPeriodReport = false;
+  bool isGeneratingBalanceSheet = false;
   bool _isLoading = false;
   UserProfile? _userProfile;
 
@@ -95,6 +97,34 @@ class _ReportsScreenState extends State<ReportsScreen> {
   bool _hasTreasurerAccess() {
     return (_userProfile?.councilRoles.any((role) => role.name == 'treasurer') ?? false) ||
            (_userProfile?.assemblyRoles.any((role) => role.name == 'faithfulPurser') ?? false);
+  }
+
+  Future<void> _generateBalanceSheet() async {
+    setState(() => isGeneratingBalanceSheet = true);
+    try {
+      final reportService = BalanceSheetReportService();
+      final organizationProvider = context.read<OrganizationProvider>();
+      await reportService.generateBalanceSheetReport(
+        _userProfile!.getOrganizationId(organizationProvider.isAssembly),
+        selectedYear,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Balance sheet report generated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error generating balance sheet report: ${e.toString()}')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => isGeneratingBalanceSheet = false);
+      }
+    }
   }
 
 
@@ -176,6 +206,68 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                     )
                                   : const Icon(Icons.summarize),
                                 label: Text(isGeneratingPeriodReport ? 'Generating...' : 'Generate Audit Report'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: AppTheme.spacing),
+                      Card(
+                        child: Padding(
+                          padding: AppTheme.cardPadding,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Balance Sheet Report',
+                                style: Theme.of(context).textTheme.titleLarge,
+                              ),
+                              const SizedBox(height: AppTheme.smallSpacing),
+                              Text(
+                                'Generate financial summary by program and month',
+                                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                  color: Colors.grey[600],
+                                ),
+                              ),
+                              const SizedBox(height: AppTheme.spacing),
+                              DropdownButtonFormField<String>(
+                                decoration: AppTheme.formFieldDecoration.copyWith(
+                                  labelText: 'Report Year',
+                                ),
+                                value: selectedYear,
+                                items: [
+                                  (DateTime.now().year - 1).toString(),
+                                  DateTime.now().year.toString(),
+                                  (DateTime.now().year + 1).toString(),
+                                ].map((year) {
+                                  return DropdownMenuItem<String>(
+                                    value: year,
+                                    child: Text(year),
+                                  );
+                                }).toList(),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    setState(() {
+                                      selectedYear = value;
+                                    });
+                                  }
+                                },
+                              ),
+                              const SizedBox(height: AppTheme.spacing),
+                              FilledButton.icon(
+                                onPressed: isGeneratingBalanceSheet ? null : _generateBalanceSheet,
+                                style: AppTheme.filledButtonStyle,
+                                icon: isGeneratingBalanceSheet
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Icon(Icons.picture_as_pdf),
+                                label: Text(isGeneratingBalanceSheet ? 'Generating...' : 'Generate PDF'),
                               ),
                             ],
                           ),
