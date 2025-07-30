@@ -160,7 +160,7 @@ class ReportService {
         final response = await _supabase
             .from('programs')
             .select()
-            .eq('organizationId', organizationId)
+            .eq('organization_id', organizationId)
             .eq('year', year)
             .eq('category', category);
 

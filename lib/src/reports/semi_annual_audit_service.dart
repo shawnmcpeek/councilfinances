@@ -1,6 +1,8 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:typed_data';
+import 'package:flutter/services.dart' show rootBundle;
 import '../utils/logger.dart';
 import '../services/user_service.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
@@ -12,7 +14,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
   static const String _auditReportTemplate = 'audit2_1295_p.pdf';
-  static const String _fillAuditReportUrl = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/fillAuditReport';
+  static const String _fillAuditReportUrl = 'https://fwcqtjsqetqavdhkahzy.supabase.co/functions/v1/fill-audit-report';
 
   @override
   String get templatePath => _auditReportTemplate;
@@ -30,14 +32,23 @@ class SemiAnnualAuditService extends BasePdfReportService {
         data.addAll(manualValues);
       }
 
-      // 3. Call Firebase Function to fill the PDF
+      // 3. Load PDF template
+      final ByteData templateData = await rootBundle.load('assets/forms/audit2_1295_p.pdf');
+      final Uint8List templateBytes = templateData.buffer.asUint8List();
+      final String templateBase64 = base64Encode(templateBytes);
+
+      // 4. Call Supabase Edge Function to fill the PDF
       final response = await http.post(
         Uri.parse(_fillAuditReportUrl),
-        headers: {'Content-Type': 'application/json'},
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${_supabase.auth.currentSession?.accessToken}',
+        },
         body: json.encode({
           ...data,
-          'period': period,
+          'period': period == 'June' ? 'January-June' : 'July-December',
           'year': year,
+          'pdfTemplate': templateBase64,
         }),
       );
 
@@ -77,17 +88,23 @@ class SemiAnnualAuditService extends BasePdfReportService {
       // Initialize data map with basic info
       final Map<String, dynamic> data = {
         'council_number': userProfile.councilNumber.toString().padLeft(6, '0'),
+        'council_city': userProfile.councilCity ?? '',
         'organization_name': 'Council ${userProfile.councilNumber}',
         'year': AuditFieldMap.getYearSuffix(year),
         // Manual entry fields will be handled by the UI
       };
 
       // Get transactions for the period
+      AppLogger.info('Fetching transactions for period: $period, year: $year, dateRange: ${dateRange.start} to ${dateRange.end}');
       final transactions = await _getTransactionsForPeriod(
         organizationId,
         dateRange.start,
         dateRange.end,
       );
+      AppLogger.info('Found ${transactions.length} transactions');
+      if (transactions.isNotEmpty) {
+        AppLogger.info('Sample transactions: ${transactions.take(3).map((t) => '${t['program']}: ${t['amount']}').join(', ')}');
+      }
 
       // Calculate program totals
       final programTotals = _calculateProgramTotals(transactions);
@@ -154,42 +171,46 @@ class SemiAnnualAuditService extends BasePdfReportService {
     for (final year in years) {
       try {
         // Fetch income
+        AppLogger.info('Querying income for org: $organizationId, date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
         final incomeResponse = await _supabase
             .from('finance_entries')
             .select()
-            .eq('organizationId', organizationId)
-            .eq('year', year.toString())
-            .eq('type', 'income')
+            .eq('organization_id', organizationId)
+            .eq('is_expense', false)
             .gte('date', startDate.toIso8601String())
             .lte('date', endDate.toIso8601String());
+        AppLogger.info('Income response: ${incomeResponse.length} records');
             
-        for (final data in incomeResponse) {
-          final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
-          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-          final date = _parseDate(data['date']);
-          
-          if (date != null) {
-            allTransactions.add({
-              'program': program,
-              'amount': amount,
-              'date': date,
-              'type': 'income',
-            });
+                  for (final data in incomeResponse) {
+            final program = data['program_name'] ?? data['programName'] ?? data['program']?['name'] ?? 'Unknown';
+            final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+            final date = _parseDate(data['date']);
+            
+            AppLogger.info('Processing income record: program=$program, amount=$amount, date=$date');
+            
+            if (date != null) {
+              allTransactions.add({
+                'program': program,
+                'amount': amount,
+                'date': date,
+                'type': 'income',
+              });
+            }
           }
-        }
 
         // Fetch expenses
+        AppLogger.info('Querying expenses for org: $organizationId, date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
         final expenseResponse = await _supabase
             .from('finance_entries')
             .select()
-            .eq('organizationId', organizationId)
-            .eq('year', year.toString())
-            .eq('type', 'expense')
+            .eq('organization_id', organizationId)
+            .eq('is_expense', true)
             .gte('date', startDate.toIso8601String())
             .lte('date', endDate.toIso8601String());
+        AppLogger.info('Expense response: ${expenseResponse.length} records');
             
         for (final data in expenseResponse) {
-          final program = data['programName'] ?? data['program']?['name'] ?? 'Unknown';
+          final program = data['program_name'] ?? data['programName'] ?? data['program']?['name'] ?? 'Unknown';
           final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
           final date = _parseDate(data['date']);
           
@@ -261,7 +282,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
 
   double _calculateInterestEarned(List<Map<String, dynamic>> transactions) {
     return transactions
-        .where((t) => t['program'] == 'Interest Earned')
+        .where((t) => t['program'] == 'Interest')
         .fold(0.0, (acc, t) => acc + (t['amount'] as num).toDouble());
   }
 
@@ -333,9 +354,10 @@ class SemiAnnualAuditService extends BasePdfReportService {
     final manualMembership1 = _parseCurrency(data['manual_membership_1']);
     final manualMembership2 = _parseCurrency(data['manual_membership_2']);
     final manualMembership3 = _parseCurrency(data['manual_membership_3']);
+    final membershipCount = _parseCurrency(data['membership_count']);
     final membershipDuesTotal = _parseCurrency(data['membership_dues_total']);
 
-    final total = netCouncil + manualMembership1 + manualMembership2 + manualMembership3 + membershipDuesTotal;
+    final total = netCouncil + manualMembership1 + manualMembership2 + manualMembership3 + membershipCount + membershipDuesTotal;
     return AuditFieldMap.formatCurrency(total);
   }
 

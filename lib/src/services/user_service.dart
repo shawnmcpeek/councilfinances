@@ -64,6 +64,7 @@ class UserService {
         'assemblyNumber': response['assembly_number'],
         'councilRoles': response['council_roles'] ?? [],
         'assemblyRoles': response['assembly_roles'] ?? [],
+        'city': response['city'],
       });
     } catch (e) {
       AppLogger.error('Error fetching user profile', e);
@@ -91,6 +92,7 @@ class UserService {
         'assemblyNumber': response['assembly_number'],
         'councilRoles': response['council_roles'] ?? [],
         'assemblyRoles': response['assembly_roles'] ?? [],
+        'city': response['city'],
       });
     } catch (e, stackTrace) {
       AppLogger.error('Error fetching user profile by ID', e, stackTrace);
@@ -143,6 +145,7 @@ class UserService {
         'assemblyNumber': response['assembly_number'],
         'councilRoles': response['council_roles'] ?? [],
         'assemblyRoles': response['assembly_roles'] ?? [],
+        'city': response['city'],
       });
     } catch (e, stackTrace) {
       AppLogger.error('Error getting current user profile', e, stackTrace);

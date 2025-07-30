@@ -10,6 +10,7 @@ class UserProfile {
   final List<CouncilRole> councilRoles;
   final List<AssemblyRole> assemblyRoles;
   final String jurisdiction;
+  final String? councilCity;
 
   UserProfile({
     required this.uid,
@@ -21,6 +22,7 @@ class UserProfile {
     List<CouncilRole>? councilRoles,
     List<AssemblyRole>? assemblyRoles,
     String? jurisdiction,
+    this.councilCity,
   }) : 
     councilRoles = councilRoles ?? [],
     assemblyRoles = assemblyRoles ?? [],
@@ -42,6 +44,7 @@ class UserProfile {
       'council_roles': councilRoles.map((role) => role.name).toList(),
       'assembly_roles': assemblyRoles.map((role) => role.name).toList(),
       'jurisdiction': jurisdiction,
+      'city': councilCity,
     };
   }
 
@@ -60,6 +63,7 @@ class UserProfile {
           ?.map((role) => AssemblyRole.values.firstWhere((e) => e.name == role))
           .toList() ?? [],
       jurisdiction: (map['jurisdiction'] as String?) ?? 'TN',
+      councilCity: map['city'] as String?,
     );
   }
 

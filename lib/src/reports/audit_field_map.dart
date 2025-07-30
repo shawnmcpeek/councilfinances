@@ -6,7 +6,7 @@ class AuditFieldMap {
   static const Map<String, String> fields = {
     // Basic Info
     'Text1': 'council_number',  // From user profile
-    'Text2': 'auditor_name',    // Manual entry for now
+    'Text2': 'council_city',    // From user profile - council location
     'Text3': 'year',           // From selected year (last 2 digits)
     'Text4': 'organization_name', // From user profile
 
@@ -23,7 +23,10 @@ class AuditFieldMap {
     'Text59': 'manual_income_2', // Manual entry
     'Text60': 'net_income', // Auto-calculated: Text58 - Text59
 
-    // Interest and Per Capita
+    // Interest and Per Capita (Text61-Text63 are reserved for future use)
+    'Text61': 'reserved_1', // Reserved for future use
+    'Text62': 'reserved_2', // Reserved for future use  
+    'Text63': 'reserved_3', // Reserved for future use
     'Text64': 'interest_earned', // Auto-calculated from transactions
     'Text65': 'total_interest', // Auto-calculated: Text62 + Text63 + Text64
     'Text66': 'supreme_per_capita', // Auto-calculated from transactions
@@ -78,7 +81,7 @@ class AuditFieldMap {
 
   // Fields that require manual entry
   static const List<String> manualEntryFields = [
-    'Text2', 'Text50', 'Text59', 'Text69', 'Text70',
+    'Text50', 'Text59', 'Text69', 'Text70',
     'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
     'Text84', 'Text85', 'Text86', 'Text87',
     'Text89', 'Text90', 'Text91', 'Text92', 'Text93',
@@ -91,23 +94,23 @@ class AuditFieldMap {
   // Fields that are auto-calculated
   static const List<String> autoCalculatedFields = [
     'Text51', 'Text52', 'Text53', 'Text54', 'Text55',
-    'Text56', 'Text57', 'Text58', 'Text60', 'Text64',
-    'Text65', 'Text66', 'Text67', 'Text68', 'Text71',
-    'Text72', 'Text73', 'Text79', 'Text80', 'Text83',
-    'Text88', 'Text103'
+    'Text56', 'Text57', 'Text58', 'Text60', 'Text61',
+    'Text62', 'Text63', 'Text64', 'Text65', 'Text66', 
+    'Text67', 'Text68', 'Text71', 'Text72', 'Text73', 
+    'Text79', 'Text80', 'Text83', 'Text88', 'Text103'
   ];
 
   // Default council programs to track
   static const List<String> defaultCouncilPrograms = [
     'Membership Dues',
     'Postage',
-    'Insurance',
+    'Council Insurance',
     'Membership Expenses',
     'Advertising',
-    'Supreme Per Capita',
-    'State Per Capita',
-    'Conference Expenses',
-    'Interest Earned'
+    'Per Capita - Supreme',
+    'Per Capita - State',
+    'Convention',
+    'Interest'
   ];
 
   // Helper method to get the date range for a period
