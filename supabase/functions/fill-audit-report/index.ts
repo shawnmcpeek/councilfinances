@@ -74,6 +74,18 @@ serve(async (req) => {
       'Text58': body.total_income || '',
       'Text59': body.manual_income_2 || '',
       'Text60': body.cash_on_hand_end_period || '',
+      'Text61': body.treasurer_cash_beginning || '',
+      'Text62': body.treasurer_received_financial_secretary || '',
+      'Text63': body.treasurer_transfers_from_savings || '',
+      'Text64': body.treasurer_interest_earned || '',
+      'Text65': body.treasurer_total_receipts || '',
+      'Text66': body.treasurer_supreme_per_capita || '',
+      'Text67': body.treasurer_state_per_capita || '',
+      'Text68': body.treasurer_general_council_expenses || '',
+      'Text69': body.treasurer_transfers_to_savings || '',
+      'Text70': body.treasurer_miscellaneous || '',
+      'Text71': body.treasurer_total_disbursements || '',
+      'Text72': body.treasurer_net_balance || '',
       
       // Interest and Per Capita
       'Text61': body.reserved_1 || '',

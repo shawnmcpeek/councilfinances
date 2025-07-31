@@ -15,6 +15,7 @@ class _SemiAnnualAuditScreenState extends State<SemiAnnualAuditScreen> {
   final SemiAnnualAuditService _reportService = SemiAnnualAuditService();
   bool _isGenerating = false;
   final Map<String, String> _manualValues = {};
+  Map<String, String>? _placeholderValues;
 
   Future<void> _handleGenerateReport(String period, int year) async {
     setState(() => _isGenerating = true);
@@ -43,6 +44,22 @@ class _SemiAnnualAuditScreenState extends State<SemiAnnualAuditScreen> {
     _manualValues.addAll(values);
   }
 
+  Future<void> _loadPlaceholderValues(String period, int year) async {
+    try {
+      final data = await _reportService.getSupabaseData(period, year);
+      setState(() {
+        _placeholderValues = {
+          'interest_earned': data['interest_earned'] ?? '',
+          'supreme_per_capita': data['supreme_per_capita'] ?? '',
+          'state_per_capita': data['state_per_capita'] ?? '',
+        };
+      });
+    } catch (e) {
+      // If we can't load placeholder values, just continue without them
+      setState(() => _placeholderValues = null);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -57,10 +74,12 @@ class _SemiAnnualAuditScreenState extends State<SemiAnnualAuditScreen> {
               SemiAnnualAuditSelector(
                 isGenerating: _isGenerating,
                 onGenerate: _handleGenerateReport,
+                onPeriodChanged: _loadPlaceholderValues,
               ),
               const SizedBox(height: AppTheme.spacing),
               AuditManualEntry(
                 initialValues: _manualValues,
+                placeholderValues: _placeholderValues,
                 onValuesChanged: _handleManualValuesChanged,
               ),
               if (_isGenerating) ...[

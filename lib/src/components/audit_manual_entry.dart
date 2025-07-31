@@ -5,11 +5,13 @@ import '../reports/audit_field_map.dart';
 
 class AuditManualEntry extends StatefulWidget {
   final Map<String, String> initialValues;
+  final Map<String, String>? placeholderValues;
   final Function(Map<String, String>) onValuesChanged;
 
   const AuditManualEntry({
     super.key,
     required this.initialValues,
+    this.placeholderValues,
     required this.onValuesChanged,
   });
 
@@ -45,8 +47,15 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
           final fieldMappings = {
             'Text50': 'manual_income_1',
             'Text59': 'manual_income_2',
-            'Text69': 'manual_expense_1',
-            'Text70': 'manual_expense_2',
+            'Text61': 'treasurer_cash_beginning',
+            'Text62': 'treasurer_received_financial_secretary',
+            'Text63': 'treasurer_transfers_from_savings',
+            'Text64': 'treasurer_interest_earned',
+            'Text66': 'treasurer_supreme_per_capita',
+            'Text67': 'treasurer_state_per_capita',
+            'Text68': 'treasurer_general_council_expenses',
+            'Text69': 'treasurer_transfers_to_savings',
+            'Text70': 'treasurer_miscellaneous',
             'Text74': 'manual_membership_1',
             'Text75': 'manual_membership_2',
             'Text76': 'manual_membership_3',
@@ -130,12 +139,27 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
             ),
             const SizedBox(height: AppTheme.spacing),
             _buildSection(
+              'Schedule B — Cash Transactions (Treasurer)',
+              ['Text61', 'Text62', 'Text63', 'Text64'],
+              'Enter receipt values for the Treasurer',
+              [
+                'Cash on hand beginning of period*',
+                'Received from financial secretary*',
+                'Transfers from sav./other accts.*',
+                'Interest earned*',
+              ],
+            ),
+            const SizedBox(height: AppTheme.spacing),
+            _buildSection(
               'Schedule B — Cash Transactions (Treasurer Disbursements)',
-              ['Text69', 'Text70'],
+              ['Text66', 'Text67', 'Text68', 'Text69', 'Text70'],
               'Enter disbursement values for the Treasurer',
               [
+                'Per capita: Supreme Council*',
+                'State Council*',
                 'General council expenses*',
                 'Transfers to sav./other accts.*',
+                'Miscellaneous*',
               ],
             ),
             const SizedBox(height: AppTheme.spacing),
@@ -212,13 +236,26 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
           final displayLabel = isRequired ? label.substring(0, label.length - 1) : label;
           final isNameField = label.toLowerCase().contains('name');
           final isAmountField = label.toLowerCase().contains('amount');
+          
+          // Get placeholder for specific fields
+          String? placeholder;
+          if (widget.placeholderValues != null) {
+            if (fields[field] == 'Text64' && widget.placeholderValues!.containsKey('interest_earned')) {
+              placeholder = 'Suggested: ${widget.placeholderValues!['interest_earned']}';
+            } else if (fields[field] == 'Text66' && widget.placeholderValues!.containsKey('supreme_per_capita')) {
+              placeholder = 'Suggested: ${widget.placeholderValues!['supreme_per_capita']}';
+            } else if (fields[field] == 'Text67' && widget.placeholderValues!.containsKey('state_per_capita')) {
+              placeholder = 'Suggested: ${widget.placeholderValues!['state_per_capita']}';
+            }
+          }
+          
           return Padding(
             padding: const EdgeInsets.only(bottom: AppTheme.smallSpacing),
             child: TextFormField(
               controller: _controllers[fields[field]],
               decoration: AppTheme.formFieldDecoration.copyWith(
                 labelText: displayLabel,
-                hintText: isNameField ? 'Enter name/description' : 'Enter amount',
+                hintText: placeholder ?? (isNameField ? 'Enter name/description' : 'Enter amount'),
                 suffixText: isAmountField ? 'USD' : null,
                 helperText: isRequired ? 'Required field' : null,
               ),

@@ -69,7 +69,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
   Future<Map<String, dynamic>> _getAuditData(String period, int year, [Map<String, String>? manualValues]) async {
     try {
       // Phase 1: Get Supabase data and calculate program totals
-      final supabaseData = await _getSupabaseData(period, year);
+      final supabaseData = await getSupabaseData(period, year);
       
       // Phase 2: Add manual values
       final Map<String, dynamic> data = Map<String, dynamic>.from(supabaseData);
@@ -87,7 +87,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
     }
   }
 
-  Future<Map<String, dynamic>> _getSupabaseData(String period, int year) async {
+  Future<Map<String, dynamic>> getSupabaseData(String period, int year) async {
     try {
       // Get user profile for organization info
       final userProfile = await _userService.getUserProfile();
@@ -176,17 +176,22 @@ class SemiAnnualAuditService extends BasePdfReportService {
       data['net_membership'] = _calculateNetMembership(data);
       data['total_disbursements_verify'] = _calculateTotalDisbursementsVerify(data);
       
-      // Calculate PDF-specific fields
-      data['cash_on_hand_end_period'] = _calculateCashOnHandEndPeriod(data);
-      data['total_disbursements_sum'] = _calculateTotalDisbursementsSum(data);
-      
-      // Debug logging for Text60 calculation
-      AppLogger.info('Text60 calculation debug:');
-      AppLogger.info('  Text58 (total_income): ${data['total_income']}');
-      AppLogger.info('  Text59 (manual_income_2): ${data['manual_income_2']}');
-      AppLogger.info('  Text60 (calculated): ${data['cash_on_hand_end_period']}');
+             // Calculate PDF-specific fields
+       data['cash_on_hand_end_period'] = _calculateCashOnHandEndPeriod(data);
+       data['total_disbursements_sum'] = _calculateTotalDisbursementsSum(data);
+       
+       // Calculate Schedule B Treasurer fields
+       data['treasurer_total_receipts'] = _calculateTreasurerTotalReceipts(data);
+       data['treasurer_total_disbursements'] = _calculateTreasurerTotalDisbursements(data);
+       data['treasurer_net_balance'] = _calculateTreasurerNetBalance(data);
+       
+       // Debug logging for Text60 calculation
+       AppLogger.info('Text60 calculation debug:');
+       AppLogger.info('  Text58 (total_income): ${data['total_income']}');
+       AppLogger.info('  Text59 (manual_income_2): ${data['manual_income_2']}');
+       AppLogger.info('  Text60 (calculated): ${data['cash_on_hand_end_period']}');
 
-      return data;
+       return data;
     } catch (e, stackTrace) {
       AppLogger.error('Error running final calculations', e, stackTrace);
       rethrow;
@@ -456,13 +461,43 @@ class SemiAnnualAuditService extends BasePdfReportService {
     return AuditFieldMap.formatCurrency(calculatedTotal);
   }
 
-  double _parseCurrency(String? value) {
-    if (value == null) return 0.0;
-    // Remove currency symbols and commas
-    final cleanValue = value.replaceAll(RegExp(r'[^\d.-]'), '');
-    return double.tryParse(cleanValue) ?? 0.0;
-  }
-}
+     double _parseCurrency(String? value) {
+     if (value == null) return 0.0;
+     // Remove currency symbols and commas
+     final cleanValue = value.replaceAll(RegExp(r'[^\d.-]'), '');
+     return double.tryParse(cleanValue) ?? 0.0;
+   }
+
+   // Schedule B Treasurer calculations
+   String _calculateTreasurerTotalReceipts(Map<String, dynamic> data) {
+     final receivedFromFinancialSecretary = _parseCurrency(data['treasurer_received_financial_secretary']);
+     final transfersFromSavings = _parseCurrency(data['treasurer_transfers_from_savings']);
+     final interestEarned = _parseCurrency(data['treasurer_interest_earned']);
+
+     final total = receivedFromFinancialSecretary + transfersFromSavings + interestEarned;
+     return AuditFieldMap.formatCurrency(total);
+   }
+
+   String _calculateTreasurerTotalDisbursements(Map<String, dynamic> data) {
+     final supremePerCapita = _parseCurrency(data['treasurer_supreme_per_capita']);
+     final statePerCapita = _parseCurrency(data['treasurer_state_per_capita']);
+     final generalCouncilExpenses = _parseCurrency(data['treasurer_general_council_expenses']);
+     final transfersToSavings = _parseCurrency(data['treasurer_transfers_to_savings']);
+     final miscellaneous = _parseCurrency(data['treasurer_miscellaneous']);
+
+     final total = supremePerCapita + statePerCapita + generalCouncilExpenses + transfersToSavings + miscellaneous;
+     return AuditFieldMap.formatCurrency(total);
+   }
+
+   String _calculateTreasurerNetBalance(Map<String, dynamic> data) {
+     final cashBeginning = _parseCurrency(data['treasurer_cash_beginning']);
+     final totalReceipts = _parseCurrency(data['treasurer_total_receipts']);
+     final totalDisbursements = _parseCurrency(data['treasurer_total_disbursements']);
+
+     final netBalance = cashBeginning + totalReceipts - totalDisbursements;
+     return AuditFieldMap.formatCurrency(netBalance);
+   }
+ }
 
 class ProgramTotal {
   final String name;

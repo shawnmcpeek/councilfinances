@@ -4,11 +4,13 @@ import '../theme/app_theme.dart';
 class SemiAnnualAuditSelector extends StatefulWidget {
   final bool isGenerating;
   final Function(String, int) onGenerate;
+  final Function(String, int)? onPeriodChanged;
 
   const SemiAnnualAuditSelector({
     super.key,
     required this.isGenerating,
     required this.onGenerate,
+    this.onPeriodChanged,
   });
 
   @override
@@ -54,6 +56,7 @@ class _SemiAnnualAuditSelectorState extends State<SemiAnnualAuditSelector> {
                     onChanged: (value) {
                       if (value != null) {
                         setState(() => selectedPeriod = value);
+                        widget.onPeriodChanged?.call(selectedPeriod, selectedYear);
                       }
                     },
                   ),
@@ -74,6 +77,7 @@ class _SemiAnnualAuditSelectorState extends State<SemiAnnualAuditSelector> {
                     onChanged: (value) {
                       if (value != null) {
                         setState(() => selectedYear = value);
+                        widget.onPeriodChanged?.call(selectedPeriod, selectedYear);
                       }
                     },
                   ),

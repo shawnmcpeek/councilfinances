@@ -23,19 +23,19 @@ class AuditFieldMap {
     'Text59': 'manual_income_2', // Manual entry
     'Text60': 'cash_on_hand_end_period', // Auto-calculated: Text58 - Text59 (cash on hand at end of period)
 
-    // Interest and Per Capita (Text61-Text63 are reserved for future use)
-    'Text61': 'reserved_1', // Reserved for future use
-    'Text62': 'reserved_2', // Reserved for future use  
-    'Text63': 'reserved_3', // Reserved for future use
-    'Text64': 'interest_earned', // Auto-calculated from transactions
-    'Text65': 'total_interest', // Auto-calculated: Text62 + Text63 + Text64
-    'Text66': 'supreme_per_capita', // Auto-calculated from transactions
-    'Text67': 'state_per_capita', // Auto-calculated from transactions
-    'Text68': 'other_council_programs', // Auto-calculated from transactions
-    'Text69': 'manual_expense_1', // Manual entry
-    'Text70': 'manual_expense_2', // Manual entry (0 for now)
-    'Text71': 'total_expenses', // Auto-calculated: Text68 + Text69 + Text70
-    'Text72': 'net_council', // Auto-calculated: Text65 - Text71
+    // Schedule B - Treasurer Section
+    'Text61': 'treasurer_cash_beginning', // Manual entry: Cash on hand beginning of period
+    'Text62': 'treasurer_received_financial_secretary', // Manual entry: Received from financial secretary
+    'Text63': 'treasurer_transfers_from_savings', // Manual entry: Transfers from sav./other accts.
+    'Text64': 'treasurer_interest_earned', // Manual entry with placeholder from Supabase
+    'Text65': 'treasurer_total_receipts', // Auto-calculated: Text62 + Text63 + Text64
+    'Text66': 'treasurer_supreme_per_capita', // Manual entry with placeholder from Supabase
+    'Text67': 'treasurer_state_per_capita', // Manual entry with placeholder from Supabase
+    'Text68': 'treasurer_general_council_expenses', // Manual entry
+    'Text69': 'treasurer_transfers_to_savings', // Manual entry: Transfers to sav./other accts.
+    'Text70': 'treasurer_miscellaneous', // Manual entry
+    'Text71': 'treasurer_total_disbursements', // Auto-calculated: Text66 + Text67 + Text68 + Text69 + Text70
+    'Text72': 'treasurer_net_balance', // Auto-calculated: Text61 + Text65 - Text71
     'Text73': 'net_council_verify', // Should equal Text72
 
     // Membership Section
@@ -81,7 +81,8 @@ class AuditFieldMap {
 
   // Fields that require manual entry
   static const List<String> manualEntryFields = [
-    'Text50', 'Text59', 'Text69', 'Text70',
+    'Text50', 'Text59', 
+    'Text61', 'Text62', 'Text63', 'Text64', 'Text66', 'Text67', 'Text68', 'Text69', 'Text70',
     'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
     'Text84', 'Text85', 'Text86', 'Text87',
     'Text89', 'Text90', 'Text91', 'Text92', 'Text93',
@@ -94,9 +95,8 @@ class AuditFieldMap {
   // Fields that are auto-calculated
   static const List<String> autoCalculatedFields = [
     'Text51', 'Text52', 'Text53', 'Text54', 'Text55',
-    'Text56', 'Text57', 'Text58', 'Text60', 'Text61',
-    'Text62', 'Text63', 'Text64', 'Text65', 'Text66', 
-    'Text67', 'Text68', 'Text71', 'Text72', 'Text73', 
+    'Text56', 'Text57', 'Text58', 'Text60', 'Text65', 
+    'Text71', 'Text72', 'Text73', 
     'Text79', 'Text80', 'Text83', 'Text88', 'Text103'
   ];
 
