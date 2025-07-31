@@ -23,14 +23,9 @@ class SemiAnnualAuditService extends BasePdfReportService {
     try {
       AppLogger.info('Generating semi-annual audit report for $period $year');
 
-      // 1. Get report data
-      final data = await _getAuditData(period, year);
+      // 1. Get report data with manual values
+      final data = await _getAuditData(period, year, manualValues);
       AppLogger.debug('Got audit data: $data');
-
-      // 2. Add manual values to data
-      if (manualValues != null) {
-        data.addAll(manualValues);
-      }
 
       // 3. Load PDF template
       final ByteData templateData = await rootBundle.load('assets/forms/audit2_1295_p.pdf');
@@ -71,7 +66,28 @@ class SemiAnnualAuditService extends BasePdfReportService {
     }
   }
 
-  Future<Map<String, dynamic>> _getAuditData(String period, int year) async {
+  Future<Map<String, dynamic>> _getAuditData(String period, int year, [Map<String, String>? manualValues]) async {
+    try {
+      // Phase 1: Get Supabase data and calculate program totals
+      final supabaseData = await _getSupabaseData(period, year);
+      
+      // Phase 2: Add manual values
+      final Map<String, dynamic> data = Map<String, dynamic>.from(supabaseData);
+      if (manualValues != null) {
+        data.addAll(manualValues);
+      }
+      
+      // Phase 3: Run final calculations using both datasets
+      final finalData = await _runFinalCalculations(data);
+      
+      return finalData;
+    } catch (e, stackTrace) {
+      AppLogger.error('Error getting audit data', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _getSupabaseData(String period, int year) async {
     try {
       // Get user profile for organization info
       final userProfile = await _userService.getUserProfile();
@@ -91,7 +107,6 @@ class SemiAnnualAuditService extends BasePdfReportService {
         'council_city': userProfile.councilCity ?? '',
         'organization_name': 'Council ${userProfile.councilNumber}',
         'year': AuditFieldMap.getYearSuffix(year),
-        // Manual entry fields will be handled by the UI
       };
 
       // Get transactions for the period
@@ -142,9 +157,17 @@ class SemiAnnualAuditService extends BasePdfReportService {
       final otherCouncilPrograms = _calculateOtherCouncilPrograms(transactions);
       data['other_council_programs'] = AuditFieldMap.formatCurrency(otherCouncilPrograms);
 
-      // Calculate totals
+      return data;
+    } catch (e, stackTrace) {
+      AppLogger.error('Error getting Supabase data', e, stackTrace);
+      rethrow;
+    }
+  }
+
+  Future<Map<String, dynamic>> _runFinalCalculations(Map<String, dynamic> data) async {
+    try {
+      // Calculate totals using both Supabase and manual data
       data['total_income'] = _calculateTotalIncome(data);
-      data['net_income'] = _calculateNetIncome(data);
       data['total_interest'] = _calculateTotalInterest(data);
       data['total_expenses'] = _calculateTotalExpenses(data);
       data['net_council'] = _calculateNetCouncil(data);
@@ -152,10 +175,20 @@ class SemiAnnualAuditService extends BasePdfReportService {
       data['total_membership'] = _calculateTotalMembership(data);
       data['net_membership'] = _calculateNetMembership(data);
       data['total_disbursements_verify'] = _calculateTotalDisbursementsVerify(data);
+      
+      // Calculate PDF-specific fields
+      data['cash_on_hand_end_period'] = _calculateCashOnHandEndPeriod(data);
+      data['total_disbursements_sum'] = _calculateTotalDisbursementsSum(data);
+      
+      // Debug logging for Text60 calculation
+      AppLogger.info('Text60 calculation debug:');
+      AppLogger.info('  Text58 (total_income): ${data['total_income']}');
+      AppLogger.info('  Text59 (manual_income_2): ${data['manual_income_2']}');
+      AppLogger.info('  Text60 (calculated): ${data['cash_on_hand_end_period']}');
 
       return data;
     } catch (e, stackTrace) {
-      AppLogger.error('Error getting audit data', e, stackTrace);
+      AppLogger.error('Error running final calculations', e, stackTrace);
       rethrow;
     }
   }
@@ -181,22 +214,22 @@ class SemiAnnualAuditService extends BasePdfReportService {
             .lte('date', endDate.toIso8601String());
         AppLogger.info('Income response: ${incomeResponse.length} records');
             
-                  for (final data in incomeResponse) {
-            final program = data['program_name'] ?? data['programName'] ?? data['program']?['name'] ?? 'Unknown';
-            final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
-            final date = _parseDate(data['date']);
-            
-            AppLogger.info('Processing income record: program=$program, amount=$amount, date=$date');
-            
-            if (date != null) {
-              allTransactions.add({
-                'program': program,
-                'amount': amount,
-                'date': date,
-                'type': 'income',
-              });
-            }
+        for (final data in incomeResponse) {
+          final program = data['program_name'] ?? data['programName'] ?? data['program']?['name'] ?? 'Unknown';
+          final amount = (data['amount'] as num?)?.toDouble() ?? 0.0;
+          final date = _parseDate(data['date']);
+          
+          AppLogger.info('Processing income record: program=$program, amount=$amount, date=$date');
+          
+          if (date != null) {
+            allTransactions.add({
+              'program': program,
+              'amount': amount,
+              'date': date,
+              'type': 'income',
+            });
           }
+        }
 
         // Fetch expenses
         AppLogger.info('Querying expenses for org: $organizationId, date range: ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
@@ -312,21 +345,59 @@ class SemiAnnualAuditService extends BasePdfReportService {
   }
 
   String _calculateTotalIncome(Map<String, dynamic> data) {
-    final manualIncome1 = _parseCurrency(data['manual_income_1']);
-    final membershipDues = _parseCurrency(data['membership_dues']);
-    final topProgram1Amount = _parseCurrency(data['top_program_1_amount']);
-    final topProgram2Amount = _parseCurrency(data['top_program_2_amount']);
-    final otherProgramsAmount = _parseCurrency(data['other_programs_amount']);
+    // Text58 should be: Cash on hand beginning + Cash received (dues + other sources)
+    final cashOnHandBeginning = _parseCurrency(data['manual_income_1']); // Text50
+    final membershipDues = _parseCurrency(data['membership_dues']); // Text51
+    final topProgram1Amount = _parseCurrency(data['top_program_1_amount']); // Text53
+    final topProgram2Amount = _parseCurrency(data['top_program_2_amount']); // Text55
+    final otherProgramsAmount = _parseCurrency(data['other_programs_amount']); // Text57
 
-    final total = manualIncome1 + membershipDues + topProgram1Amount + topProgram2Amount + otherProgramsAmount;
+    final total = cashOnHandBeginning + membershipDues + topProgram1Amount + topProgram2Amount + otherProgramsAmount;
+    
+    AppLogger.info('Text58 (Total Cash Received) calculation:');
+    AppLogger.info('  cashOnHandBeginning (Text50): $cashOnHandBeginning');
+    AppLogger.info('  membershipDues (Text51): $membershipDues');
+    AppLogger.info('  topProgram1Amount (Text53): $topProgram1Amount');
+    AppLogger.info('  topProgram2Amount (Text55): $topProgram2Amount');
+    AppLogger.info('  otherProgramsAmount (Text57): $otherProgramsAmount');
+    AppLogger.info('  Text58 total: $total');
+    
     return AuditFieldMap.formatCurrency(total);
   }
 
-  String _calculateNetIncome(Map<String, dynamic> data) {
-    final totalIncome = _parseCurrency(data['total_income']);
-    final manualIncome2 = _parseCurrency(data['manual_income_2']);
+  String _calculateCashOnHandEndPeriod(Map<String, dynamic> data) {
+    // Text60 = Text58 (Total Cash Received) - Text59 (Transferred to Treasurer)
+    final totalCashReceived = _parseCurrency(data['total_income']); // Text58
+    final transferredToTreasurer = _parseCurrency(data['manual_income_2']); // Text59
 
-    return AuditFieldMap.formatCurrency(totalIncome - manualIncome2);
+    AppLogger.info('Text60 calculation breakdown:');
+    AppLogger.info('  totalCashReceived (Text58): $totalCashReceived');
+    AppLogger.info('  transferredToTreasurer (Text59): $transferredToTreasurer');
+    AppLogger.info('  Text60 result: ${totalCashReceived - transferredToTreasurer}');
+
+    return AuditFieldMap.formatCurrency(totalCashReceived - transferredToTreasurer);
+  }
+
+  String _calculateTotalDisbursementsSum(Map<String, dynamic> data) {
+    final manualField1 = _parseCurrency(data['manual_field_1']);
+    final manualField2 = _parseCurrency(data['manual_field_2']);
+    final manualField3 = _parseCurrency(data['manual_field_3']);
+    final manualField4 = _parseCurrency(data['manual_field_4']);
+    final manualField5 = _parseCurrency(data['manual_field_5']);
+    final manualField6 = _parseCurrency(data['manual_field_6']);
+    final manualField7 = _parseCurrency(data['manual_field_7']);
+    final manualField8 = _parseCurrency(data['manual_field_8']);
+    final manualField9 = _parseCurrency(data['manual_field_9']);
+    final manualField10 = _parseCurrency(data['manual_field_10']);
+    final manualField11 = _parseCurrency(data['manual_field_11']);
+    final manualField12 = _parseCurrency(data['manual_field_12']);
+    final manualField13 = _parseCurrency(data['manual_field_13']);
+
+    final total = manualField1 + manualField2 + manualField3 + manualField4 + manualField5 +
+                  manualField6 + manualField7 + manualField8 + manualField9 + manualField10 +
+                  manualField11 + manualField12 + manualField13;
+
+    return AuditFieldMap.formatCurrency(total);
   }
 
   String _calculateTotalInterest(Map<String, dynamic> data) {

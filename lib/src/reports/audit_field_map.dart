@@ -21,7 +21,7 @@ class AuditFieldMap {
     'Text57': 'other_programs_amount', // Auto-calculated from transactions
     'Text58': 'total_income', // Auto-calculated: Text50 + Text51 + Text53 + Text55 + Text57
     'Text59': 'manual_income_2', // Manual entry
-    'Text60': 'net_income', // Auto-calculated: Text58 - Text59
+    'Text60': 'cash_on_hand_end_period', // Auto-calculated: Text58 - Text59 (cash on hand at end of period)
 
     // Interest and Per Capita (Text61-Text63 are reserved for future use)
     'Text61': 'reserved_1', // Reserved for future use

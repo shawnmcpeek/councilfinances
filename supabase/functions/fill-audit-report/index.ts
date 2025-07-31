@@ -40,6 +40,7 @@ serve(async (req) => {
     }
 
     console.log('Audit report data received:', body)
+    console.log('Text60 value from body:', body.cash_on_hand_end_period)
 
     // Load the template PDF from the request body
     // The PDF template should be sent as base64 in the request
@@ -72,7 +73,7 @@ serve(async (req) => {
       'Text57': body.other_programs_amount || '',
       'Text58': body.total_income || '',
       'Text59': body.manual_income_2 || '',
-      'Text60': body.net_income || '',
+      'Text60': body.cash_on_hand_end_period || '',
       
       // Interest and Per Capita
       'Text61': body.reserved_1 || '',
@@ -96,7 +97,7 @@ serve(async (req) => {
       'Text77': body.membership_count || '',
       'Text78': body.membership_dues_total || '',
       'Text79': body.total_membership || '',
-      'Text80': body.total_disbursements || '',
+      'Text80': body.total_disbursements_sum || '',
       'Text83': body.net_membership || '',
       
       // Disbursements Section
@@ -130,12 +131,20 @@ serve(async (req) => {
       'Text110': body.manual_field_20 || '',
     }
 
+    // Debug Text60 specifically
+    console.log('Text60 value from body:', body.cash_on_hand_end_period)
+    console.log('Text60 mapped value:', fieldMappings['Text60'])
+    console.log('All field mappings:', Object.keys(fieldMappings))
+
     // Fill each field
     for (const [fieldName, value] of Object.entries(fieldMappings)) {
       try {
         const field = form.getTextField(fieldName)
         if (field) {
           field.setText(value.toString())
+          console.log(`Successfully filled field ${fieldName} with value: ${value}`)
+        } else {
+          console.warn(`Field ${fieldName} not found in PDF template`)
         }
       } catch (error) {
         console.warn(`Field ${fieldName} not found in PDF template:`, error)

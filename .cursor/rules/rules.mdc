@@ -21,3 +21,5 @@ alwaysApply: true
 # this is a very separated component app. There are re-usable components like log_display that gets used in different locations. Same with organizer_toggle and program_dropdown. Don't re-create them in individual components, import and implement them in the components as specified.
 # When changing code or removing code, always be more careful. If this is surgery, use a scalpel, not a machete
 # when doing cleanup and something isn't implemented or is imported but not used, always double check if it should be implemented or used. Only delete it if you are sure it isn't needed. 
+# This app started with firebase. We no longer use firebase for anything. Everything is supabase.
+# THe supabase function is just to fill in the data for the fill-in pdfs. The app itself does everything else.

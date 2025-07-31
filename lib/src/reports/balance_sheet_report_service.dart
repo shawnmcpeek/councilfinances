@@ -76,103 +76,233 @@ class BalanceSheetReportService extends BasePdfReportService {
     final year = data['year'] as String;
     final balanceSheetData = data['balance_sheet_data'] as BalanceSheetData;
 
-    // Create first page
-    PdfPage currentPage = document.pages.add();
-    final pageSize = currentPage.getClientSize();
-    final margin = 20.0;
+    // Set up fonts with larger sizes for better readability
+    final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 20, style: PdfFontStyle.bold);
+    final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 16, style: PdfFontStyle.bold);
+    final PdfFont bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 12);
+    final PdfFont sectionFont = PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold);
+
+    final margin = 25.0;
+    final formattedOrgName = _formatOrganizationName(organization);
+
+    // Page 1: Income (Jan-Jun)
+    PdfPage incomePage1 = document.pages.add();
+    final pageSize = incomePage1.getClientSize();
     final contentWidth = pageSize.width - (2 * margin);
     double yPosition = margin;
 
-    // Set up fonts
-    final PdfFont titleFont = PdfStandardFont(PdfFontFamily.helvetica, 18, style: PdfFontStyle.bold);
-    final PdfFont headerFont = PdfStandardFont(PdfFontFamily.helvetica, 14, style: PdfFontStyle.bold);
-    final PdfFont bodyFont = PdfStandardFont(PdfFontFamily.helvetica, 10);
-
-    // Draw title on first page
-    currentPage.graphics.drawString(
+    // Draw header on first page
+    incomePage1.graphics.drawString(
       title,
       titleFont,
-      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 30),
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 35),
       format: PdfStringFormat(alignment: PdfTextAlignment.center)
     );
-    yPosition += 40;
+    yPosition += 45;
 
-    // Draw organization and year
-    final formattedOrgName = _formatOrganizationName(organization);
-    currentPage.graphics.drawString(
+    incomePage1.graphics.drawString(
       'Organization: $formattedOrgName',
       bodyFont,
-      bounds: Rect.fromLTWH(margin, yPosition, contentWidth / 2, 20)
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth / 2, 25)
     );
-    currentPage.graphics.drawString(
+    incomePage1.graphics.drawString(
       'Year: $year',
       bodyFont,
-      bounds: Rect.fromLTWH(margin + contentWidth / 2, yPosition, contentWidth / 2, 20),
+      bounds: Rect.fromLTWH(margin + contentWidth / 2, yPosition, contentWidth / 2, 25),
       format: PdfStringFormat(alignment: PdfTextAlignment.right)
+    );
+    yPosition += 35;
+
+    // Draw Income Section header
+    incomePage1.graphics.drawString(
+      'INCOME (January - June)',
+      sectionFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 25),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
     );
     yPosition += 30;
 
-    // Define column widths for the table
-    final programNameWidth = 150.0;
-    final monthWidth = 70.0;
-    final totalWidth = 90.0;
-
-    // Draw Income Section on first page
-    currentPage.graphics.drawString(
-      'INCOME',
-      headerFont,
-      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 20),
-      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    // Create Income grid for Jan-Jun
+    final incomeGrid1 = _createBalanceSheetGrid(
+      balanceSheetData.incomeRows, 
+      balanceSheetData.monthlyIncomeTotals, 
+      false, 
+      180.0, // Wider program name column
+      85.0,  // Wider month columns
+      100.0, // Wider total column
+      [1, 2, 3, 4, 5, 6] // Only Jan-Jun months
     );
-    yPosition += 25;
-
-    final incomeGrid = _createBalanceSheetGrid(balanceSheetData.incomeRows, balanceSheetData.monthlyIncomeTotals, false, programNameWidth, monthWidth, totalWidth);
-    incomeGrid.draw(
-      page: currentPage,
+    
+    incomeGrid1.draw(
+      page: incomePage1,
       bounds: Rect.fromLTWH(margin, yPosition, contentWidth, pageSize.height - yPosition - margin),
       format: PdfLayoutFormat(
-        breakType: PdfLayoutBreakType.fitColumnsToPage,
+        breakType: PdfLayoutBreakType.fitPage,
         layoutType: PdfLayoutType.paginate
       )
     );
 
-    // Create new page for Expenses
-    PdfPage expensePage = document.pages.add();
-    
-    // Draw header on expense page
-    expensePage.graphics.drawString(
+    // Page 2: Income (Jul-Dec)
+    PdfPage incomePage2 = document.pages.add();
+    yPosition = margin;
+
+    // Draw header on second page
+    incomePage2.graphics.drawString(
       title,
       titleFont,
-      bounds: Rect.fromLTWH(margin, margin, contentWidth, 30),
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 35),
       format: PdfStringFormat(alignment: PdfTextAlignment.center)
     );
-    
-    expensePage.graphics.drawString(
+    yPosition += 45;
+
+    incomePage2.graphics.drawString(
       'Organization: $formattedOrgName',
       bodyFont,
-      bounds: Rect.fromLTWH(margin, margin + 40, contentWidth / 2, 20)
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth / 2, 25)
     );
-    expensePage.graphics.drawString(
+    incomePage2.graphics.drawString(
       'Year: $year',
       bodyFont,
-      bounds: Rect.fromLTWH(margin + contentWidth / 2, margin + 40, contentWidth / 2, 20),
+      bounds: Rect.fromLTWH(margin + contentWidth / 2, yPosition, contentWidth / 2, 25),
       format: PdfStringFormat(alignment: PdfTextAlignment.right)
     );
+    yPosition += 35;
 
-    // Draw Expense Section on second page
-    expensePage.graphics.drawString(
-      'EXPENSES',
-      headerFont,
-      bounds: Rect.fromLTWH(margin, margin + 70, contentWidth, 20),
+    // Draw Income Section header
+    incomePage2.graphics.drawString(
+      'INCOME (July - December)',
+      sectionFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 25),
       format: PdfStringFormat(alignment: PdfTextAlignment.center)
     );
+    yPosition += 30;
 
-    final expenseGrid = _createBalanceSheetGrid(balanceSheetData.expenseRows, balanceSheetData.monthlyExpenseTotals, true, programNameWidth, monthWidth, totalWidth);
-    expenseGrid.draw(
-      page: expensePage,
-      bounds: Rect.fromLTWH(margin, margin + 95, contentWidth, pageSize.height - margin - 95 - margin),
+    // Create Income grid for Jul-Dec
+    final incomeGrid2 = _createBalanceSheetGrid(
+      balanceSheetData.incomeRows, 
+      balanceSheetData.monthlyIncomeTotals, 
+      false, 
+      180.0, // Wider program name column
+      85.0,  // Wider month columns
+      100.0, // Wider total column
+      [7, 8, 9, 10, 11, 12] // Only Jul-Dec months
+    );
+    
+    incomeGrid2.draw(
+      page: incomePage2,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, pageSize.height - yPosition - margin),
       format: PdfLayoutFormat(
-        breakType: PdfLayoutBreakType.fitColumnsToPage,
+        breakType: PdfLayoutBreakType.fitPage,
+        layoutType: PdfLayoutType.paginate
+      )
+    );
+
+    // Page 3: Expenses (Jan-Jun)
+    PdfPage expensePage1 = document.pages.add();
+    yPosition = margin;
+
+    // Draw header on third page
+    expensePage1.graphics.drawString(
+      title,
+      titleFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 35),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    );
+    yPosition += 45;
+
+    expensePage1.graphics.drawString(
+      'Organization: $formattedOrgName',
+      bodyFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth / 2, 25)
+    );
+    expensePage1.graphics.drawString(
+      'Year: $year',
+      bodyFont,
+      bounds: Rect.fromLTWH(margin + contentWidth / 2, yPosition, contentWidth / 2, 25),
+      format: PdfStringFormat(alignment: PdfTextAlignment.right)
+    );
+    yPosition += 35;
+
+    // Draw Expense Section header
+    expensePage1.graphics.drawString(
+      'EXPENSES (January - June)',
+      sectionFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 25),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    );
+    yPosition += 30;
+
+    // Create Expense grid for Jan-Jun
+    final expenseGrid1 = _createBalanceSheetGrid(
+      balanceSheetData.expenseRows, 
+      balanceSheetData.monthlyExpenseTotals, 
+      true, 
+      180.0, // Wider program name column
+      85.0,  // Wider month columns
+      100.0, // Wider total column
+      [1, 2, 3, 4, 5, 6] // Only Jan-Jun months
+    );
+    
+    expenseGrid1.draw(
+      page: expensePage1,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, pageSize.height - yPosition - margin),
+      format: PdfLayoutFormat(
+        breakType: PdfLayoutBreakType.fitPage,
+        layoutType: PdfLayoutType.paginate
+      )
+    );
+
+    // Page 4: Expenses (Jul-Dec)
+    PdfPage expensePage2 = document.pages.add();
+    yPosition = margin;
+
+    // Draw header on fourth page
+    expensePage2.graphics.drawString(
+      title,
+      titleFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 35),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    );
+    yPosition += 45;
+
+    expensePage2.graphics.drawString(
+      'Organization: $formattedOrgName',
+      bodyFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth / 2, 25)
+    );
+    expensePage2.graphics.drawString(
+      'Year: $year',
+      bodyFont,
+      bounds: Rect.fromLTWH(margin + contentWidth / 2, yPosition, contentWidth / 2, 25),
+      format: PdfStringFormat(alignment: PdfTextAlignment.right)
+    );
+    yPosition += 35;
+
+    // Draw Expense Section header
+    expensePage2.graphics.drawString(
+      'EXPENSES (July - December)',
+      sectionFont,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, 25),
+      format: PdfStringFormat(alignment: PdfTextAlignment.center)
+    );
+    yPosition += 30;
+
+    // Create Expense grid for Jul-Dec
+    final expenseGrid2 = _createBalanceSheetGrid(
+      balanceSheetData.expenseRows, 
+      balanceSheetData.monthlyExpenseTotals, 
+      true, 
+      180.0, // Wider program name column
+      85.0,  // Wider month columns
+      100.0, // Wider total column
+      [7, 8, 9, 10, 11, 12] // Only Jul-Dec months
+    );
+    
+    expenseGrid2.draw(
+      page: expensePage2,
+      bounds: Rect.fromLTWH(margin, yPosition, contentWidth, pageSize.height - yPosition - margin),
+      format: PdfLayoutFormat(
+        breakType: PdfLayoutBreakType.fitPage,
         layoutType: PdfLayoutType.paginate
       )
     );
@@ -197,90 +327,86 @@ class BalanceSheetReportService extends BasePdfReportService {
     }
   }
 
-  PdfGrid _createBalanceSheetGrid(List<BalanceSheetRow> rows, Map<int, double> monthlyTotals, bool isExpense, double programNameWidth, double monthWidth, double totalWidth) {
+  PdfGrid _createBalanceSheetGrid(List<BalanceSheetRow> rows, Map<int, double> monthlyTotals, bool isExpense, double programNameWidth, double monthWidth, double totalWidth, List<int> months) {
     // Create a PdfGrid
     PdfGrid grid = PdfGrid();
     
-    // Add columns to grid (14 columns: Program Name + 12 months + Total)
-    grid.columns.add(count: 14);
+    // Add columns to grid (Program Name + specified months + Total)
+    final columnCount = 1 + months.length + 1; // Program Name + months + Total
+    grid.columns.add(count: columnCount);
     
     // Set column widths using the passed variables
     grid.columns[0].width = programNameWidth; // Program Name
-    for (int i = 1; i <= 12; i++) {
-      grid.columns[i].width = monthWidth; // Month columns
+    for (int i = 0; i < months.length; i++) {
+      grid.columns[i + 1].width = monthWidth; // Month columns
     }
-    grid.columns[13].width = totalWidth; // Total column
+    grid.columns[columnCount - 1].width = totalWidth; // Total column
     
     // Add header row
     grid.headers.add(1);
     PdfGridRow header = grid.headers[0];
     header.cells[0].value = 'Program Name';
-    header.cells[1].value = 'Jan';
-    header.cells[2].value = 'Feb';
-    header.cells[3].value = 'Mar';
-    header.cells[4].value = 'Apr';
-    header.cells[5].value = 'May';
-    header.cells[6].value = 'Jun';
-    header.cells[7].value = 'Jul';
-    header.cells[8].value = 'Aug';
-    header.cells[9].value = 'Sep';
-    header.cells[10].value = 'Oct';
-    header.cells[11].value = 'Nov';
-    header.cells[12].value = 'Dec';
-    header.cells[13].value = 'Total';
+    
+    // Add month headers
+    for (int i = 0; i < months.length; i++) {
+      final month = months[i];
+      final monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      header.cells[i + 1].value = monthNames[month - 1];
+    }
+    header.cells[columnCount - 1].value = 'Total';
     
     // Add data rows
     for (final row in rows) {
       PdfGridRow gridRow = grid.rows.add();
       gridRow.cells[0].value = row.programName;
-      gridRow.cells[1].value = formatters.formatCurrency(row.monthlyAmounts[1] ?? 0.0);
-      gridRow.cells[2].value = formatters.formatCurrency(row.monthlyAmounts[2] ?? 0.0);
-      gridRow.cells[3].value = formatters.formatCurrency(row.monthlyAmounts[3] ?? 0.0);
-      gridRow.cells[4].value = formatters.formatCurrency(row.monthlyAmounts[4] ?? 0.0);
-      gridRow.cells[5].value = formatters.formatCurrency(row.monthlyAmounts[5] ?? 0.0);
-      gridRow.cells[6].value = formatters.formatCurrency(row.monthlyAmounts[6] ?? 0.0);
-      gridRow.cells[7].value = formatters.formatCurrency(row.monthlyAmounts[7] ?? 0.0);
-      gridRow.cells[8].value = formatters.formatCurrency(row.monthlyAmounts[8] ?? 0.0);
-      gridRow.cells[9].value = formatters.formatCurrency(row.monthlyAmounts[9] ?? 0.0);
-      gridRow.cells[10].value = formatters.formatCurrency(row.monthlyAmounts[10] ?? 0.0);
-      gridRow.cells[11].value = formatters.formatCurrency(row.monthlyAmounts[11] ?? 0.0);
-      gridRow.cells[12].value = formatters.formatCurrency(row.monthlyAmounts[12] ?? 0.0);
-      gridRow.cells[13].value = formatters.formatCurrency(row.yearlyTotal);
+      
+      // Add monthly amounts for specified months
+      for (int i = 0; i < months.length; i++) {
+        final month = months[i];
+        gridRow.cells[i + 1].value = formatters.formatCurrency(row.monthlyAmounts[month] ?? 0.0);
+      }
+      
+      // Calculate total for specified months
+      double periodTotal = 0.0;
+      for (final month in months) {
+        periodTotal += row.monthlyAmounts[month] ?? 0.0;
+      }
+      gridRow.cells[columnCount - 1].value = formatters.formatCurrency(periodTotal);
     }
     
     // Add totals row
     PdfGridRow totalsRow = grid.rows.add();
     totalsRow.cells[0].value = 'Monthly Totals';
-    totalsRow.cells[1].value = formatters.formatCurrency(monthlyTotals[1] ?? 0.0);
-    totalsRow.cells[2].value = formatters.formatCurrency(monthlyTotals[2] ?? 0.0);
-    totalsRow.cells[3].value = formatters.formatCurrency(monthlyTotals[3] ?? 0.0);
-    totalsRow.cells[4].value = formatters.formatCurrency(monthlyTotals[4] ?? 0.0);
-    totalsRow.cells[5].value = formatters.formatCurrency(monthlyTotals[5] ?? 0.0);
-    totalsRow.cells[6].value = formatters.formatCurrency(monthlyTotals[6] ?? 0.0);
-    totalsRow.cells[7].value = formatters.formatCurrency(monthlyTotals[7] ?? 0.0);
-    totalsRow.cells[8].value = formatters.formatCurrency(monthlyTotals[8] ?? 0.0);
-    totalsRow.cells[9].value = formatters.formatCurrency(monthlyTotals[9] ?? 0.0);
-    totalsRow.cells[10].value = formatters.formatCurrency(monthlyTotals[10] ?? 0.0);
-    totalsRow.cells[11].value = formatters.formatCurrency(monthlyTotals[11] ?? 0.0);
-    totalsRow.cells[12].value = formatters.formatCurrency(monthlyTotals[12] ?? 0.0);
-    totalsRow.cells[13].value = formatters.formatCurrency(monthlyTotals.values.fold(0.0, (sum, amount) => sum + amount));
     
-    // Style the grid
+    // Add monthly totals for specified months
+    for (int i = 0; i < months.length; i++) {
+      final month = months[i];
+      totalsRow.cells[i + 1].value = formatters.formatCurrency(monthlyTotals[month] ?? 0.0);
+    }
+    
+    // Calculate total for specified months
+    double periodTotal = 0.0;
+    for (final month in months) {
+      periodTotal += monthlyTotals[month] ?? 0.0;
+    }
+    totalsRow.cells[columnCount - 1].value = formatters.formatCurrency(periodTotal);
+    
+    // Style the grid with larger fonts for better readability
     grid.style = PdfGridStyle(
-      cellPadding: PdfPaddings(left: 1, right: 1, top: 2, bottom: 2), // Minimal padding
-      font: PdfStandardFont(PdfFontFamily.helvetica, 6), // Small font to fit
+      cellPadding: PdfPaddings(left: 3, right: 3, top: 4, bottom: 4), // More padding
+      font: PdfStandardFont(PdfFontFamily.helvetica, 10), // Larger font (was 6)
     );
     
     // Style the header
     header.style = PdfGridRowStyle(
       backgroundBrush: PdfBrushes.lightGray,
-      font: PdfStandardFont(PdfFontFamily.helvetica, 6, style: PdfFontStyle.bold),
+      font: PdfStandardFont(PdfFontFamily.helvetica, 10, style: PdfFontStyle.bold), // Larger font (was 6)
     );
     
     // Style the totals row
     totalsRow.style = PdfGridRowStyle(
       backgroundBrush: PdfBrushes.lightYellow,
-      font: PdfStandardFont(PdfFontFamily.helvetica, 6, style: PdfFontStyle.bold),
+      font: PdfStandardFont(PdfFontFamily.helvetica, 10, style: PdfFontStyle.bold), // Larger font (was 6)
     );
     
     return grid;

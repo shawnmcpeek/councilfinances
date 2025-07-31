@@ -38,14 +38,53 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
         final newValue = _controllers[field]!.text;
         if (_currentValues[field] != newValue) {
           _currentValues[field] = newValue;
-          // Map Text69 and Text70 to manual_expense_1 and manual_expense_2 for backend
+          // Map all manual entry fields to their corresponding backend field names
           final mappedValues = Map<String, String>.from(_currentValues);
-          if (mappedValues.containsKey('Text69')) {
-            mappedValues['manual_expense_1'] = mappedValues['Text69'] ?? '';
+          
+          // Map Text fields to their corresponding backend field names
+          final fieldMappings = {
+            'Text50': 'manual_income_1',
+            'Text59': 'manual_income_2',
+            'Text69': 'manual_expense_1',
+            'Text70': 'manual_expense_2',
+            'Text74': 'manual_membership_1',
+            'Text75': 'manual_membership_2',
+            'Text76': 'manual_membership_3',
+            'Text77': 'membership_count',
+            'Text78': 'membership_dues_total',
+            'Text84': 'manual_disbursement_1',
+            'Text85': 'manual_disbursement_2',
+            'Text86': 'manual_disbursement_3',
+            'Text87': 'manual_disbursement_4',
+            'Text89': 'manual_field_1',
+            'Text90': 'manual_field_2',
+            'Text91': 'manual_field_3',
+            'Text92': 'manual_field_4',
+            'Text93': 'manual_field_5',
+            'Text95': 'manual_field_6',
+            'Text96': 'manual_field_7',
+            'Text97': 'manual_field_8',
+            'Text98': 'manual_field_9',
+            'Text99': 'manual_field_10',
+            'Text100': 'manual_field_11',
+            'Text101': 'manual_field_12',
+            'Text102': 'manual_field_13',
+            'Text104': 'manual_field_14',
+            'Text105': 'manual_field_15',
+            'Text106': 'manual_field_16',
+            'Text107': 'manual_field_17',
+            'Text108': 'manual_field_18',
+            'Text109': 'manual_field_19',
+            'Text110': 'manual_field_20',
+          };
+          
+          // Apply mappings
+          for (final entry in fieldMappings.entries) {
+            if (mappedValues.containsKey(entry.key)) {
+              mappedValues[entry.value] = mappedValues[entry.key] ?? '';
+            }
           }
-          if (mappedValues.containsKey('Text70')) {
-            mappedValues['manual_expense_2'] = mappedValues['Text70'] ?? '';
-          }
+          
           widget.onValuesChanged(mappedValues);
         }
       });
