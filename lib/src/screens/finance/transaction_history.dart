@@ -4,6 +4,7 @@ import '../../services/finance_service.dart';
 import '../../models/finance_entry.dart';
 import '../../models/finance_entry_adapter.dart';
 import '../../components/log_display.dart';
+import '../../components/finance_entry_edit_dialog.dart';
 
 class TransactionHistory extends StatefulWidget {
   final String organizationId;
@@ -84,14 +85,16 @@ class _TransactionHistoryState extends State<TransactionHistory> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       onEdit: (adapter) async {
-        await showDialog(
+        final updated = await showDialog<FinanceEntry>(
           context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Edit'),
-            content: const Text('Edit not implemented yet.'),
-            actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+          builder: (context) => FinanceEntryEditDialog(
+            entry: adapter.entry,
+            organizationId: widget.organizationId,
           ),
         );
+        if (updated != null) {
+          _loadTransactions();
+        }
       },
       onDelete: (adapter) async {
         final confirm = await showDialog<bool>(

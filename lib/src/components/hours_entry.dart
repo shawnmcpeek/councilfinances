@@ -13,10 +13,12 @@ import 'program_dropdown.dart';
 
 class HoursEntryForm extends StatefulWidget {
   final String organizationId;
+  final HoursEntry? existingEntry; // Add optional existing entry for editing
 
   const HoursEntryForm({
     super.key,
     required this.organizationId,
+    this.existingEntry, // Add this parameter
   });
 
   @override
@@ -45,6 +47,26 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
   void initState() {
     super.initState();
     _loadUserProfile();
+    
+    // If editing an existing entry, populate the form
+    if (widget.existingEntry != null) {
+      final entry = widget.existingEntry!;
+      _selectedProgram = Program(
+        id: entry.programId,
+        name: entry.programName,
+        category: '',
+        isSystemDefault: false,
+        financialType: FinancialType.both,
+        isEnabled: true,
+      );
+      _selectedCategory = entry.category;
+      _startDate = entry.startTime;
+      _startTime = TimeOfDay.fromDateTime(entry.startTime);
+      _endDate = entry.endTime;
+      _endTime = TimeOfDay.fromDateTime(entry.endTime);
+      _disbursementController.text = entry.disbursement?.toString() ?? '';
+      _descriptionController.text = entry.description ?? '';
+    }
   }
 
   @override
@@ -176,8 +198,8 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
       final endDateTime = _combineDateAndTime(_endDate, _endTime);
       
       final entry = HoursEntry(
-        id: '',  // Will be set by Supabase
-        userId: '',  // Will be set by service
+        id: widget.existingEntry?.id ?? '',  // Use existing ID if editing
+        userId: widget.existingEntry?.userId ?? '',  // Use existing userId if editing
         organizationId: widget.organizationId,
         programId: _selectedProgram!.id,
         programName: _selectedProgram!.name,
@@ -187,28 +209,37 @@ class _HoursEntryFormState extends State<HoursEntryForm> {
         totalHours: _calculateTotalHours(),
         disbursement: double.tryParse(_disbursementController.text),
         description: _descriptionController.text.trim(),
-        createdAt: DateTime.now(),
+        createdAt: widget.existingEntry?.createdAt ?? DateTime.now(),
       );
 
-      await _hoursService.addHoursEntry(entry);
-      
-      if (mounted) {
-        // Reset form
-        setState(() {
-          _selectedProgram = null;
-          _selectedCategory = null;
-          _startDate = DateTime.now();
-          _startTime = TimeOfDay.now();
-          _endDate = DateTime.now();
-          _endTime = TimeOfDay.now();
-          _disbursementController.clear();
-          _descriptionController.clear();
-          _isLoading = false;
-        });
+      if (widget.existingEntry != null) {
+        // Update existing entry
+        await _hoursService.updateHoursEntry(entry, false); // Assuming not assembly
+        if (mounted) {
+          Navigator.of(context).pop(entry);
+        }
+      } else {
+        // Create new entry
+        await _hoursService.addHoursEntry(entry);
         
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Hours logged successfully')),
-        );
+        if (mounted) {
+          // Reset form
+          setState(() {
+            _selectedProgram = null;
+            _selectedCategory = null;
+            _startDate = DateTime.now();
+            _startTime = TimeOfDay.now();
+            _endDate = DateTime.now();
+            _endTime = TimeOfDay.now();
+            _disbursementController.clear();
+            _descriptionController.clear();
+            _isLoading = false;
+          });
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Hours logged successfully')),
+          );
+        }
       }
     } catch (e) {
       AppLogger.error('Error saving hours entry', e);

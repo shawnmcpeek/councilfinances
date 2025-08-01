@@ -13,6 +13,7 @@ import '../components/organization_toggle.dart';
 import '../components/log_display.dart';
 import 'package:provider/provider.dart';
 import '../providers/organization_provider.dart';
+import '../components/program_entry_edit_dialog.dart';
 
 class ProgramsCollectScreen extends StatefulWidget {
   const ProgramsCollectScreen({super.key});
@@ -399,14 +400,19 @@ class _ProgramsCollectScreenState extends State<ProgramsCollectScreen> {
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
                     onEdit: (adapter) async {
-                      await showDialog(
+                      final updated = await showDialog<ProgramEntry>(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Edit'),
-                          content: const Text('Edit not implemented yet.'),
-                          actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('OK'))],
+                        builder: (context) => ProgramEntryEditDialog(
+                          entry: adapter.entry,
+                          organizationId: _getFormattedOrganizationId(),
                         ),
                       );
+                      if (updated != null) {
+                        final organizationId = _getFormattedOrganizationId();
+                        if (organizationId.isNotEmpty) {
+                          _subscribeToEntries(organizationId);
+                        }
+                      }
                     },
                     onDelete: (adapter) async {
                       final confirm = await showDialog<bool>(

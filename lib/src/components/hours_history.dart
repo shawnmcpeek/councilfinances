@@ -71,6 +71,7 @@ class _HoursHistoryState extends State<HoursHistory> {
           context: context,
           builder: (context) => HoursEntryForm(
             organizationId: widget.organizationId,
+            existingEntry: adapter.entry, // Pass the existing entry for editing
           ),
         );
         if (updated != null) _loadEntries();

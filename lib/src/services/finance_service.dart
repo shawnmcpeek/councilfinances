@@ -198,4 +198,35 @@ class FinanceService {
       rethrow;
     }
   }
+
+  Future<void> updateFinanceEntry({
+    required String organizationId,
+    required FinanceEntry entry,
+  }) async {
+    try {
+      final user = _authService.currentUser;
+      if (user == null) throw Exception('User must be logged in to update entries');
+
+      final data = {
+        'date': entry.date.toIso8601String(),
+        'amount': entry.amount,
+        'description': entry.description ?? '',
+        'program_id': entry.program.id,
+        'program_name': entry.program.name,
+        'payment_method': entry.paymentMethod ?? '',
+        'check_number': entry.checkNumber,
+        'updated_at': DateTime.now().toIso8601String(),
+        'updated_by': user.id,
+      };
+
+      AppLogger.debug('Updating finance entry: ${entry.id} with data: $data');
+      await _supabase
+          .from('finance_entries')
+          .update(data)
+          .eq('id', entry.id);
+    } catch (e, stackTrace) {
+      AppLogger.error('Error updating finance entry', e, stackTrace);
+      rethrow;
+    }
+  }
 } 
