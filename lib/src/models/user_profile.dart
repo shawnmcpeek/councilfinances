@@ -11,6 +11,8 @@ class UserProfile {
   final List<AssemblyRole> assemblyRoles;
   final String jurisdiction;
   final String? councilCity;
+  final String? assemblyCity;
+  final String? assemblyJurisdiction;
 
   UserProfile({
     required this.uid,
@@ -23,6 +25,8 @@ class UserProfile {
     List<AssemblyRole>? assemblyRoles,
     String? jurisdiction,
     this.councilCity,
+    this.assemblyCity,
+    this.assemblyJurisdiction,
   }) : 
     councilRoles = councilRoles ?? [],
     assemblyRoles = assemblyRoles ?? [],
@@ -45,6 +49,8 @@ class UserProfile {
       'assembly_roles': assemblyRoles.map((role) => role.name).toList(),
       'jurisdiction': jurisdiction,
       'city': councilCity,
+      'assembly_city': assemblyCity,
+      'assembly_jurisdiction': assemblyJurisdiction,
     };
   }
 
@@ -64,6 +70,8 @@ class UserProfile {
           .toList() ?? [],
       jurisdiction: (map['jurisdiction'] as String?) ?? 'TN',
       councilCity: map['city'] as String?,
+      assemblyCity: map['assembly_city'] as String?,
+      assemblyJurisdiction: map['assembly_jurisdiction'] as String?,
     );
   }
 

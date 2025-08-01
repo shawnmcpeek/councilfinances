@@ -5,10 +5,10 @@ class AuditFieldMap {
   // Map field IDs to their corresponding data points and calculation rules
   static const Map<String, String> fields = {
     // Basic Info
-    'Text1': 'council_number',  // From user profile
-    'Text2': 'council_city',    // From user profile - council location
+    'Text1': 'organization_name',  // From organizations table - full organization name
+    'Text2': 'organization_city',    // From organizations table - council location
     'Text3': 'year',           // From selected year (last 2 digits)
-    'Text4': 'organization_name', // From user profile
+    'Text4': 'organization_jurisdiction', // From organizations table - council jurisdiction
 
     // Income Section
     'Text50': 'manual_income_1',  // Manual entry

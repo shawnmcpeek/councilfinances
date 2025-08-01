@@ -7,7 +7,7 @@ class UserService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // Auto-create organization if it doesn't exist
-  Future<void> _ensureOrganizationExists(int councilNumber, int? assemblyNumber, String jurisdiction) async {
+  Future<void> _ensureOrganizationExists(int councilNumber, int? assemblyNumber, String jurisdiction, {String? councilCity, String? assemblyCity, String? assemblyJurisdiction}) async {
     try {
       // Ensure council exists
       final councilId = 'C${councilNumber.toString().padLeft(6, '0')}';
@@ -18,6 +18,8 @@ class UserService {
             'name': 'Council #$councilNumber',
             'type': 'council',
             'jurisdiction': jurisdiction,
+            'city': councilCity,
+            'state': jurisdiction,
           })
           .eq('id', councilId);
 
@@ -30,7 +32,9 @@ class UserService {
               'id': assemblyId,
               'name': 'Assembly #$assemblyNumber',
               'type': 'assembly',
-              'jurisdiction': jurisdiction,
+              'jurisdiction': assemblyJurisdiction ?? jurisdiction,
+              'city': assemblyCity,
+              'state': assemblyJurisdiction ?? jurisdiction,
             })
             .eq('id', assemblyId);
       }
@@ -107,7 +111,10 @@ class UserService {
       if (user == null) throw Exception('No authenticated user found');
 
       // Ensure organizations exist before updating profile
-      await _ensureOrganizationExists(profile.councilNumber, profile.assemblyNumber, profile.jurisdiction);
+      await _ensureOrganizationExists(profile.councilNumber, profile.assemblyNumber, profile.jurisdiction,
+          councilCity: profile.councilCity,
+          assemblyCity: profile.assemblyCity,
+          assemblyJurisdiction: profile.assemblyJurisdiction);
 
       final profileData = profile.toMap()
         ..removeWhere((key, value) => value == null);

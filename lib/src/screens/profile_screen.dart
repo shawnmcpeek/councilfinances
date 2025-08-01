@@ -6,6 +6,7 @@ import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../services/hours_service.dart';
+import '../services/organization_service.dart';
 import '../theme/app_theme.dart';
 import '../utils/logger.dart';
 
@@ -25,11 +26,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
   final _userService = UserService();
   final _hoursService = HoursService();
+  final _organizationService = OrganizationService();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _membershipNumberController = TextEditingController();
   final _councilNumberController = TextEditingController();
   final _assemblyNumberController = TextEditingController();
+  final _councilLocationController = TextEditingController();
+  final _councilJurisdictionController = TextEditingController();
+  final _assemblyLocationController = TextEditingController();
+  final _assemblyJurisdictionController = TextEditingController();
   bool _isLoading = true;
   List<CouncilRole> _selectedCouncilRoles = [];
   List<AssemblyRole> _selectedAssemblyRoles = [];
@@ -46,6 +52,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _showCouncilRoles = isValid;
       });
     }
+    
+    // If valid council number, fetch organization data and populate location fields
+    if (isValid && value.isNotEmpty) {
+      _fetchCouncilData(int.parse(value));
+    }
+  }
+
+  Future<void> _fetchCouncilData(int councilNumber) async {
+    try {
+      final organization = await _organizationService.getOrganizationByNumber(councilNumber, false);
+      if (organization != null && mounted) {
+        setState(() {
+          _councilLocationController.text = organization.city ?? '';
+          _councilJurisdictionController.text = organization.state ?? organization.jurisdiction ?? '';
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Error fetching council data', e);
+    }
   }
 
   void _validateAssemblyNumber(String value) {
@@ -56,6 +81,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _showAssemblyRoles = isValid;
       });
+    }
+    
+    // If valid assembly number, fetch organization data and populate location fields
+    if (isValid && value.isNotEmpty) {
+      _fetchAssemblyData(int.parse(value));
+    }
+  }
+
+  Future<void> _fetchAssemblyData(int assemblyNumber) async {
+    try {
+      final organization = await _organizationService.getOrganizationByNumber(assemblyNumber, true);
+      if (organization != null && mounted) {
+        setState(() {
+          _assemblyLocationController.text = organization.city ?? '';
+          _assemblyJurisdictionController.text = organization.state ?? organization.jurisdiction ?? '';
+        });
+      }
+    } catch (e) {
+      AppLogger.error('Error fetching assembly data', e);
     }
   }
 
@@ -156,6 +200,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _membershipNumberController.text = profile?.membershipNumber.toString() ?? '';
           _councilNumberController.text = profile?.councilNumber.toString() ?? '';
           _assemblyNumberController.text = profile?.assemblyNumber?.toString() ?? '';
+          _councilLocationController.text = profile?.councilCity ?? '';
+          _councilJurisdictionController.text = profile?.jurisdiction ?? '';
+          _assemblyLocationController.text = profile?.assemblyCity ?? '';
+          _assemblyJurisdictionController.text = profile?.assemblyJurisdiction ?? '';
           _selectedCouncilRoles = profile?.councilRoles ?? [];
           _selectedAssemblyRoles = profile?.assemblyRoles ?? [];
           _validateCouncilNumber(_councilNumberController.text);
@@ -193,6 +241,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             : int.parse(_assemblyNumberController.text),
         councilRoles: _selectedCouncilRoles,
         assemblyRoles: _selectedAssemblyRoles,
+        jurisdiction: _councilJurisdictionController.text.trim(),
+        councilCity: _councilLocationController.text.trim(),
+        assemblyCity: _assemblyLocationController.text.trim(),
+        assemblyJurisdiction: _assemblyJurisdictionController.text.trim(),
       );
 
       AppLogger.debug('ProfileScreen: Saving profile data: ${profile.toMap()}');
@@ -226,6 +278,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     _membershipNumberController.dispose();
     _councilNumberController.dispose();
     _assemblyNumberController.dispose();
+    _councilLocationController.dispose();
+    _councilJurisdictionController.dispose();
+    _assemblyLocationController.dispose();
+    _assemblyJurisdictionController.dispose();
     super.dispose();
   }
 
@@ -351,6 +407,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           return null;
                         },
                       ),
+                      SizedBox(height: AppTheme.spacing),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _councilLocationController,
+                              decoration: AppTheme.formFieldDecorationWithLabel('Council Location')
+                                  .copyWith(hintText: 'e.g. Denver'),
+                            ),
+                          ),
+                          SizedBox(width: AppTheme.spacing),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _councilJurisdictionController,
+                              decoration: AppTheme.formFieldDecorationWithLabel('Council Jurisdiction')
+                                  .copyWith(hintText: 'e.g. CO'),
+                            ),
+                          ),
+                        ],
+                      ),
                       if (_showCouncilRoles) ...[
                         SizedBox(height: AppTheme.spacing),
                         _buildRoleSelector(
@@ -386,6 +462,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }
                           return null;
                         },
+                      ),
+                      SizedBox(height: AppTheme.spacing),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextFormField(
+                              controller: _assemblyLocationController,
+                              decoration: AppTheme.formFieldDecorationWithLabel('Assembly Location')
+                                  .copyWith(hintText: 'e.g. Denver'),
+                            ),
+                          ),
+                          SizedBox(width: AppTheme.spacing),
+                          Expanded(
+                            child: TextFormField(
+                              controller: _assemblyJurisdictionController,
+                              decoration: AppTheme.formFieldDecorationWithLabel('Assembly Jurisdiction')
+                                  .copyWith(hintText: 'e.g. CO'),
+                            ),
+                          ),
+                        ],
                       ),
                       if (_showAssemblyRoles) ...[
                         SizedBox(height: AppTheme.spacing),

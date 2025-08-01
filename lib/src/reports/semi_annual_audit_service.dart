@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:flutter/services.dart' show rootBundle;
 import '../utils/logger.dart';
 import '../services/user_service.dart';
+import '../services/organization_service.dart';
 import '../services/report_file_saver.dart' show saveOrShareFile;
 import 'base_pdf_report_service.dart';
 
@@ -13,6 +14,7 @@ import 'audit_field_map.dart';
 class SemiAnnualAuditService extends BasePdfReportService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
+  final OrganizationService _organizationService = OrganizationService();
   static const String _auditReportTemplate = 'audit2_1295_p.pdf';
   static const String _fillAuditReportUrl = 'https://fwcqtjsqetqavdhkahzy.supabase.co/functions/v1/fill-audit-report';
 
@@ -245,6 +247,9 @@ class SemiAnnualAuditService extends BasePdfReportService {
         throw Exception('User profile not found');
       }
 
+      // Get organization data for city and jurisdiction
+      final organizationData = await _organizationService.getOrganizationByNumber(userProfile.councilNumber, false);
+      
       // Get date range for the period
       final dateRange = AuditFieldMap.getDateRangeForPeriod(period, year);
 
@@ -255,7 +260,9 @@ class SemiAnnualAuditService extends BasePdfReportService {
       final Map<String, dynamic> data = {
         'council_number': userProfile.councilNumber.toString().padLeft(6, '0'),
         'council_city': userProfile.councilCity ?? '',
-        'organization_name': 'Council ${userProfile.councilNumber}',
+        'organization_name': organizationData?.name ?? 'Council ${userProfile.councilNumber}',
+        'organization_city': organizationData?.city ?? '',
+        'organization_jurisdiction': organizationData?.state ?? organizationData?.jurisdiction ?? '',
         'year': AuditFieldMap.getYearSuffix(year),
       };
 

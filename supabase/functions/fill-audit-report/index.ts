@@ -57,10 +57,10 @@ serve(async (req) => {
     // Fill in the form fields
     const fieldMappings = {
       // Basic Info
-      'Text1': body.council_number || '',
-      'Text2': body.auditor_name || '',
+      'Text1': body.organization_name || '',
+      'Text2': body.organization_city || '',
       'Text3': body.year?.toString().slice(-2) || '',
-      'Text4': body.organization_name || '',
+      'Text4': body.organization_jurisdiction || '',
       
       // Income Section
       'Text50': body.manual_income_1 || '',
