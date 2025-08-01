@@ -71,10 +71,144 @@ class SemiAnnualAuditService extends BasePdfReportService {
       // Phase 1: Get Supabase data and calculate program totals
       final supabaseData = await getSupabaseData(period, year);
       
-      // Phase 2: Add manual values
+      // Phase 2: Add manual values with proper field mapping
       final Map<String, dynamic> data = Map<String, dynamic>.from(supabaseData);
       if (manualValues != null) {
-        data.addAll(manualValues);
+        // Map PDF field names to expected field names for Supabase function
+        final Map<String, String> mappedValues = {};
+        for (final entry in manualValues.entries) {
+          final pdfFieldName = entry.key;
+          final value = entry.value;
+          
+          // Map PDF field names to expected field names
+          switch (pdfFieldName) {
+            case 'Text50':
+              mappedValues['manual_income_1'] = value;
+              break;
+            case 'Text59':
+              mappedValues['manual_income_2'] = value;
+              break;
+            case 'Text61':
+              mappedValues['treasurer_cash_beginning'] = value;
+              break;
+            case 'Text62':
+              mappedValues['treasurer_received_financial_secretary'] = value;
+              break;
+            case 'Text63':
+              mappedValues['treasurer_transfers_from_savings'] = value;
+              break;
+            case 'Text64':
+              mappedValues['treasurer_interest_earned'] = value;
+              break;
+            case 'Text66':
+              mappedValues['treasurer_supreme_per_capita'] = value;
+              break;
+            case 'Text67':
+              mappedValues['treasurer_state_per_capita'] = value;
+              break;
+            case 'Text68':
+              mappedValues['treasurer_general_council_expenses'] = value;
+              break;
+            case 'Text69':
+              mappedValues['treasurer_transfers_to_savings'] = value;
+              break;
+            case 'Text70':
+              mappedValues['treasurer_miscellaneous'] = value;
+              break;
+            case 'Text74':
+              mappedValues['manual_membership_1'] = value;
+              break;
+            case 'Text75':
+              mappedValues['manual_membership_2'] = value;
+              break;
+            case 'Text76':
+              mappedValues['manual_membership_3'] = value;
+              break;
+            case 'Text77':
+              mappedValues['membership_count'] = value;
+              break;
+            case 'Text78':
+              mappedValues['membership_dues_total'] = value;
+              break;
+            case 'Text84':
+              mappedValues['manual_disbursement_1'] = value;
+              break;
+            case 'Text85':
+              mappedValues['manual_disbursement_2'] = value;
+              break;
+            case 'Text86':
+              mappedValues['manual_disbursement_3'] = value;
+              break;
+            case 'Text87':
+              mappedValues['manual_disbursement_4'] = value;
+              break;
+            case 'Text89':
+              mappedValues['manual_field_1'] = value;
+              break;
+            case 'Text90':
+              mappedValues['manual_field_2'] = value;
+              break;
+            case 'Text91':
+              mappedValues['manual_field_3'] = value;
+              break;
+            case 'Text92':
+              mappedValues['manual_field_4'] = value;
+              break;
+            case 'Text93':
+              mappedValues['manual_field_5'] = value;
+              break;
+            case 'Text95':
+              mappedValues['manual_field_6'] = value;
+              break;
+            case 'Text96':
+              mappedValues['manual_field_7'] = value;
+              break;
+            case 'Text97':
+              mappedValues['manual_field_8'] = value;
+              break;
+            case 'Text98':
+              mappedValues['manual_field_9'] = value;
+              break;
+            case 'Text99':
+              mappedValues['manual_field_10'] = value;
+              break;
+            case 'Text100':
+              mappedValues['manual_field_11'] = value;
+              break;
+            case 'Text101':
+              mappedValues['manual_field_12'] = value;
+              break;
+            case 'Text102':
+              mappedValues['manual_field_13'] = value;
+              break;
+            case 'Text104':
+              mappedValues['manual_field_14'] = value;
+              break;
+            case 'Text105':
+              mappedValues['manual_field_15'] = value;
+              break;
+            case 'Text106':
+              mappedValues['manual_field_16'] = value;
+              break;
+            case 'Text107':
+              mappedValues['manual_field_17'] = value;
+              break;
+            case 'Text108':
+              mappedValues['manual_field_18'] = value;
+              break;
+            case 'Text109':
+              mappedValues['manual_field_19'] = value;
+              break;
+            case 'Text110':
+              mappedValues['manual_field_20'] = value;
+              break;
+            default:
+              // Keep original field name if no mapping found
+              mappedValues[pdfFieldName] = value;
+              break;
+          }
+        }
+        data.addAll(mappedValues);
       }
       
       // Phase 3: Run final calculations using both datasets
@@ -185,6 +319,11 @@ class SemiAnnualAuditService extends BasePdfReportService {
        data['treasurer_total_disbursements'] = _calculateTreasurerTotalDisbursements(data);
        data['treasurer_net_balance'] = _calculateTreasurerNetBalance(data);
        
+       // Add calculated values to data map for Supabase function
+       data['Text65'] = data['treasurer_total_receipts']; // Total receipts
+       data['Text71'] = data['treasurer_total_disbursements']; // Total disbursements  
+       data['Text72'] = data['treasurer_net_balance']; // Net balance
+
        // Debug logging for Text60 calculation
        AppLogger.info('Text60 calculation debug:');
        AppLogger.info('  Text58 (total_income): ${data['total_income']}');
@@ -468,36 +607,39 @@ class SemiAnnualAuditService extends BasePdfReportService {
      return double.tryParse(cleanValue) ?? 0.0;
    }
 
-   // Schedule B Treasurer calculations
-   String _calculateTreasurerTotalReceipts(Map<String, dynamic> data) {
-     final receivedFromFinancialSecretary = _parseCurrency(data['treasurer_received_financial_secretary']);
-     final transfersFromSavings = _parseCurrency(data['treasurer_transfers_from_savings']);
-     final interestEarned = _parseCurrency(data['treasurer_interest_earned']);
+       // Schedule B Treasurer calculations
+    String _calculateTreasurerTotalReceipts(Map<String, dynamic> data) {
+      final receivedFromFinancialSecretary = _parseCurrency(data['treasurer_received_financial_secretary']);
+      final transfersFromSavings = _parseCurrency(data['treasurer_transfers_from_savings']);
+      final interestEarned = _parseCurrency(data['treasurer_interest_earned']);
 
-     final total = receivedFromFinancialSecretary + transfersFromSavings + interestEarned;
-     return AuditFieldMap.formatCurrency(total);
-   }
+      final total = receivedFromFinancialSecretary + transfersFromSavings + interestEarned;
+      return AuditFieldMap.formatCurrency(total);
+    }
 
-   String _calculateTreasurerTotalDisbursements(Map<String, dynamic> data) {
-     final supremePerCapita = _parseCurrency(data['treasurer_supreme_per_capita']);
-     final statePerCapita = _parseCurrency(data['treasurer_state_per_capita']);
-     final generalCouncilExpenses = _parseCurrency(data['treasurer_general_council_expenses']);
-     final transfersToSavings = _parseCurrency(data['treasurer_transfers_to_savings']);
-     final miscellaneous = _parseCurrency(data['treasurer_miscellaneous']);
+    String _calculateTreasurerTotalDisbursements(Map<String, dynamic> data) {
+      final supremePerCapita = _parseCurrency(data['treasurer_supreme_per_capita']);
+      final statePerCapita = _parseCurrency(data['treasurer_state_per_capita']);
+      final generalCouncilExpenses = _parseCurrency(data['treasurer_general_council_expenses']);
+      final transfersToSavings = _parseCurrency(data['treasurer_transfers_to_savings']);
+      final miscellaneous = _parseCurrency(data['treasurer_miscellaneous']);
 
-     final total = supremePerCapita + statePerCapita + generalCouncilExpenses + transfersToSavings + miscellaneous;
-     return AuditFieldMap.formatCurrency(total);
-   }
+      final total = supremePerCapita + statePerCapita + generalCouncilExpenses + transfersToSavings + miscellaneous;
+      return AuditFieldMap.formatCurrency(total);
+    }
 
-   String _calculateTreasurerNetBalance(Map<String, dynamic> data) {
-     final cashBeginning = _parseCurrency(data['treasurer_cash_beginning']);
-     final totalReceipts = _parseCurrency(data['treasurer_total_receipts']);
-     final totalDisbursements = _parseCurrency(data['treasurer_total_disbursements']);
+        String _calculateTreasurerNetBalance(Map<String, dynamic> data) {
+       final cashBeginning = _parseCurrency(data['treasurer_cash_beginning']);
+       final totalReceipts = _parseCurrency(data['treasurer_total_receipts']);
+       final totalDisbursements = _parseCurrency(data['treasurer_total_disbursements']);
 
-     final netBalance = cashBeginning + totalReceipts - totalDisbursements;
-     return AuditFieldMap.formatCurrency(netBalance);
-   }
- }
+       final netBalance = cashBeginning + totalReceipts - totalDisbursements;
+       return AuditFieldMap.formatCurrency(netBalance);
+     }
+
+    
+   
+  }
 
 class ProgramTotal {
   final String name;

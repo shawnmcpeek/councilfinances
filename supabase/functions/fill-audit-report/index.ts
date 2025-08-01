@@ -74,6 +74,8 @@ serve(async (req) => {
       'Text58': body.total_income || '',
       'Text59': body.manual_income_2 || '',
       'Text60': body.cash_on_hand_end_period || '',
+      
+      // Treasurer Section
       'Text61': body.treasurer_cash_beginning || '',
       'Text62': body.treasurer_received_financial_secretary || '',
       'Text63': body.treasurer_transfers_from_savings || '',
@@ -86,20 +88,6 @@ serve(async (req) => {
       'Text70': body.treasurer_miscellaneous || '',
       'Text71': body.treasurer_total_disbursements || '',
       'Text72': body.treasurer_net_balance || '',
-      
-      // Interest and Per Capita
-      'Text61': body.reserved_1 || '',
-      'Text62': body.reserved_2 || '',
-      'Text63': body.reserved_3 || '',
-      'Text64': body.interest_earned || '',
-      'Text65': body.total_interest || '',
-      'Text66': body.supreme_per_capita || '',
-      'Text67': body.state_per_capita || '',
-      'Text68': body.other_council_programs || '',
-      'Text69': body.manual_expense_1 || '',
-      'Text70': body.manual_expense_2 || '',
-      'Text71': body.total_expenses || '',
-      'Text72': body.net_council || '',
       'Text73': body.net_council_verify || '',
       
       // Membership Section
