@@ -74,6 +74,14 @@ class SemiAnnualAuditService extends BasePdfReportService {
       // Phase 2: Add manual values with proper field mapping
       final Map<String, dynamic> data = Map<String, dynamic>.from(supabaseData);
       if (manualValues != null) {
+        // Debug logging for manual values
+        AppLogger.info('Manual values received: $manualValues');
+        if (manualValues.containsKey('Text73')) {
+          AppLogger.info('Text73 (Undeposited funds) value: ${manualValues['Text73']}');
+        } else {
+          AppLogger.info('Text73 (Undeposited funds) NOT found in manual values');
+        }
+        
         // Map PDF field names to expected field names for Supabase function
         final Map<String, String> mappedValues = {};
         for (final entry in manualValues.entries) {
@@ -115,6 +123,9 @@ class SemiAnnualAuditService extends BasePdfReportService {
             case 'Text70':
               mappedValues['treasurer_miscellaneous'] = value;
               break;
+            case 'Text73':
+              mappedValues['net_council_verify'] = value;
+              break;
             case 'Text74':
               mappedValues['manual_membership_1'] = value;
               break;
@@ -138,9 +149,6 @@ class SemiAnnualAuditService extends BasePdfReportService {
               break;
             case 'Text86':
               mappedValues['manual_disbursement_3'] = value;
-              break;
-            case 'Text87':
-              mappedValues['manual_disbursement_4'] = value;
               break;
             case 'Text89':
               mappedValues['manual_field_1'] = value;
@@ -209,6 +217,14 @@ class SemiAnnualAuditService extends BasePdfReportService {
           }
         }
         data.addAll(mappedValues);
+        
+        // Debug logging for mapped values
+        AppLogger.info('Mapped values: $mappedValues');
+        if (mappedValues.containsKey('net_council_verify')) {
+          AppLogger.info('net_council_verify mapped value: ${mappedValues['net_council_verify']}');
+        } else {
+          AppLogger.info('net_council_verify NOT found in mapped values');
+        }
       }
       
       // Phase 3: Run final calculations using both datasets
@@ -305,7 +321,10 @@ class SemiAnnualAuditService extends BasePdfReportService {
       data['total_interest'] = _calculateTotalInterest(data);
       data['total_expenses'] = _calculateTotalExpenses(data);
       data['net_council'] = _calculateNetCouncil(data);
-      data['net_council_verify'] = data['net_council'];
+      // Only set net_council_verify to null if no manual value was provided
+      if (!data.containsKey('net_council_verify')) {
+        data['net_council_verify'] = null;
+      }
       data['total_membership'] = _calculateTotalMembership(data);
       data['net_membership'] = _calculateNetMembership(data);
       data['total_disbursements_verify'] = _calculateTotalDisbursementsVerify(data);
@@ -319,10 +338,20 @@ class SemiAnnualAuditService extends BasePdfReportService {
        data['treasurer_total_disbursements'] = _calculateTreasurerTotalDisbursements(data);
        data['treasurer_net_balance'] = _calculateTreasurerNetBalance(data);
        
+       // Calculate asset totals
+       data['total_assets'] = _calculateTotalAssets(data);
+       data['total_assets_verify'] = _calculateTotalAssetsVerify(data);
+       
+       // Calculate liability totals
+       data['total_liabilities'] = _calculateTotalLiabilities(data);
+       
        // Add calculated values to data map for Supabase function
        data['Text65'] = data['treasurer_total_receipts']; // Total receipts
        data['Text71'] = data['treasurer_total_disbursements']; // Total disbursements  
        data['Text72'] = data['treasurer_net_balance']; // Net balance
+       data['Text87'] = data['total_assets']; // Total assets (Text64 + Text65 + Text66)
+       data['Text68'] = data['total_assets_verify']; // Total assets verify (Text83 + Text87)
+       data['Text103'] = data['total_liabilities']; // Total liabilities (Text98 + Text100 + Text102)
 
        // Debug logging for Text60 calculation
        AppLogger.info('Text60 calculation debug:');
@@ -636,6 +665,32 @@ class SemiAnnualAuditService extends BasePdfReportService {
        final netBalance = cashBeginning + totalReceipts - totalDisbursements;
        return AuditFieldMap.formatCurrency(netBalance);
      }
+
+  String _calculateTotalAssets(Map<String, dynamic> data) {
+    final interestEarned = _parseCurrency(data['treasurer_interest_earned']);
+    final totalReceipts = _parseCurrency(data['treasurer_total_receipts']);
+    final netBalance = _parseCurrency(data['treasurer_net_balance']);
+
+    final total = interestEarned + totalReceipts + netBalance;
+    return AuditFieldMap.formatCurrency(total);
+  }
+
+  String _calculateTotalAssetsVerify(Map<String, dynamic> data) {
+    final netMembership = _parseCurrency(data['net_membership']);
+    final totalAssets = _parseCurrency(data['total_assets']);
+
+    final total = netMembership + totalAssets;
+    return AuditFieldMap.formatCurrency(total);
+  }
+
+  String _calculateTotalLiabilities(Map<String, dynamic> data) {
+    final liability1Amount = _parseCurrency(data['liability_1_amount']);
+    final liability2Amount = _parseCurrency(data['liability_2_amount']);
+    final liability3Amount = _parseCurrency(data['liability_3_amount']);
+
+    final total = liability1Amount + liability2Amount + liability3Amount;
+    return AuditFieldMap.formatCurrency(total);
+  }
 
     
    

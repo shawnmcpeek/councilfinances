@@ -83,7 +83,7 @@ serve(async (req) => {
       'Text65': body.treasurer_total_receipts || '',
       'Text66': body.treasurer_supreme_per_capita || '',
       'Text67': body.treasurer_state_per_capita || '',
-      'Text68': body.treasurer_general_council_expenses || '',
+      'Text68': body.total_assets_verify || '',
       'Text69': body.treasurer_transfers_to_savings || '',
       'Text70': body.treasurer_miscellaneous || '',
       'Text71': body.treasurer_total_disbursements || '',
@@ -104,7 +104,7 @@ serve(async (req) => {
       'Text84': body.manual_disbursement_1 || '',
       'Text85': body.manual_disbursement_2 || '',
       'Text86': body.manual_disbursement_3 || '',
-      'Text87': body.manual_disbursement_4 || '',
+      'Text87': body.total_assets || '',
       'Text88': body.total_disbursements_verify || '',
       
       // Additional Fields
@@ -116,19 +116,19 @@ serve(async (req) => {
       'Text95': body.manual_field_6 || '',
       'Text96': body.manual_field_7 || '',
       'Text97': body.manual_field_8 || '',
-      'Text98': body.manual_field_9 || '',
-      'Text99': body.manual_field_10 || '',
-      'Text100': body.manual_field_11 || '',
-      'Text101': body.manual_field_12 || '',
-      'Text102': body.manual_field_13 || '',
-      'Text103': body.total_disbursements_sum || '',
-      'Text104': body.manual_field_14 || '',
-      'Text105': body.manual_field_15 || '',
-      'Text106': body.manual_field_16 || '',
-      'Text107': body.manual_field_17 || '',
-      'Text108': body.manual_field_18 || '',
-      'Text109': body.manual_field_19 || '',
-      'Text110': body.manual_field_20 || '',
+      'Text98': body.liability_1_amount || '',
+      'Text99': body.liability_1_name || '',
+      'Text100': body.liability_2_amount || '',
+      'Text101': body.liability_3_name || '',
+      'Text102': body.liability_3_amount || '',
+      'Text103': body.total_liabilities || '',
+      'Text104': '', // No data from app
+      'Text105': '', // No data from app
+      'Text106': '', // No data from app
+      'Text107': '', // No data from app
+      'Text108': '', // No data from app
+      'Text109': '', // No data from app
+      'Text110': '', // No data from app
     }
 
     // Debug Text60 specifically

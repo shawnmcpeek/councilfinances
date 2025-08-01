@@ -31,12 +31,12 @@ class AuditFieldMap {
     'Text65': 'treasurer_total_receipts', // Auto-calculated: Text62 + Text63 + Text64
     'Text66': 'treasurer_supreme_per_capita', // Manual entry with placeholder from Supabase
     'Text67': 'treasurer_state_per_capita', // Manual entry with placeholder from Supabase
-    'Text68': 'treasurer_general_council_expenses', // Manual entry
+    'Text68': 'total_assets_verify', // Auto-calculated: Text83 + Text87
     'Text69': 'treasurer_transfers_to_savings', // Manual entry: Transfers to sav./other accts.
     'Text70': 'treasurer_miscellaneous', // Manual entry
     'Text71': 'treasurer_total_disbursements', // Auto-calculated: Text66 + Text67 + Text68 + Text69 + Text70
     'Text72': 'treasurer_net_balance', // Auto-calculated: Text61 + Text65 - Text71
-    'Text73': 'net_council_verify', // Should equal Text72
+    'Text73': 'net_council_verify', // Manual entry: Undeposited funds
 
     // Membership Section
     'Text74': 'manual_membership_1', // Manual entry
@@ -52,8 +52,8 @@ class AuditFieldMap {
     'Text84': 'manual_disbursement_1', // Manual entry
     'Text85': 'manual_disbursement_2', // Manual entry
     'Text86': 'manual_disbursement_3', // Manual entry
-    'Text87': 'manual_disbursement_4', // Manual entry
-    'Text88': 'total_disbursements_verify', // Auto-calculated: Text83 + Text84 + Text85 + Text86 + Text87
+    'Text87': 'total_assets', // Auto-calculated: Text64 + Text65 + Text66
+    'Text88': 'total_disbursements_verify', // Auto-calculated: Text83 + Text84 + Text85 + Text86
 
     // Additional Fields
     'Text89': 'manual_field_1', // Manual entry
@@ -64,40 +64,40 @@ class AuditFieldMap {
     'Text95': 'manual_field_6', // Manual entry
     'Text96': 'manual_field_7', // Manual entry (future: Text95 * dues rate)
     'Text97': 'manual_field_8', // Manual entry
-    'Text98': 'manual_field_9', // Manual entry
-    'Text99': 'manual_field_10', // Manual entry
-    'Text100': 'manual_field_11', // Manual entry
-    'Text101': 'manual_field_12', // Manual entry
-    'Text102': 'manual_field_13', // Manual entry
-    'Text103': 'total_disbursements_sum', // Auto-calculated sum of Text89-Text102
-    'Text104': 'manual_field_14', // Manual entry
-    'Text105': 'manual_field_15', // Manual entry
-    'Text106': 'manual_field_16', // Manual entry
-    'Text107': 'manual_field_17', // Manual entry
-    'Text108': 'manual_field_18', // Manual entry
-    'Text109': 'manual_field_19', // Manual entry
-    'Text110': 'manual_field_20', // Manual entry
+    'Text98': 'liability_1_amount', // Manual entry
+    'Text99': 'liability_1_name', // Manual entry
+    'Text100': 'liability_2_amount', // Manual entry
+    'Text101': 'liability_3_name', // Manual entry
+    'Text102': 'liability_3_amount', // Manual entry
+    'Text103': 'total_liabilities', // Auto-calculated: Text98 + Text100 + Text102
+    'Text104': 'manual_field_14', // No data from app
+    'Text105': 'manual_field_15', // No data from app
+    'Text106': 'manual_field_16', // No data from app
+    'Text107': 'manual_field_17', // No data from app
+    'Text108': 'manual_field_18', // No data from app
+    'Text109': 'manual_field_19', // No data from app
+    'Text110': 'manual_field_20', // No data from app
   };
 
   // Fields that require manual entry
   static const List<String> manualEntryFields = [
     'Text50', 'Text59', 
-    'Text61', 'Text62', 'Text63', 'Text64', 'Text66', 'Text67', 'Text68', 'Text69', 'Text70',
+    'Text61', 'Text62', 'Text63', 'Text64', 'Text66', 'Text67', 'Text69', 'Text70',
+    'Text73',
     'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
-    'Text84', 'Text85', 'Text86', 'Text87',
+    'Text84', 'Text85', 'Text86',
     'Text89', 'Text90', 'Text91', 'Text92', 'Text93',
     'Text95', 'Text96', 'Text97', 'Text98', 'Text99',
-    'Text100', 'Text101', 'Text102',
-    'Text104', 'Text105', 'Text106', 'Text107', 'Text108',
-    'Text109', 'Text110'
+    'Text100', 'Text101', 'Text102'
   ];
 
   // Fields that are auto-calculated
   static const List<String> autoCalculatedFields = [
     'Text51', 'Text52', 'Text53', 'Text54', 'Text55',
     'Text56', 'Text57', 'Text58', 'Text60', 'Text65', 
-    'Text71', 'Text72', 'Text73', 
-    'Text79', 'Text80', 'Text83', 'Text88', 'Text103'
+    'Text68', 'Text71', 'Text72', 'Text87',
+    'Text79', 'Text80', 'Text83', 'Text88', 'Text103',
+    'Text104', 'Text105', 'Text106', 'Text107', 'Text108', 'Text109', 'Text110'
   ];
 
   // Default council programs to track

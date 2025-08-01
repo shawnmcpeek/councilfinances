@@ -18,6 +18,7 @@ class _SemiAnnualAuditScreenState extends State<SemiAnnualAuditScreen> {
   Map<String, String>? _placeholderValues;
 
   Future<void> _handleGenerateReport(String period, int year) async {
+    print('DEBUG: Generating report with manual values: $_manualValues'); // Debug logging
     setState(() => _isGenerating = true);
     try {
       await _reportService.generateAuditReport(period, year, _manualValues);
@@ -40,8 +41,10 @@ class _SemiAnnualAuditScreenState extends State<SemiAnnualAuditScreen> {
   }
 
   void _handleManualValuesChanged(Map<String, String> values) {
+    print('DEBUG: Manual values changed: $values'); // Debug logging
     setState(() => _manualValues.clear());
     _manualValues.addAll(values);
+    print('DEBUG: _manualValues after update: $_manualValues'); // Debug logging
   }
 
   Future<void> _loadPlaceholderValues(String period, int year) async {

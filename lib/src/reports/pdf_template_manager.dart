@@ -193,12 +193,81 @@ void initializeTemplates() {
   // Audit report template
   manager.registerTemplate(
     TemplateIds.auditReport,
-    'forms/audit2_1295_p.pdf',
+    'audit2_1295_p.pdf',
     {
-      'Text1': 'organization_name',
-      'Text2': 'report_date',
-      'Text3': 'auditor_name',
-      // ... Add other audit report field mappings
+      // Basic Info
+      'Text1': 'council_number',
+      'Text2': 'council_city',
+      'Text3': 'year',
+      'Text4': 'organization_name',
+
+      // Income Section
+      'Text50': 'manual_income_1',
+      'Text51': 'membership_dues',
+      'Text52': 'top_program_1_name',
+      'Text53': 'top_program_1_amount',
+      'Text54': 'top_program_2_name',
+      'Text55': 'top_program_2_amount',
+      'Text56': 'other_programs_name',
+      'Text57': 'other_programs_amount',
+      'Text58': 'total_income',
+      'Text59': 'manual_income_2',
+      'Text60': 'cash_on_hand_end_period',
+
+      // Treasurer Section
+      'Text61': 'treasurer_cash_beginning',
+      'Text62': 'treasurer_received_financial_secretary',
+      'Text63': 'treasurer_transfers_from_savings',
+      'Text64': 'treasurer_interest_earned',
+      'Text65': 'treasurer_total_receipts',
+      'Text66': 'treasurer_supreme_per_capita',
+      'Text67': 'treasurer_state_per_capita',
+      'Text68': 'treasurer_general_council_expenses',
+      'Text69': 'treasurer_transfers_to_savings',
+      'Text70': 'treasurer_miscellaneous',
+      'Text71': 'treasurer_total_disbursements',
+      'Text72': 'treasurer_net_balance',
+      'Text73': 'net_council_verify',
+
+      // Membership Section
+      'Text74': 'manual_membership_1',
+      'Text75': 'manual_membership_2',
+      'Text76': 'manual_membership_3',
+      'Text77': 'membership_count',
+      'Text78': 'membership_dues_total',
+      'Text79': 'total_membership',
+      'Text80': 'total_disbursements',
+      'Text83': 'net_membership',
+
+      // Disbursements Section
+      'Text84': 'manual_disbursement_1',
+      'Text85': 'manual_disbursement_2',
+      'Text86': 'manual_disbursement_3',
+      'Text87': 'manual_disbursement_4',
+      'Text88': 'total_disbursements_verify',
+
+      // Additional Fields
+      'Text89': 'manual_field_1',
+      'Text90': 'manual_field_2',
+      'Text91': 'manual_field_3',
+      'Text92': 'manual_field_4',
+      'Text93': 'manual_field_5',
+      'Text95': 'manual_field_6',
+      'Text96': 'manual_field_7',
+      'Text97': 'manual_field_8',
+      'Text98': 'manual_field_9',
+      'Text99': 'manual_field_10',
+      'Text100': 'manual_field_11',
+      'Text101': 'manual_field_12',
+      'Text102': 'manual_field_13',
+      'Text103': 'total_disbursements_sum',
+      'Text104': 'manual_field_14',
+      'Text105': 'manual_field_15',
+      'Text106': 'manual_field_16',
+      'Text107': 'manual_field_17',
+      'Text108': 'manual_field_18',
+      'Text109': 'manual_field_19',
+      'Text110': 'manual_field_20',
     },
   );
 

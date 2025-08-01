@@ -114,7 +114,7 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
               'Schedule C — Assets',
               [
                 'Text73', 'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
-                'Text84', 'Text85', 'Text86', 'Text87', 'Text100', 'Text101'
+                'Text84', 'Text85', 'Text86'
               ],
               'Enter asset values',
               [
@@ -127,10 +127,6 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
                 'Other asset*',
                 'Short term CD*',
                 'Money Market Mutual Funds*',
-                'Misc. Asset 1 Name',
-                'Misc. Asset 1 Amount (USD)',
-                'Misc. Asset 2 Name',
-                'Misc. Asset 2 Amount (USD)',
               ],
             ),
             const SizedBox(height: AppTheme.spacing),
@@ -138,7 +134,7 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
               'Schedule C — Liabilities',
               [
                 'Text89', 'Text90', 'Text91', 'Text92', 'Text93', 'Text95', 'Text96',
-                'Text97', 'Text98', 'Text99', 'Text102', 'Text104', 'Text105'
+                'Text97', 'Text98', 'Text99', 'Text100', 'Text101', 'Text102'
               ],
               'Enter liability values',
               [
@@ -149,12 +145,11 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
                 'Due State Council*',
                 'Advance payments by members (number)*',
                 'Advance payments by members (amount)*',
-                'Misc. Liability 1 Name',
-                'Misc. Liability 1 Amount (USD)',
-                'Misc. Liability 2 Name',
-                'Misc. Liability 2 Amount (USD)',
-                'Misc. Liability 3 Name',
-                'Misc. Liability 3 Amount (USD)',
+                'Liability 1 Name*',
+                'Liability 1 Amount (USD)*',
+                'Liability 2 Amount (USD)*',
+                'Liability 3 Name*',
+                'Liability 3 Amount (USD)*',
               ],
             ),
           ],
