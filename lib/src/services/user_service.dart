@@ -7,36 +7,33 @@ class UserService {
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // Auto-create organization if it doesn't exist
-  Future<void> _ensureOrganizationExists(int councilNumber, int? assemblyNumber, String jurisdiction, {String? councilCity, String? assemblyCity, String? assemblyJurisdiction}) async {
+  Future<void> ensureOrganizationExists(int councilNumber, int? assemblyNumber, String jurisdiction, {String? councilCity, String? assemblyCity}) async {
     try {
-      // Ensure council exists
-      final councilId = 'C${councilNumber.toString().padLeft(6, '0')}';
-      await _supabase
-          .from('organizations')
-          .upsert({
-            'id': councilId,
-            'name': 'Council #$councilNumber',
-            'type': 'council',
-            'jurisdiction': jurisdiction,
-            'city': councilCity,
-            'state': jurisdiction,
-          })
-          .eq('id', councilId);
+      // Helper function to update a single organization
+      Future<void> updateOrganization(String orgId, String orgName, String orgType, String? city) async {
+        if (city != null && city.isNotEmpty) {
+          await _supabase
+              .from('organizations')
+              .upsert({
+                'id': orgId,
+                'name': orgName,
+                'type': orgType,
+                'city': city,
+                'state': jurisdiction,
+              })
+              .eq('id', orgId);
+          AppLogger.debug('Updated $orgType organization: $orgId with city: $city');
+        }
+      }
 
-      // Ensure assembly exists if provided
+      // Update council if city provided
+      final councilId = 'C${councilNumber.toString().padLeft(6, '0')}';
+      await updateOrganization(councilId, 'Council #$councilNumber', 'council', councilCity);
+
+      // Update assembly if city provided
       if (assemblyNumber != null) {
         final assemblyId = 'A${assemblyNumber.toString().padLeft(6, '0')}';
-        await _supabase
-            .from('organizations')
-            .upsert({
-              'id': assemblyId,
-              'name': 'Assembly #$assemblyNumber',
-              'type': 'assembly',
-              'jurisdiction': assemblyJurisdiction ?? jurisdiction,
-              'city': assemblyCity,
-              'state': assemblyJurisdiction ?? jurisdiction,
-            })
-            .eq('id', assemblyId);
+        await updateOrganization(assemblyId, 'Assembly #$assemblyNumber', 'assembly', assemblyCity);
       }
 
       AppLogger.debug('Ensured organizations exist: Council $councilId, Assembly ${assemblyNumber != null ? 'A${assemblyNumber.toString().padLeft(6, '0')}' : 'none'}');
@@ -111,10 +108,8 @@ class UserService {
       if (user == null) throw Exception('No authenticated user found');
 
       // Ensure organizations exist before updating profile
-      await _ensureOrganizationExists(profile.councilNumber, profile.assemblyNumber, profile.jurisdiction,
-          councilCity: profile.councilCity,
-          assemblyCity: profile.assemblyCity,
-          assemblyJurisdiction: profile.assemblyJurisdiction);
+      await ensureOrganizationExists(profile.councilNumber, profile.assemblyNumber, profile.jurisdiction,
+          councilCity: profile.councilCity, assemblyCity: profile.assemblyCity);
 
       final profileData = profile.toMap()
         ..removeWhere((key, value) => value == null);

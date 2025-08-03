@@ -196,10 +196,10 @@ void initializeTemplates() {
     'audit2_1295_p.pdf',
     {
       // Basic Info
-      'Text1': 'council_number',
-      'Text2': 'council_city',
+      'Text1': 'organization_name',
+      'Text2': 'organization_city',
       'Text3': 'year',
-      'Text4': 'organization_name',
+      'Text4': 'organization_jurisdiction',
 
       // Income Section
       'Text50': 'manual_income_1',

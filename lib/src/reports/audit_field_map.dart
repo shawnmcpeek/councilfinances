@@ -31,7 +31,7 @@ class AuditFieldMap {
     'Text65': 'treasurer_total_receipts', // Auto-calculated: Text62 + Text63 + Text64
     'Text66': 'treasurer_supreme_per_capita', // Manual entry with placeholder from Supabase
     'Text67': 'treasurer_state_per_capita', // Manual entry with placeholder from Supabase
-    'Text68': 'total_assets_verify', // Auto-calculated: Text83 + Text87
+    'Text68': 'treasurer_general_council_expenses', // Manual entry: General council expenses
     'Text69': 'treasurer_transfers_to_savings', // Manual entry: Transfers to sav./other accts.
     'Text70': 'treasurer_miscellaneous', // Manual entry
     'Text71': 'treasurer_total_disbursements', // Auto-calculated: Text66 + Text67 + Text68 + Text69 + Text70
@@ -82,7 +82,7 @@ class AuditFieldMap {
   // Fields that require manual entry
   static const List<String> manualEntryFields = [
     'Text50', 'Text59', 
-    'Text61', 'Text62', 'Text63', 'Text64', 'Text66', 'Text67', 'Text69', 'Text70',
+    'Text61', 'Text62', 'Text63', 'Text64', 'Text66', 'Text67', 'Text68', 'Text69', 'Text70',
     'Text73',
     'Text74', 'Text75', 'Text76', 'Text77', 'Text78',
     'Text84', 'Text85', 'Text86',
@@ -95,7 +95,7 @@ class AuditFieldMap {
   static const List<String> autoCalculatedFields = [
     'Text51', 'Text52', 'Text53', 'Text54', 'Text55',
     'Text56', 'Text57', 'Text58', 'Text60', 'Text65', 
-    'Text68', 'Text71', 'Text72', 'Text87',
+    'Text71', 'Text72', 'Text87',
     'Text79', 'Text80', 'Text83', 'Text88', 'Text103',
     'Text104', 'Text105', 'Text106', 'Text107', 'Text108', 'Text109', 'Text110'
   ];

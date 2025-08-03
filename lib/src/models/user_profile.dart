@@ -48,9 +48,6 @@ class UserProfile {
       'council_roles': councilRoles.map((role) => role.name).toList(),
       'assembly_roles': assemblyRoles.map((role) => role.name).toList(),
       'jurisdiction': jurisdiction,
-      'city': councilCity,
-      'assembly_city': assemblyCity,
-      'assembly_jurisdiction': assemblyJurisdiction,
     };
   }
 

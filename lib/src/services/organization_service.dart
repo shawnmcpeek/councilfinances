@@ -67,7 +67,6 @@ class OrganizationService {
     required String name,
     String? city,
     String? state,
-    String? jurisdiction,
   }) async {
     try {
       final organizationId = isAssembly 
@@ -80,7 +79,6 @@ class OrganizationService {
         'type': isAssembly ? 'assembly' : 'council',
         'city': city,
         'state': state,
-        'jurisdiction': jurisdiction,
       };
 
       AppLogger.debug('Upserting organization: $data');

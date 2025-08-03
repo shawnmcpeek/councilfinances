@@ -15,22 +15,91 @@ class SemiAnnualAuditService extends BasePdfReportService {
   final SupabaseClient _supabase = Supabase.instance.client;
   final UserService _userService = UserService();
   final OrganizationService _organizationService = OrganizationService();
-  static const String _auditReportTemplate = 'audit2_1295_p.pdf';
+  String _getAuditReportTemplate(String period) {
+    return period == 'June' ? 'audit1_1295_p.pdf' : 'audit2_1295_p.pdf';
+  }
   static const String _fillAuditReportUrl = 'https://fwcqtjsqetqavdhkahzy.supabase.co/functions/v1/fill-audit-report';
 
   @override
-  String get templatePath => _auditReportTemplate;
+  String get templatePath => _getAuditReportTemplate('December'); // Default to December template
+
+
+
+  // Test function to show actual database data
+  Future<void> showActualDatabaseData() async {
+    try {
+      final userProfile = await _userService.getUserProfile();
+      if (userProfile != null) {
+        final organizationData = await _organizationService.getOrganizationByNumber(userProfile.councilNumber, false);
+        
+        print('=== ACTUAL DATABASE DATA ===');
+        print('USER PROFILE DATA:');
+        print('  User ID: ${userProfile.uid}');
+        print('  First Name: ${userProfile.firstName}');
+        print('  Last Name: ${userProfile.lastName}');
+        print('  Council Number: ${userProfile.councilNumber}');
+        print('  Council City: ${userProfile.councilCity}');
+        print('  Jurisdiction: ${userProfile.jurisdiction}');
+        print('');
+        print('ORGANIZATION DATA:');
+        print('  Organization ID: ${organizationData?.id}');
+        print('  Organization Name: ${organizationData?.name}');
+        print('  Organization Type: ${organizationData?.type}');
+        print('  Organization City: ${organizationData?.city}');
+        print('  Organization State: ${organizationData?.state}');
+        print('  Organization Jurisdiction: ${organizationData?.jurisdiction}');
+        print('===========================');
+      } else {
+        print('ERROR: Could not get user profile');
+      }
+    } catch (e) {
+      print('ERROR getting database data: $e');
+    }
+  }
 
   Future<void> generateAuditReport(String period, int year, [Map<String, String>? manualValues]) async {
     try {
       AppLogger.info('Generating semi-annual audit report for $period $year');
+
+      // Show actual database data for verification
+      await showActualDatabaseData();
+
+      // Get user profile and organization info for logging
+      final userProfile = await _userService.getUserProfile();
+      if (userProfile != null) {
+        final organizationData = await _organizationService.getOrganizationByNumber(userProfile.councilNumber, false);
+        AppLogger.info('=== AUDIT REPORT USER INFO ===');
+        AppLogger.info('Council Name: ${organizationData?.name ?? 'Council ${userProfile.councilNumber}'}');
+        AppLogger.info('Council City: ${organizationData?.city ?? userProfile.councilCity ?? 'Not specified'}');
+        AppLogger.info('Council State: ${organizationData?.state ?? organizationData?.jurisdiction ?? userProfile.jurisdiction ?? 'Not specified'}');
+        AppLogger.info('User: ${userProfile.firstName} ${userProfile.lastName}');
+        AppLogger.info('Council Number: ${userProfile.councilNumber}');
+        AppLogger.info('=== RAW ORGANIZATION DATA ===');
+        AppLogger.info('Organization ID: ${organizationData?.id}');
+        AppLogger.info('Organization Name: ${organizationData?.name}');
+        AppLogger.info('Organization Type: ${organizationData?.type}');
+        AppLogger.info('Organization City: ${organizationData?.city}');
+        AppLogger.info('Organization State: ${organizationData?.state}');
+        AppLogger.info('Organization Jurisdiction: ${organizationData?.jurisdiction}');
+        AppLogger.info('=== RAW USER DATA ===');
+        AppLogger.info('User ID: ${userProfile.uid}');
+        AppLogger.info('User First Name: ${userProfile.firstName}');
+        AppLogger.info('User Last Name: ${userProfile.lastName}');
+        AppLogger.info('User Council Number: ${userProfile.councilNumber}');
+        AppLogger.info('User Council City: ${userProfile.councilCity}');
+        AppLogger.info('User Jurisdiction: ${userProfile.jurisdiction}');
+        AppLogger.info('================================');
+      } else {
+        AppLogger.warning('Could not retrieve user profile for audit report logging');
+      }
 
       // 1. Get report data with manual values
       final data = await _getAuditData(period, year, manualValues);
       AppLogger.debug('Got audit data: $data');
 
       // 3. Load PDF template
-      final ByteData templateData = await rootBundle.load('assets/forms/audit2_1295_p.pdf');
+      final String templatePath = _getAuditReportTemplate(period);
+      final ByteData templateData = await rootBundle.load('assets/forms/$templatePath');
       final Uint8List templateBytes = templateData.buffer.asUint8List();
       final String templateBase64 = base64Encode(templateBytes);
 
@@ -247,8 +316,18 @@ class SemiAnnualAuditService extends BasePdfReportService {
         throw Exception('User profile not found');
       }
 
+      // Ensure organization exists before fetching data
+      await _userService.ensureOrganizationExists(
+        userProfile.councilNumber, 
+        userProfile.assemblyNumber, 
+        userProfile.jurisdiction, 
+        councilCity: userProfile.councilCity,
+        assemblyCity: userProfile.assemblyCity
+      );
+      
       // Get organization data for city and jurisdiction
       final organizationData = await _organizationService.getOrganizationByNumber(userProfile.councilNumber, false);
+      AppLogger.info('Organization data fetched: ${organizationData?.name}, ${organizationData?.city}, ${organizationData?.state}, ${organizationData?.jurisdiction}');
       
       // Get date range for the period
       final dateRange = AuditFieldMap.getDateRangeForPeriod(period, year);
@@ -262,9 +341,11 @@ class SemiAnnualAuditService extends BasePdfReportService {
         'council_city': userProfile.councilCity ?? '',
         'organization_name': organizationData?.name ?? 'Council ${userProfile.councilNumber}',
         'organization_city': organizationData?.city ?? '',
-        'organization_jurisdiction': organizationData?.state ?? organizationData?.jurisdiction ?? '',
+        'organization_jurisdiction': organizationData?.jurisdiction ?? organizationData?.state ?? '',
         'year': AuditFieldMap.getYearSuffix(year),
       };
+      
+      AppLogger.info('Basic info data set: organization_name=${data['organization_name']}, organization_city=${data['organization_city']}, organization_jurisdiction=${data['organization_jurisdiction']}');
 
       // Get transactions for the period
       AppLogger.info('Fetching transactions for period: $period, year: $year, dateRange: ${dateRange.start} to ${dateRange.end}');
@@ -334,6 +415,7 @@ class SemiAnnualAuditService extends BasePdfReportService {
       }
       data['total_membership'] = _calculateTotalMembership(data);
       data['net_membership'] = _calculateNetMembership(data);
+      data['text87'] = _calculateText87(data);
       data['total_disbursements_verify'] = _calculateTotalDisbursementsVerify(data);
       
              // Calculate PDF-specific fields
@@ -352,13 +434,25 @@ class SemiAnnualAuditService extends BasePdfReportService {
        // Calculate liability totals
        data['total_liabilities'] = _calculateTotalLiabilities(data);
        
-       // Add calculated values to data map for Supabase function
-       data['Text65'] = data['treasurer_total_receipts']; // Total receipts
-       data['Text71'] = data['treasurer_total_disbursements']; // Total disbursements  
-       data['Text72'] = data['treasurer_net_balance']; // Net balance
-       data['Text87'] = data['total_assets']; // Total assets (Text64 + Text65 + Text66)
-       data['Text68'] = data['total_assets_verify']; // Total assets verify (Text83 + Text87)
-       data['Text103'] = data['total_liabilities']; // Total liabilities (Text98 + Text100 + Text102)
+               // The Supabase function expects these field names, not Text1-Text4
+        // The function will map them to the correct PDF fields
+        data['organization_name'] = data['organization_name']; // For Text1
+        data['organization_city'] = data['organization_city']; // For Text2
+        data['year'] = data['year']; // For Text3
+        data['organization_jurisdiction'] = data['organization_jurisdiction']; // For Text4
+        
+                 // Debug logging for organization values
+         AppLogger.info('Organization debug values:');
+         AppLogger.info('  organization_name: ${data['organization_name']}');
+         AppLogger.info('  organization_city: ${data['organization_city']}');
+         AppLogger.info('  year: ${data['year']}');
+         AppLogger.info('  organization_jurisdiction: ${data['organization_jurisdiction']}');
+        data['Text65'] = data['treasurer_total_receipts']; // Total receipts
+        data['Text71'] = data['treasurer_total_disbursements']; // Total disbursements  
+        data['Text72'] = data['treasurer_net_balance']; // Net balance
+        data['Text87'] = data['text87']; // Total disbursements (Text84 + Text85 + Text86)
+        data['Text88'] = data['total_disbursements_verify']; // Total disbursements verify (Text83 + Text87)
+        data['Text103'] = data['total_liabilities']; // Total liabilities (Text98 + Text100 + Text102)
 
        // Debug logging for Text60 calculation
        AppLogger.info('Text60 calculation debug:');
@@ -601,14 +695,14 @@ class SemiAnnualAuditService extends BasePdfReportService {
   }
 
   String _calculateTotalMembership(Map<String, dynamic> data) {
-    final netCouncil = _parseCurrency(data['net_council']);
-    final manualMembership1 = _parseCurrency(data['manual_membership_1']);
-    final manualMembership2 = _parseCurrency(data['manual_membership_2']);
-    final manualMembership3 = _parseCurrency(data['manual_membership_3']);
-    final membershipCount = _parseCurrency(data['membership_count']);
-    final membershipDuesTotal = _parseCurrency(data['membership_dues_total']);
+    final netCouncilVerify = _parseCurrency(data['net_council_verify']); // Text73
+    final manualMembership1 = _parseCurrency(data['manual_membership_1']); // Text74
+    final manualMembership2 = _parseCurrency(data['manual_membership_2']); // Text75
+    final manualMembership3 = _parseCurrency(data['manual_membership_3']); // Text76
+    final membershipCount = _parseCurrency(data['membership_count']); // Text77
+    final membershipDuesTotal = _parseCurrency(data['membership_dues_total']); // Text78
 
-    final total = netCouncil + manualMembership1 + manualMembership2 + manualMembership3 + membershipCount + membershipDuesTotal;
+    final total = netCouncilVerify + manualMembership1 + manualMembership2 + manualMembership3 + membershipCount + membershipDuesTotal;
     return AuditFieldMap.formatCurrency(total);
   }
 
@@ -619,21 +713,23 @@ class SemiAnnualAuditService extends BasePdfReportService {
     return AuditFieldMap.formatCurrency(totalMembership - totalDisbursements);
   }
 
-  String _calculateTotalDisbursementsVerify(Map<String, dynamic> data) {
-    final manualDisbursement1 = _parseCurrency(data['manual_disbursement_1']);
-    final manualDisbursement2 = _parseCurrency(data['manual_disbursement_2']);
-    final manualDisbursement3 = _parseCurrency(data['manual_disbursement_3']);
-    final manualDisbursement4 = _parseCurrency(data['manual_disbursement_4']);
+  String _calculateText87(Map<String, dynamic> data) {
+    // Text87 = Text84 + Text85 + Text86 (sum of manual disbursements)
+    final manualDisbursement1 = _parseCurrency(data['manual_disbursement_1']); // Text84
+    final manualDisbursement2 = _parseCurrency(data['manual_disbursement_2']); // Text85
+    final manualDisbursement3 = _parseCurrency(data['manual_disbursement_3']); // Text86
 
-    // Verify that total disbursements match the sum of individual disbursements
-    final calculatedTotal = manualDisbursement1 + manualDisbursement2 + manualDisbursement3 + manualDisbursement4;
-    final reportedTotal = _parseCurrency(data['total_disbursements']);
-    
-    if ((calculatedTotal - reportedTotal).abs() > 0.01) {
-      AppLogger.warning('Disbursement verification failed: calculated $calculatedTotal vs reported $reportedTotal');
-    }
-    
-    return AuditFieldMap.formatCurrency(calculatedTotal);
+    final total = manualDisbursement1 + manualDisbursement2 + manualDisbursement3;
+    return AuditFieldMap.formatCurrency(total);
+  }
+
+  String _calculateTotalDisbursementsVerify(Map<String, dynamic> data) {
+    // Text88 = Text83 + Text87 (net_membership + total_disbursements)
+    final netMembership = _parseCurrency(data['net_membership']); // Text83
+    final totalDisbursements = _parseCurrency(data['text87']); // Text87
+
+    final total = netMembership + totalDisbursements;
+    return AuditFieldMap.formatCurrency(total);
   }
 
      double _parseCurrency(String? value) {
@@ -691,17 +787,24 @@ class SemiAnnualAuditService extends BasePdfReportService {
   }
 
   String _calculateTotalLiabilities(Map<String, dynamic> data) {
-    final liability1Amount = _parseCurrency(data['liability_1_amount']);
-    final liability2Amount = _parseCurrency(data['liability_2_amount']);
-    final liability3Amount = _parseCurrency(data['liability_3_amount']);
+    // Text103 = Text89 + Text90 + Text91 + Text92 + Text93 + Text96 + Text98 + Text100 + Text102
+    final manualField1 = _parseCurrency(data['manual_field_1']); // Text89
+    final manualField2 = _parseCurrency(data['manual_field_2']); // Text90
+    final manualField3 = _parseCurrency(data['manual_field_3']); // Text91
+    final manualField4 = _parseCurrency(data['manual_field_4']); // Text92
+    final manualField5 = _parseCurrency(data['manual_field_5']); // Text93
+    final manualField7 = _parseCurrency(data['manual_field_7']); // Text96
+    final manualField9 = _parseCurrency(data['manual_field_9']); // Text98
+    final manualField11 = _parseCurrency(data['manual_field_11']); // Text100
+    final manualField13 = _parseCurrency(data['manual_field_13']); // Text102
 
-    final total = liability1Amount + liability2Amount + liability3Amount;
+    final total = manualField1 + manualField2 + manualField3 + manualField4 + manualField5 + 
+                  manualField7 + manualField9 + manualField11 + manualField13;
     return AuditFieldMap.formatCurrency(total);
   }
 
-    
-   
-  }
+
+}
 
 class ProgramTotal {
   final String name;

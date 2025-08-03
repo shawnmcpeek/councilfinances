@@ -68,12 +68,7 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: AppTheme.smallSpacing),
-            Text(
-              'Enter values for the semi-annual audit report. Fields marked with * are required.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Colors.grey[600],
-              ),
-            ),
+
             const SizedBox(height: AppTheme.spacing),
             _buildSection(
               'Schedule B — Cash Transactions (Financial Secretary)',
@@ -117,17 +112,17 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
                 'Text84', 'Text85', 'Text86'
               ],
               'Enter asset values',
-              [
-                'Undeposited funds*',
-                'Bank — Checking acct.*',
-                'Bank — Savings acct.*',
-                'Bank — Money market accts.*',
-                'How many members have outstanding dues',
-                'Total amount of outstanding dues (USD)',
-                'Other asset*',
-                'Short term CD*',
-                'Money Market Mutual Funds*',
-              ],
+                             [
+                 'Undeposited funds*',
+                 'Bank — Checking acct.*',
+                 'Bank — Savings acct.*',
+                 'Bank — Money market accts.*',
+                 'How many members have outstanding dues',
+                 'Total amount of outstanding dues (USD)',
+                 'Short Term CD*',
+                 'Money Market Mutual Funds*',
+                 'Misc Assets*',
+               ],
             ),
             const SizedBox(height: AppTheme.spacing),
             _buildSection(
@@ -137,20 +132,21 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
                 'Text97', 'Text98', 'Text99', 'Text100', 'Text101', 'Text102'
               ],
               'Enter liability values',
-              [
-                'Due Supreme Council: Per capita*',
-                'Due Supreme Council: Supplies*',
-                'Due Supreme Council: Catholic advertising*',
-                'Due Supreme Council: Other*',
-                'Due State Council*',
-                'Advance payments by members (number)*',
-                'Advance payments by members (amount)*',
-                'Liability 1 Name*',
-                'Liability 1 Amount (USD)*',
-                'Liability 2 Amount (USD)*',
-                'Liability 3 Name*',
-                'Liability 3 Amount (USD)*',
-              ],
+                             [
+                 'Due Supreme Council: Per capita*',
+                 'Due Supreme Council: Supplies*',
+                 'Due Supreme Council: Catholic advertising*',
+                 'Due Supreme Council: Other*',
+                 'Due State Council*',
+                 'Advance payments by members (number)*',
+                 'Advance payments by members (amount)*',
+                 'Liability 1 Name*',
+                 'Liability 1 Amount (USD)*',
+                 'Liability 2 Name*',
+                 'Liability 2 Amount (USD)*',
+                 'Liability 3 Name*',
+                 'Liability 3 Amount (USD)*',
+               ],
             ),
           ],
         ),
@@ -199,7 +195,7 @@ class _AuditManualEntryState extends State<AuditManualEntry> {
                 labelText: displayLabel,
                 hintText: placeholder ?? (isNameField ? 'Enter name/description' : 'Enter amount'),
                 suffixText: isAmountField ? 'USD' : null,
-                helperText: isRequired ? 'Required field' : null,
+
               ),
               keyboardType: isNameField ? TextInputType.text : const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: isNameField

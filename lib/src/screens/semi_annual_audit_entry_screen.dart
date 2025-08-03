@@ -64,7 +64,7 @@ class _SemiAnnualAuditEntryScreenState extends State<SemiAnnualAuditEntryScreen>
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
-                      decoration: AppTheme.formFieldDecorationWithLabel('Report Period'),
+                      decoration: AppTheme.formFieldDecorationWithLabel('Report Period Ends'),
                       value: _selectedPeriod,
                       items: const [
                         DropdownMenuItem(value: 'June', child: Text('June')),
