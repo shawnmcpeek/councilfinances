@@ -1,5 +1,6 @@
 {
   "devDependencies": {
-    "supabase": "^2.33.7"
+    "supabase": "^2.33.9",
+    "supabase-cli": "^0.0.21"
   }
 }

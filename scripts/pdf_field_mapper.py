@@ -41,7 +41,7 @@ def get_field_name(field):
         name = name[1:-1]
     return name
 
-def create_field_visualization(fields, output_path):
+def create_field_visualization(fields, output_path, input_path):
     """Create a visual representation of field locations"""
     packet = io.BytesIO()
     can = canvas.Canvas(packet, pagesize=letter)
@@ -64,7 +64,7 @@ def create_field_visualization(fields, output_path):
     
     # Create a new PDF with field visualization
     new_pdf = PdfReader(packet)
-    existing_pdf = PdfReader(output_path.replace('_mapped.pdf', '.pdf'))
+    existing_pdf = PdfReader(input_path)
     output = PdfWriter()
     
     # Add the field visualization layer to the first page
@@ -179,7 +179,7 @@ def map_pdf_fields(input_path: str, output_path: str):
     
     # Create visual representation
     try:
-        create_field_visualization(field_mapping, output_path)
+        create_field_visualization(field_mapping, output_path, input_path)
         print(f"Created visual field map: {output_path}")
     except Exception as e:
         print(f"Error creating visual field map: {str(e)}")
@@ -187,6 +187,6 @@ def map_pdf_fields(input_path: str, output_path: str):
     return field_mapping
 
 if __name__ == "__main__":
-    input_pdf = "audit2_1295_p.pdf"
+    input_pdf = "../assets/forms/audit2_1295_p.pdf"
     output_pdf = "audit2_1295_p_mapped.pdf"
     map_pdf_fields(input_pdf, output_pdf) 

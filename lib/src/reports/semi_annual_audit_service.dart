@@ -57,12 +57,68 @@ class SemiAnnualAuditService extends BasePdfReportService {
     }
   }
 
+  // Simple database connection test
+  Future<void> testDatabaseConnection() async {
+    try {
+      print('=== TESTING DATABASE CONNECTION ===');
+      
+      // Test 1: Check if Supabase client is initialized
+      print('1. Checking Supabase client...');
+      if (_supabase.auth.currentSession != null) {
+        print('   ✓ User is authenticated');
+        print('   User ID: ${_supabase.auth.currentUser?.id}');
+      } else {
+        print('   ✗ User is NOT authenticated');
+      }
+      
+      // Test 2: Try to query a simple table
+      print('2. Testing database query...');
+      final response = await _supabase
+          .from('user_profiles')
+          .select('count')
+          .limit(1);
+      print('   ✓ Database query successful');
+      print('   Response: $response');
+      
+      // Test 3: Check if finance_entries table exists
+      print('3. Testing finance_entries table...');
+      final financeResponse = await _supabase
+          .from('finance_entries')
+          .select('count')
+          .limit(1);
+      print('   ✓ Finance entries table accessible');
+      print('   Finance entries count: ${financeResponse.length}');
+      
+      print('=== DATABASE CONNECTION TEST COMPLETE ===');
+    } catch (e) {
+      print('✗ DATABASE CONNECTION TEST FAILED: $e');
+    }
+  }
+
   Future<void> generateAuditReport(String period, int year, [Map<String, String>? manualValues]) async {
     try {
       AppLogger.info('Generating semi-annual audit report for $period $year');
 
+      // Test database connection first
+      await testDatabaseConnection();
+
       // Show actual database data for verification
       await showActualDatabaseData();
+
+      // Check authentication status before making the Edge Function call
+      AppLogger.info('=== AUTHENTICATION STATUS CHECK ===');
+      final session = _supabase.auth.currentSession;
+      if (session != null) {
+        AppLogger.info('✓ User is authenticated');
+        AppLogger.info('User ID: ${session.user.id}');
+        AppLogger.info('Access Token: ${session.accessToken.substring(0, 20)}...');
+        AppLogger.info('Token expires at: ${session.expiresAt}');
+        AppLogger.info('Current time: ${DateTime.now().millisecondsSinceEpoch}');
+        AppLogger.info('Token is expired: ${session.expiresAt != null && session.expiresAt! < DateTime.now().millisecondsSinceEpoch}');
+      } else {
+        AppLogger.error('✗ User is NOT authenticated - this will cause the Edge Function call to fail');
+        throw Exception('User not authenticated');
+      }
 
       // Get user profile and organization info for logging
       final userProfile = await _userService.getUserProfile();
@@ -104,31 +160,52 @@ class SemiAnnualAuditService extends BasePdfReportService {
       final String templateBase64 = base64Encode(templateBytes);
 
       // 4. Call Supabase Edge Function to fill the PDF
-      final response = await http.post(
-        Uri.parse(_fillAuditReportUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${_supabase.auth.currentSession?.accessToken}',
-        },
-        body: json.encode({
-          ...data,
-          'period': period == 'June' ? 'January-June' : 'July-December',
-          'year': year,
-          'pdfTemplate': templateBase64,
-        }),
-      );
+      AppLogger.info('Calling Supabase Edge Function at: $_fillAuditReportUrl');
+      AppLogger.info('Request payload size: ${json.encode(data).length} bytes');
+      AppLogger.info('PDF template size: ${templateBase64.length} bytes');
+      
+      // Log the request details
+      final requestBody = json.encode({
+        ...data,
+        'period': period == 'June' ? 'January-June' : 'July-December',
+        'year': year,
+        'pdfTemplate': templateBase64,
+      });
+      
+      AppLogger.info('Request headers: ${{
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${_supabase.auth.currentSession?.accessToken?.substring(0, 20)}...',
+      }}');
+      
+      try {
+        final response = await http.post(
+          Uri.parse(_fillAuditReportUrl),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer ${_supabase.auth.currentSession?.accessToken}',
+          },
+          body: requestBody,
+        );
+        
+        AppLogger.info('Supabase Edge Function response status: ${response.statusCode}');
+        AppLogger.info('Supabase Edge Function response headers: ${response.headers}');
+        AppLogger.info('Supabase Edge Function response body: ${response.body}');
+        
+        if (response.statusCode != 200) {
+          throw Exception('Failed to generate PDF: ${response.body}');
+        }
 
-      if (response.statusCode != 200) {
-        throw Exception('Failed to generate PDF: ${response.body}');
+        // 4. Save or share the PDF
+        final fileName = 'semi_annual_audit_${period.toLowerCase()}_$year.pdf';
+        await saveOrShareFile(
+          response.bodyBytes,
+          fileName,
+          'Semi-Annual Audit Report for $period $year'
+        );
+      } catch (e) {
+        AppLogger.error('HTTP request failed: $e');
+        rethrow;
       }
-
-      // 4. Save or share the PDF
-      final fileName = 'semi_annual_audit_${period.toLowerCase()}_$year.pdf';
-      await saveOrShareFile(
-        response.bodyBytes,
-        fileName,
-        'Semi-Annual Audit Report for $period $year'
-      );
 
       AppLogger.info('Semi-annual audit report saved/shared successfully');
     } catch (e, stackTrace) {
