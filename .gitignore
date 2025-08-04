@@ -61,6 +61,8 @@ yarn-error.log*
 .supabase/
 
 # Environment files
+.env
+.env.backup
 .env.local
 .env.development.local
 .env.test.local
